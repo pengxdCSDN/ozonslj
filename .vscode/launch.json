@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend: FastAPI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "backend.app.main:app",
+        "--reload",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000"
+      ],
+      "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "cwd": "${workspaceFolder}",
+      "jinja": false,
+      "justMyCode": true
+    },
+    {
+      "name": "Extension: Side Panel Preview",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:4173/sidepanel.html",
+      "webRoot": "${workspaceFolder}\\extension\\src",
+      "sourceMaps": true
+    }
+  ]
+}
+

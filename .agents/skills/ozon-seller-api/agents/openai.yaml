@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ozon Seller API"
+  short_description: "Build safe Ozon Seller API integrations"
+  default_prompt: "Use $ozon-seller-api to design a safe Ozon Seller API integration for this browser extension."

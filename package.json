@@ -1,0 +1,12 @@
+{
+  "name": "ozonslj",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "pnpm --filter @ozonslj/extension dev",
+    "build": "pnpm --filter @ozonslj/extension build",
+    "typecheck": "pnpm --filter @ozonslj/extension typecheck"
+  }
+}
+

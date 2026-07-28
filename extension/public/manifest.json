@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Ozon Seller Operations",
+  "version": "0.1.0",
+  "description": "View Ozon product offers, prices, and stock from a focused side panel.",
+  "action": {
+    "default_title": "Open Ozon Seller Operations"
+  },
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "permissions": [
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*"
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  }
+}
+
