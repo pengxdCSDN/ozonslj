@@ -20,3 +20,4 @@ extension/vite.config.d.ts
 .vscode/*.local.json
 data/*.db
 data/*.db-*
+deploy/secrets/

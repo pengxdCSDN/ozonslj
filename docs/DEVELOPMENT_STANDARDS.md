@@ -40,8 +40,8 @@ API → 应用 → 领域
 
 - `api`：HTTP 协议、参数校验、依赖注入、响应转换。
 - `application`：用例、权限、事务和操作编排。
-- `domain`：业务模型、规则和端口，不依赖 FastAPI/SQLite。
-- `infrastructure`：SQLite、Ozon HTTP、加密和日志实现。
+- `domain`：业务模型、规则和端口，不依赖 FastAPI/PostgreSQL。
+- `infrastructure`：PostgreSQL、Redis、Ozon HTTP、加密和日志实现。
 - API 路由不得直接执行 SQL；领域层不得导入基础设施模块。
 
 ### 2.3 FastAPI
@@ -52,13 +52,13 @@ API → 应用 → 领域
 - 错误转换集中处理，不把 Ozon 原始错误或凭据返回前端。
 - 长任务通过同步任务模型执行，不阻塞 HTTP 请求。
 
-### 2.4 SQLite
+### 2.4 PostgreSQL
 
 - 使用参数化语句，禁止字符串拼接 SQL。
 - 每个操作明确连接和事务边界。
 - 开启外键；写操作尽量短，避免长期持有数据库锁。
 - 金额不使用浮点数；标识符不强制转换为整数。
-- 表结构变化同步修改 `database/schema.sql`、数据库文档和测试。
+- 表结构变化必须新增 `database/postgres/migrations` 版本化迁移，并同步修改中文注释、数据库文档和测试。
 
 ### 2.5 Ozon 集成
 
@@ -107,7 +107,7 @@ API → 应用 → 领域
 | 层级 | 测试内容 | 依赖 |
 |---|---|---|
 | 单元测试 | 领域规则、映射、错误分类 | 无网络、无数据库 |
-| 集成测试 | SQLite 持久化、约束和事务 | pytest 临时文件 |
+| 集成测试 | PostgreSQL 迁移、持久化、约束和事务 | 临时 PostgreSQL 16 |
 | 契约测试 | Ozon 成功、认证失败、限流、超时、畸形响应 | Mock |
 | API 测试 | 路由、权限、校验、分页和错误格式 | FastAPI TestClient |
 | 前端测试 | 组件状态和用户交互 | Stub API |
@@ -137,4 +137,4 @@ powershell -ExecutionPolicy Bypass -File .\scripts\check.ps1
 - 是否正确处理分页、空数据、限流和失败。
 - 是否引入不必要权限、依赖或复杂度。
 - 文档、SQL、接口定义和测试是否同步。
-- 是否能在无 Docker、无真实 Ozon 凭据条件下运行。
+- 是否能在 PostgreSQL 与 Redis 就绪、无真实 Ozon 凭据条件下运行 Stub 模式。

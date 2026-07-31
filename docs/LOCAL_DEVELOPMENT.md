@@ -6,9 +6,11 @@
 - Node.js LTS
 - pnpm
 - Chrome
-- 推荐使用 VS Code
+- PostgreSQL 16
+- Redis 7
+- 推荐使用 VS Code 或 Docker Desktop 提供依赖服务
 
-项目不需要 Docker 或独立数据库服务。
+项目不提供 SQLite 回退；启动后端前必须准备 PostgreSQL 与 Redis。
 
 ## 2. 首次安装
 
@@ -18,7 +20,8 @@ python -m venv .venv
 pnpm install
 ```
 
-复制 `.env.example` 为 `.env`。默认配置使用 Stub 模式和 `data/ozonslj.db`，无需填写真实 Ozon 凭据。
+复制 `.env.example` 为 `.env`，并创建未提交的 `secrets/postgres_password`。默认使用 Stub
+模式，无需填写真实 Ozon 凭据，但 PostgreSQL 与 Redis 必须可连接。
 
 ## 3. 启动后端
 
@@ -52,9 +55,9 @@ pnpm dev
 
 | 模式 | 后端 | 数据库 | Ozon |
 |---|---|---|---|
-| `local-stub` | 本地 FastAPI | `data/ozonslj.db` | 确定性模拟数据 |
-| `local-live` | 本地 FastAPI | `data/ozonslj.db` | 真实 Seller API |
-| `test` | pytest 进程 | 临时 SQLite 文件 | Mock/契约夹具 |
+| `local-stub` | 本地 FastAPI | PostgreSQL 16 | 确定性模拟数据 |
+| `local-live` | 本地 FastAPI | PostgreSQL 16 | 真实 Seller API |
+| `test` | pytest 进程 | Fake 仓储或临时 PostgreSQL 16 | Mock/契约夹具 |
 
 默认使用 `local-stub`。`local-live` 必须显式配置，自动化测试禁止使用真实账户。
 
@@ -64,7 +67,14 @@ pnpm dev
 APP_ENV=local
 APP_HOST=127.0.0.1
 APP_PORT=8000
-DATABASE_PATH=data/ozonslj.db
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=ozonslj
+POSTGRES_USER=ozonslj
+POSTGRES_PASSWORD_FILE=secrets/postgres_password
+POSTGRES_POOL_MIN_SIZE=1
+POSTGRES_POOL_MAX_SIZE=4
+REDIS_URL=redis://127.0.0.1:6379/0
 OZON_MODE=stub
 OZON_BASE_URL=https://api-seller.ozon.ru
 OZON_CLIENT_ID=
@@ -80,7 +90,7 @@ LOG_LEVEL=DEBUG
 - 侧边栏：从 `chrome://extensions` 打开侧边栏检查器。
 - Service Worker：点击扩展的 Service Worker 检查入口。
 - 网络：通过请求编号关联扩展请求和后端日志。
-- SQLite：使用任意 SQLite 客户端查看 `data/ozonslj.db`。
+- PostgreSQL：使用 `psql` 或数据库客户端连接本地服务；远程节点必须通过 SSH 隧道访问。
 - Ozon 错误：优先使用 Stub 场景复现，再考虑真实凭据。
 
 ## 8. 完整检查

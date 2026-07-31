@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ozonslj 服务节点</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, "PingFang SC", sans-serif; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0b1220; color: #e5edf8; }
+      main { width: min(680px, calc(100% - 40px)); padding: 42px; border: 1px solid #26344d; border-radius: 20px; background: #111b2e; }
+      h1 { margin: 0 0 12px; font-size: clamp(30px, 6vw, 52px); }
+      p { color: #9db0ca; line-height: 1.7; }
+      #status { display: inline-flex; gap: 10px; align-items: center; margin-top: 18px; padding: 10px 14px; border-radius: 999px; background: #18253b; }
+      .dot { width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; }
+      .ok .dot { background: #22c55e; }
+      .error .dot { background: #ef4444; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>ozonslj</h1>
+      <p>Ozon 跨境运营服务节点。当前为 PostgreSQL、Redis、API、Worker 与 Nginx 的部署骨架。</p>
+      <div id="status"><span class="dot"></span><span>正在检查 API…</span></div>
+    </main>
+    <script>
+      const statusNode = document.querySelector("#status");
+      fetch("/api/health/ready")
+        .then((response) => {
+          if (!response.ok) throw new Error("not ready");
+          statusNode.className = "ok";
+          statusNode.lastElementChild.textContent = "API 与依赖服务已就绪";
+        })
+        .catch(() => {
+          statusNode.className = "error";
+          statusNode.lastElementChild.textContent = "API 尚未就绪";
+        });
+    </script>
+  </body>
+</html>

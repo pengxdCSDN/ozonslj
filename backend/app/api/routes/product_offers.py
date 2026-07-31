@@ -1,9 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.app.api.dependencies import get_product_offer_gateway
 from backend.app.domain.product_offer import ProductOfferPage
+from backend.app.domain.store_workspace import WorkspaceNotFoundError
 from backend.app.infrastructure.ozon.gateway import ProductOfferGateway
 
 router = APIRouter(prefix="/v1/store-workspaces", tags=["product-offers"])
@@ -13,11 +14,17 @@ router = APIRouter(prefix="/v1/store-workspaces", tags=["product-offers"])
 async def list_product_offers(
     workspace_id: str,
     gateway: Annotated[ProductOfferGateway, Depends(get_product_offer_gateway)],
-    cursor: str | None = None,
+    cursor: Annotated[str | None, Query(pattern=r"^\d+$")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> ProductOfferPage:
-    # The local workspace is the only accepted workspace until persistence/auth is added.
-    if workspace_id != "local":
-        return ProductOfferPage(items=[], total=0, next_cursor=None, source="stub")
-    return await gateway.list_product_offers(cursor=cursor, limit=limit)
-
+    try:
+        return await gateway.list_product_offers(
+            workspace_id=workspace_id,
+            cursor=cursor,
+            limit=limit,
+        )
+    except WorkspaceNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Store workspace not found",
+        ) from error

@@ -69,7 +69,7 @@ FastAPI 参数校验当前返回标准 `422` 结构。业务功能完善后统�
 
 | 参数 | 类型 | 必填 | 描述 |
 |---|---|---|---|
-| `workspace_id` | string | 是 | 店铺工作区编号；当前仅支持 `local` |
+| `workspace_id` | string | 是 | 店铺工作区编号；必须存在且所有查询按该编号隔离 |
 
 查询参数：
 
@@ -94,7 +94,7 @@ FastAPI 参数校验当前返回标准 `422` 结构。业务功能完善后统�
   ],
   "total": 3,
   "next_cursor": "1",
-  "source": "sqlite"
+  "source": "postgres"
 }
 ```
 
@@ -105,7 +105,29 @@ FastAPI 参数校验当前返回标准 `422` 结构。业务功能完善后统�
 | `items` | array | 当前页商品报价 |
 | `total` | integer | 总记录数 |
 | `next_cursor` | string/null | 下一页游标，没有下一页时为空 |
-| `source` | string | 数据来源，当前为 `sqlite` 或测试用 `stub` |
+| `source` | string | 数据来源，当前为 `postgres` 或测试用 `stub` |
+
+### 3.4 查询店铺工作区
+
+`GET /v1/store-workspaces`
+
+成功响应示例：
+
+```json
+{
+  "items": [
+    {
+      "id": "local",
+      "name": "Local workspace",
+      "seller_display_name": "Local stub seller",
+      "seller_status": "disabled"
+    }
+  ]
+}
+```
+
+该接口只返回扩展展示与切换所需的最小摘要，不返回 `Client-Id`、`Api-Key`、密文或
+凭据版本。扩展只持久化选中的工作区编号，并在每次商品请求中显式传递该编号。
 
 ## 4. MVP 规划接口
 
@@ -115,7 +137,6 @@ FastAPI 参数校验当前返回标准 `422` 结构。业务功能完善后统�
 |---|---|---|
 | POST | `/v1/sessions` | 创建运营人员会话 |
 | DELETE | `/v1/sessions/current` | 退出当前会话 |
-| GET | `/v1/store-workspaces` | 查询店铺工作区 |
 | POST | `/v1/store-workspaces` | 添加卖家账户并创建工作区 |
 | POST | `/v1/store-workspaces/{id}/verify` | 验证卖家账户凭据 |
 | GET | `/v1/store-workspaces/{id}/product-offers` | 查询商品报价 |

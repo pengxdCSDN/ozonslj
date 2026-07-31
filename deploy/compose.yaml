@@ -1,0 +1,147 @@
+name: ozonslj
+
+x-app-common: &app-common
+  image: ${REGISTRY_PREFIX}/pxd:${APP_IMAGE_TAG}
+  restart: unless-stopped
+  environment:
+    APP_ENV: production
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    POSTGRES_DATABASE: ozonslj
+    POSTGRES_USER: ozonslj
+    POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    POSTGRES_POOL_MIN_SIZE: "1"
+    POSTGRES_POOL_MAX_SIZE: "4"
+    REDIS_URL: redis://redis:6379/0
+    OZON_MODE: stub
+    LOG_LEVEL: INFO
+  secrets:
+    - postgres_password
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - backend
+    - egress
+
+services:
+  postgres:
+    image: ${REGISTRY_PREFIX}/pxd:postgres-16-alpine
+    restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - max_connections=30
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - effective_cache_size=384MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+    environment:
+      POSTGRES_DB: ozonslj
+      POSTGRES_USER: ozonslj
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # 只绑定服务器回环地址，供本地客户端通过 SSH 隧道访问，禁止公网直连。
+      - "127.0.0.1:15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ozonslj -d ozonslj"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - backend
+
+  redis:
+    image: ${REGISTRY_PREFIX}/pxd:redis-7.4-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 96mb
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - backend
+
+  api:
+    <<: *app-common
+    command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 320M
+
+  worker:
+    <<: *app-common
+    command: ["python", "-m", "backend.app.worker"]
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+
+  web:
+    image: ${REGISTRY_PREFIX}/pxd:nginx-1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./web:/usr/share/nginx/html:ro
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    networks:
+      - backend
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  backend:
+    internal: true
+  egress:

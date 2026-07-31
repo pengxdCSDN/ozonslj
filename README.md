@@ -1,6 +1,6 @@
 # ozonslj
 
-面向 Ozon 跨境卖家的本地 Chrome 运营插件。项目由 React/TypeScript 扩展、Python FastAPI 后端和 SQLite 数据库组成，无需 Docker。
+面向 Ozon 跨境卖家的 Chrome/Web 运营系统。项目由 React/TypeScript 扩展、Python FastAPI 后端、PostgreSQL 与 Redis 组成，并支持 Linux Docker Compose 节点。
 
 ## 快速开始
 
@@ -29,6 +29,7 @@ pnpm dev
 - [前后端开发规范](./docs/DEVELOPMENT_STANDARDS.md)
 - [本地开发与调试](./docs/LOCAL_DEVELOPMENT.md)
 - [开发计划](./docs/PROJECT_PLAN.md)
+- [Linux 部署](./docs/DEPLOYMENT.md)
 
 ## 完整检查
 
