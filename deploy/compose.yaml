@@ -132,6 +132,7 @@ services:
           memory: 64M
     networks:
       - backend
+      - egress
 
 secrets:
   postgres_password:
