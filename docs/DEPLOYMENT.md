@@ -62,7 +62,7 @@ PostgreSQL 首次启动后，API 和 Worker 会执行同一套版本化迁移。
 ## 发布流程
 
 1. 代码检查通过后推送 Git 分支或发布标签。
-2. 阿里云 ACR 从指定 Git 引用构建应用镜像。
+2. 阿里云 ACR 使用仓库根目录 `Dockerfile` 从指定 Git 引用构建应用镜像。
 3. 服务器只从 ACR 拉取镜像，不在 2GB 服务器本地构建。
 4. 先执行 `docker compose config`，再拉取并启动。
 5. 验证健康检查、数据库迁移、容器日志和外部 HTTP 访问。
