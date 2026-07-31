@@ -58,7 +58,16 @@ PostgreSQL 首次启动后，API 和 Worker 会执行同一套版本化迁移。
 ## 备份与恢复
 
 备份文件写入 `/opt/ozonslj/backups`，至少保留最近 7 份。正式业务数据进入系统前，
-需要补充定时 `pg_dump --format=custom`、过期清理和恢复演练脚本。
+使用以下脚本执行自定义格式备份与隔离恢复演练：
+
+```bash
+bash /opt/ozonslj/app/deploy/scripts/backup_postgres.sh
+bash /opt/ozonslj/app/deploy/scripts/restore_postgres_drill.sh \
+  /opt/ozonslj/backups/ozonslj-YYYYMMDDTHHMMSSZ.dump
+```
+
+备份先写入临时文件并通过 `pg_restore --list` 验证，再原子改名；恢复演练创建独立临时
+数据库，验证迁移和表数量后立即删除，绝不覆盖运行中的 `ozonslj` 数据库。
 
 ## 发布流程
 
