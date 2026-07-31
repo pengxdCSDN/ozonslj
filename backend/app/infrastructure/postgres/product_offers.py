@@ -7,6 +7,7 @@ from backend.app.domain.product_offer import ProductOffer, ProductOfferPage
 from backend.app.domain.store_workspace import WorkspaceNotFoundError
 
 _MINOR_UNITS_PER_MAJOR = Decimal(100)
+_MONEY_QUANTUM = Decimal("0.01")
 
 
 class PostgresProductOfferGateway:
@@ -70,7 +71,7 @@ class PostgresProductOfferGateway:
                     str(row["ozon_product_id"]) if row["ozon_product_id"] is not None else None
                 ),
                 name=str(row["name"]),
-                price=Decimal(int(row["price_minor"])) / _MINOR_UNITS_PER_MAJOR,
+                price=_minor_to_decimal(int(row["price_minor"])),
                 currency=str(row["currency"]),
                 available_stock=int(row["available_stock"]),
             )
@@ -83,3 +84,9 @@ class PostgresProductOfferGateway:
             next_cursor=str(end) if end < total else None,
             source="postgres",
         )
+
+
+def _minor_to_decimal(amount_minor: int) -> Decimal:
+    """把最小货币单位整数转换为固定两位小数，保持 API 金额格式稳定。"""
+
+    return (Decimal(amount_minor) / _MINOR_UNITS_PER_MAJOR).quantize(_MONEY_QUANTUM)
