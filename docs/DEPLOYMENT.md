@@ -69,6 +69,10 @@ bash /opt/ozonslj/app/deploy/scripts/restore_postgres_drill.sh \
 备份先写入临时文件并通过 `pg_restore --list` 验证，再原子改名；恢复演练创建独立临时
 数据库，验证迁移和表数量后立即删除，绝不覆盖运行中的 `ozonslj` 数据库。
 
+服务器安装 `deploy/cron/ozonslj-backup` 后，每天 03:15（Asia/Shanghai）执行一次互斥备份；
+`deploy/logrotate/ozonslj-backup` 每周轮转任务日志并保留 8 份。定时任务只负责备份，恢复
+演练仍应在结构升级前或至少每月人工执行并核对结果。
+
 ## 发布流程
 
 1. 代码检查通过后推送 Git 分支或发布标签。

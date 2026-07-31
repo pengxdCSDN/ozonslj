@@ -1,0 +1,5 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# 每天 Asia/Shanghai 03:15 执行；flock 防止上一次备份未结束时重复运行。
+15 3 * * * root /usr/bin/flock -n /run/lock/ozonslj-backup.lock /bin/bash /opt/ozonslj/app/deploy/scripts/backup_postgres.sh >> /var/log/ozonslj-backup.log 2>&1
