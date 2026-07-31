@@ -64,6 +64,7 @@ services:
           memory: 512M
     networks:
       - backend
+      - tunnel
 
   redis:
     image: ${REGISTRY_PREFIX}/pxd:redis-7.4-alpine
@@ -146,3 +147,4 @@ networks:
   backend:
     internal: true
   egress:
+  tunnel:
