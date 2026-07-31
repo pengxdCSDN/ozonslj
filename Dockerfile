@@ -14,7 +14,8 @@ COPY database/postgres ./database/postgres
 RUN python -m pip install --upgrade pip \
     && python -m pip install .
 
-RUN useradd --system --uid 10001 --create-home appuser \
+RUN groupadd --system --gid 10001 appuser \
+    && useradd --system --uid 10001 --gid 10001 --create-home appuser \
     && chown -R appuser:appuser /app
 
 USER appuser

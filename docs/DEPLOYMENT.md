@@ -25,7 +25,8 @@
 部署时在 `app/deploy` 下创建以下未纳入 Git 的文件：
 
 - `.env`：镜像仓库前缀与应用镜像标签。
-- `secrets/postgres_password`：仅包含 PostgreSQL 强随机密码，文件权限 `600`。
+- `secrets/postgres_password`：仅包含 PostgreSQL 强随机密码，属主组为 `root:10001`，权限 `640`；
+  组编号与容器内非 root 应用用户一致。
 
 ## 资源预算
 
