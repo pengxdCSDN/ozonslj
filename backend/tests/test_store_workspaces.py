@@ -1,12 +1,14 @@
 from fastapi.testclient import TestClient
 
-from backend.app.api.dependencies import get_store_workspace_gateway
+from backend.app.api.dependencies import get_current_user, get_store_workspace_gateway
+from backend.app.domain.identity import AuthenticatedUser
 from backend.app.domain.store_workspace import StoreWorkspace
 from backend.app.main import app
 
 
 class _WorkspaceGateway:
-    async def list_store_workspaces(self) -> list[StoreWorkspace]:
+    async def list_store_workspaces(self, workspace_ids: tuple[str, ...]) -> list[StoreWorkspace]:
+        assert workspace_ids == ("local",)
         return [
             StoreWorkspace(
                 id="local",
@@ -19,6 +21,13 @@ class _WorkspaceGateway:
 
 def test_store_workspaces_list_excludes_credentials() -> None:
     app.dependency_overrides[get_store_workspace_gateway] = _WorkspaceGateway
+    app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+        id="operator-1",
+        email="operator@example.com",
+        display_name="Operator",
+        role="operator",
+        workspace_ids=("local",),
+    )
     try:
         response = TestClient(app).get("/v1/store-workspaces")
     finally:
@@ -30,3 +39,13 @@ def test_store_workspaces_list_excludes_credentials() -> None:
     assert "api_key" not in response_text
     assert "client_id" not in response_text
     assert "encrypted" not in response_text
+
+
+def test_store_workspaces_requires_login() -> None:
+    app.dependency_overrides[get_store_workspace_gateway] = _WorkspaceGateway
+    try:
+        response = TestClient(app).get("/v1/store-workspaces")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 401

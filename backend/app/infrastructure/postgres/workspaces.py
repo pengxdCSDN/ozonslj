@@ -12,7 +12,9 @@ class PostgresStoreWorkspaceGateway:
     def __init__(self, pool: AsyncConnectionPool) -> None:
         self._pool = pool
 
-    async def list_store_workspaces(self) -> list[StoreWorkspace]:
+    async def list_store_workspaces(
+        self, workspace_ids: tuple[str, ...]
+    ) -> list[StoreWorkspace]:
         async with (
             self._pool.connection() as connection,
             connection.cursor(row_factory=dict_row) as cursor,
@@ -27,8 +29,10 @@ class PostgresStoreWorkspaceGateway:
                     FROM store_workspaces AS workspaces
                     JOIN seller_accounts AS accounts
                       ON accounts.id = workspaces.seller_account_id
+                    WHERE workspaces.id = ANY(%s)
                     ORDER BY workspaces.created_at, workspaces.id
-                    """
+                    """,
+                (list(workspace_ids),),
             )
             rows = await cursor.fetchall()
         return [

@@ -27,4 +27,6 @@ class StoreWorkspaceList(BaseModel):
 class StoreWorkspaceGateway(Protocol):
     """读取运营用户可见工作区的领域端口。"""
 
-    async def list_store_workspaces(self) -> list[StoreWorkspace]: ...
+    async def list_store_workspaces(
+        self, workspace_ids: tuple[str, ...]
+    ) -> list[StoreWorkspace]: ...

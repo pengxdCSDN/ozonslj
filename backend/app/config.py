@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import quote_plus
 
-from pydantic import HttpUrl
+from pydantic import Field, HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     postgres_pool_min_size: int = 1
     postgres_pool_max_size: int = 4
     redis_url: str = "redis://127.0.0.1:6379/0"
+    session_cookie_secure: bool = False
+    login_max_attempts: int = Field(default=5, ge=1, le=20)
+    login_window_seconds: int = Field(default=300, ge=60, le=3600)
     ozon_mode: Literal["stub", "live"] = "stub"
     ozon_base_url: HttpUrl = HttpUrl("https://api-seller.ozon.ru")
     ozon_client_id: str | None = None

@@ -23,7 +23,10 @@ pnpm dev
 
 - [统一领域语言](./CONTEXT.md)
 - [架构设计](./docs/ARCHITECTURE.md)
+- [架构设计 V4（待架构评审）](./docs/ARCHITECTURE_V4.md)
 - [项目需求](./docs/REQUIREMENTS.md)
+- [项目需求 V3（待确认）](./docs/REQUIREMENTS_V3.md)
+- [项目需求 V4（已确认）](./docs/REQUIREMENTS_V4.md)
 - [数据库设计](./docs/DATABASE.md)
 - [接口文档](./docs/API.md)
 - [前后端开发规范](./docs/DEVELOPMENT_STANDARDS.md)

@@ -13,7 +13,25 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 
-import { fetchProductOffers, type ProductOffer, type ProductOfferPage } from "./api";
+import {
+  fetchCurrentUser,
+  fetchProductOffers,
+  fetchStoreWorkspaces,
+  getSelectedWorkspaceId,
+  login,
+  logout,
+  setSelectedWorkspaceId,
+  type CurrentUser,
+  type ProductOffer,
+  type ProductOfferPage,
+  type StoreWorkspace
+} from "./api";
+
+type AuthState =
+  | { status: "loading" }
+  | { status: "anonymous" }
+  | { status: "authenticated"; user: CurrentUser }
+  | { status: "error"; message: string };
 
 type LoadState =
   | { status: "loading" }
@@ -64,18 +82,93 @@ function ProductRow({ offer }: { offer: ProductOffer }) {
   );
 }
 
+function LoginPanel({ onAuthenticated }: { onAuthenticated: (user: CurrentUser) => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  return (
+    <main className="login-shell">
+      <section className="login-card">
+        <div className="brand-mark login-mark" aria-hidden>O</div>
+        <p className="eyebrow">Ozon 跨境运营</p>
+        <h1>登录运营控制台</h1>
+        <p className="login-note">使用管理员分配的账号登录。卖家 API 凭据不会保存在浏览器中。</p>
+        <form
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setSubmitting(true);
+            setError(null);
+            try {
+              onAuthenticated(await login(email, password));
+            } catch (loginError) {
+              setError(loginError instanceof Error ? loginError.message : "登录失败，请重试");
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+        >
+          <label className="login-field">
+            <span>邮箱</span>
+            <input
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </label>
+          <label className="login-field">
+            <span>密码</span>
+            <input
+              type="password"
+              autoComplete="current-password"
+              minLength={8}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </label>
+          {error ? <p className="login-error" role="alert">{error}</p> : null}
+          <button className="primary-button login-button" type="submit" disabled={submitting}>
+            {submitting ? "正在登录…" : "登录"}
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
 export function App() {
+  const [auth, setAuth] = useState<AuthState>({ status: "loading" });
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [view, setView] = useState<View>("overview");
   const [query, setQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [workspaces, setWorkspaces] = useState<StoreWorkspace[]>([]);
+  const [selectedWorkspaceId, setSelectedWorkspace] = useState<string | null>(null);
   const deferredQuery = useDeferredValue(query);
 
-  const loadOffers = useCallback(async (signal?: AbortSignal) => {
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchCurrentUser(controller.signal)
+      .then((user) => setAuth(user ? { status: "authenticated", user } : { status: "anonymous" }))
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setAuth({
+          status: "error",
+          message: error instanceof Error ? error.message : "无法检查登录状态"
+        });
+      });
+    return () => controller.abort();
+  }, []);
+
+  const loadOffers = useCallback(async (workspaceId: string, signal?: AbortSignal) => {
     setState({ status: "loading" });
     try {
-      const data = await fetchProductOffers(signal);
+      const data = await fetchProductOffers(workspaceId, signal);
       setState({ status: "ready", data });
       setLastSyncedAt(new Date());
     } catch (error) {
@@ -88,12 +181,45 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (auth.status !== "authenticated") return;
     const controller = new AbortController();
-    void loadOffers(controller.signal);
+    async function initializeWorkspace(): Promise<void> {
+      try {
+        const [availableWorkspaces, persistedWorkspaceId] = await Promise.all([
+          fetchStoreWorkspaces(controller.signal),
+          getSelectedWorkspaceId()
+        ]);
+        if (availableWorkspaces.length === 0) {
+          setState({ status: "error", message: "尚未配置可用的店铺工作区" });
+          return;
+        }
+        setWorkspaces(availableWorkspaces);
+        const initialWorkspace =
+          availableWorkspaces.find(({ id }) => id === persistedWorkspaceId) ??
+          availableWorkspaces[0];
+        setSelectedWorkspace(initialWorkspace.id);
+        await setSelectedWorkspaceId(initialWorkspace.id);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setState({
+          status: "error",
+          message: error instanceof Error ? error.message : "无法加载店铺工作区"
+        });
+      }
+    }
+    void initializeWorkspace();
     return () => controller.abort();
-  }, [loadOffers]);
+  }, [auth.status]);
+
+  useEffect(() => {
+    if (selectedWorkspaceId === null) return;
+    const controller = new AbortController();
+    void loadOffers(selectedWorkspaceId, controller.signal);
+    return () => controller.abort();
+  }, [loadOffers, selectedWorkspaceId]);
 
   const offers = state.status === "ready" ? state.data.items : [];
+  const selectedWorkspace = workspaces.find(({ id }) => id === selectedWorkspaceId);
   const metrics = useMemo(() => {
     let stock = 0;
     let risk = 0;
@@ -126,6 +252,20 @@ export function App() {
     });
   }, [deferredQuery, offers, stockFilter]);
 
+  if (auth.status === "loading") {
+    return <main className="login-shell"><div className="auth-loading">正在检查登录状态…</div></main>;
+  }
+  if (auth.status === "anonymous") {
+    return <LoginPanel onAuthenticated={(user) => setAuth({ status: "authenticated", user })} />;
+  }
+  if (auth.status === "error") {
+    return (
+      <main className="login-shell">
+        <section className="login-card"><h1>暂时无法连接服务</h1><p className="login-error">{auth.message}</p></section>
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <header className="masthead">
@@ -134,17 +274,39 @@ export function App() {
           <span>Ozon 跨境运营</span>
           <strong>本地控制台</strong>
         </div>
-        <button className="workspace-switcher" type="button">
+        <label className="workspace-switcher">
           <span className="online-dot" aria-hidden />
-          中国主店
+          <span className="sr-only">当前店铺工作区</span>
+          <select
+            aria-label="当前店铺工作区"
+            value={selectedWorkspaceId ?? ""}
+            onChange={(event) => {
+              const workspaceId = event.target.value;
+              setSelectedWorkspace(workspaceId);
+              void setSelectedWorkspaceId(workspaceId);
+            }}
+          >
+            {workspaces.map((workspace) => (
+              <option key={workspace.id} value={workspace.id}>{workspace.name}</option>
+            ))}
+          </select>
           <CaretDown size={13} weight="bold" aria-hidden />
-        </button>
+        </label>
+        <button
+          className="logout-button"
+          type="button"
+          title={`退出 ${auth.user.display_name}`}
+          onClick={async () => {
+            await logout();
+            setAuth({ status: "anonymous" });
+          }}
+        >退出</button>
       </header>
 
       <section className="route-strip" aria-label="店铺连接状态">
-        <div className="route-node active"><Storefront size={14} weight="fill" /><span>中国主店</span></div>
+        <div className="route-node active"><Storefront size={14} weight="fill" /><span>{selectedWorkspace?.name ?? "正在加载工作区"}</span></div>
         <span className="route-line" aria-hidden />
-        <div className="route-node active"><CheckCircle size={14} weight="fill" /><span>SQLite 已连接</span></div>
+        <div className="route-node active"><CheckCircle size={14} weight="fill" /><span>PostgreSQL 已连接</span></div>
         <span className={`route-line ${metrics.empty > 0 ? "alert" : ""}`} aria-hidden />
         <div className={`route-node ${metrics.empty > 0 ? "alert" : "active"}`}>
           <WarningCircle size={14} weight="fill" />
@@ -173,7 +335,16 @@ export function App() {
           <WarningCircle aria-hidden size={28} weight="duotone" />
           <h2>本地服务未连接</h2>
           <p>{state.message}</p>
-          <button className="primary-button" type="button" onClick={() => void loadOffers()}>重新连接</button>
+          <button
+            className="primary-button"
+            type="button"
+            disabled={selectedWorkspaceId === null}
+            onClick={() => {
+              if (selectedWorkspaceId !== null) void loadOffers(selectedWorkspaceId);
+            }}
+          >
+            重新连接
+          </button>
         </section>
       ) : null}
 
@@ -184,11 +355,11 @@ export function App() {
               <p className="eyebrow">今日运营简报</p>
               <h1>库存正在流动，<br /><em>{metrics.empty + metrics.risk} 项</em>需要关注。</h1>
               <p className="hero-note">
-                数据来自本地 SQLite。最后同步：
+                数据来自 PostgreSQL。最后同步：
                 {lastSyncedAt ? lastSyncedAt.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "尚未同步"}
               </p>
             </div>
-            <button className="sync-button" type="button" onClick={() => void loadOffers()}>
+            <button className="sync-button" type="button" onClick={() => void loadOffers(selectedWorkspaceId!)}>
               <ArrowClockwise size={16} weight="bold" />同步数据
             </button>
           </section>
@@ -216,7 +387,7 @@ export function App() {
         <div className="view-content">
           <section className="products-header">
             <div><p className="eyebrow">商品目录</p><h1>商品与库存</h1><p>快速定位缺货和低库存商品。</p></div>
-            <button className="square-button" type="button" onClick={() => void loadOffers()} aria-label="刷新商品"><ArrowClockwise size={17} weight="bold" /></button>
+            <button className="square-button" type="button" onClick={() => void loadOffers(selectedWorkspaceId!)} aria-label="刷新商品"><ArrowClockwise size={17} weight="bold" /></button>
           </section>
           <div className="toolbar">
             <label className="search-field">

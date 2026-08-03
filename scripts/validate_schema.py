@@ -16,6 +16,8 @@ REQUIRED_TABLES = {
     "sync_jobs",
     "sync_checkpoints",
     "seller_operations",
+    "workspace_memberships",
+    "user_sessions",
 }
 REQUIRED_INDEXES = {
     "idx_product_offers_workspace_position",
@@ -25,6 +27,9 @@ REQUIRED_INDEXES = {
     "idx_posting_items_posting",
     "idx_sync_jobs_one_active_workspace",
     "idx_operations_workspace_time",
+    "operators_email_unique_idx",
+    "workspace_memberships_workspace_idx",
+    "user_sessions_operator_active_idx",
 }
 FORBIDDEN_TERMS = {"Api-Key明文", "Client-Id明文"}
 
