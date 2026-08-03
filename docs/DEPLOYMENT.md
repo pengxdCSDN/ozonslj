@@ -73,6 +73,34 @@ bash /opt/ozonslj/app/deploy/scripts/restore_postgres_drill.sh \
 `deploy/logrotate/ozonslj-backup` 每周轮转任务日志并保留 8 份。定时任务只负责备份，恢复
 演练仍应在结构升级前或至少每月人工执行并核对结果。
 
+## 创建首个管理员账号
+
+系统不提供公网注册入口。部署并完成数据库迁移后，在服务器上通过 API 容器交互式创建或更新管理员账号：
+
+```bash
+cd /opt/ozonslj/app/deploy
+docker compose --env-file .env exec api \
+  python /app/scripts/create_operator.py \
+  --email admin@example.com \
+  --display-name 管理员 \
+  --role admin
+```
+
+密码至少 12 位，并在终端中隐藏输入。未指定 `--workspace` 时，`admin` 自动获得全部已启用工作区权限。
+
+如果旧应用镜像尚未包含 `/app/scripts/create_operator.py`，可先从服务器仓库临时复制脚本，再执行同一命令：
+
+```bash
+docker compose cp ../scripts/create_operator.py api:/tmp/create_operator.py
+docker compose --env-file .env exec -e PYTHONPATH=/app api \
+  python /tmp/create_operator.py \
+  --email admin@example.com \
+  --display-name 管理员 \
+  --role admin
+```
+
+该临时文件会随容器重建消失；后续镜像必须通过 Dockerfile 将脚本复制到 `/app/scripts/create_operator.py`。
+
 ## 发布流程
 
 1. 代码检查通过后推送 Git 分支或发布标签。
