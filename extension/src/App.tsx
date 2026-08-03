@@ -274,25 +274,26 @@ export function App() {
           <span>Ozon 跨境运营</span>
           <strong>本地控制台</strong>
         </div>
-        <label className="workspace-switcher">
-          <span className="online-dot" aria-hidden />
-          <span className="sr-only">当前店铺工作区</span>
-          <select
-            aria-label="当前店铺工作区"
-            value={selectedWorkspaceId ?? ""}
-            onChange={(event) => {
-              const workspaceId = event.target.value;
-              setSelectedWorkspace(workspaceId);
-              void setSelectedWorkspaceId(workspaceId);
-            }}
-          >
-            {workspaces.map((workspace) => (
-              <option key={workspace.id} value={workspace.id}>{workspace.name}</option>
-            ))}
-          </select>
-          <CaretDown size={13} weight="bold" aria-hidden />
-        </label>
       </header>
+
+      <label className="workspace-switcher">
+        <span className="online-dot" aria-hidden />
+        <span className="sr-only">当前店铺工作区</span>
+        <select
+          aria-label="当前店铺工作区"
+          value={selectedWorkspaceId ?? ""}
+          onChange={(event) => {
+            const workspaceId = event.target.value;
+            setSelectedWorkspace(workspaceId);
+            void setSelectedWorkspaceId(workspaceId);
+          }}
+        >
+          {workspaces.map((workspace) => (
+            <option key={workspace.id} value={workspace.id}>{workspace.name}</option>
+          ))}
+        </select>
+        <CaretDown size={13} weight="bold" aria-hidden />
+      </label>
 
       <section className="route-strip" aria-label="店铺连接状态">
         <div className="route-node active"><Storefront size={14} weight="fill" /><span>{selectedWorkspace?.name ?? "正在加载工作区"}</span></div>

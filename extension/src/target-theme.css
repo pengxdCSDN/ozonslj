@@ -86,23 +86,23 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 
 @media (min-width: 900px) {
   body { min-width: 900px; }
-  .app-shell { display: grid; grid-template-columns: 260px minmax(0, 1fr); grid-template-rows: 124px minmax(0, 1fr); min-height: 100dvh; background: radial-gradient(circle at 94% 92%, rgb(7 91 132 / 22%), transparent 32%), linear-gradient(180deg, #0b091b, #090818 42%); }
-  .masthead { grid-column: 1; grid-row: 1; display: grid; grid-template-columns: auto 1fr; align-content: start; padding: 17px 20px 0; border-right: 1px solid var(--target-line); }
+  .app-shell { display: grid; grid-template-columns: 260px minmax(0, 1fr); grid-template-rows: 74px 54px minmax(0, 1fr); min-height: 100dvh; background: radial-gradient(circle at 94% 92%, rgb(7 91 132 / 22%), transparent 32%), linear-gradient(180deg, #0b091b, #090818 42%); }
+  .masthead { grid-column: 1; grid-row: 1; display: grid; grid-template-columns: auto 1fr; align-content: center; padding: 12px 20px; border-right: 1px solid var(--target-line); }
   .brand-mark { width: 40px; height: 40px; }
   .brand-copy strong { font-size: 15px; }
-  .masthead .workspace-switcher { grid-column: 1 / -1; grid-row: 2; align-self: start; margin: 16px -20px 0; padding: 14px 20px; border: 0; border-top: 1px solid var(--target-line); border-bottom: 1px solid var(--target-line); border-radius: 0; background: #181729; }
-  .masthead .workspace-switcher select { max-width: 142px; }
+  .app-shell > .workspace-switcher { grid-column: 1; grid-row: 2; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; margin: 0; padding: 0 20px; border: 0; border-top: 1px solid var(--target-line); border-right: 1px solid var(--target-line); border-bottom: 1px solid var(--target-line); border-radius: 0; background: #181729; }
+  .app-shell > .workspace-switcher select { width: 100%; max-width: none; }
   .route-strip { display: none; }
-  .view-tabs { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; gap: 7px; padding: 26px 14px 72px; border-right: 1px solid var(--target-line); border-bottom: 0; background: var(--target-sidebar); }
+  .view-tabs { grid-column: 1; grid-row: 3; display: flex; flex-direction: column; gap: 7px; padding: 24px 14px 126px; border-right: 1px solid var(--target-line); border-bottom: 0; background: var(--target-sidebar); }
   .view-tabs::before { margin: 0 10px 5px; color: #5f5c70; font-size: 9px; font-weight: 700; letter-spacing: .12em; content: "运营中心"; }
   .view-tabs button { justify-content: flex-start; gap: 11px; padding: 12px 14px; border: 1px solid transparent; border-radius: 9px; font-size: 12px; }
   .view-tabs button + button { margin-left: 0; }
   .view-tabs button.active { border-color: rgb(139 105 246 / 24%); box-shadow: inset 3px 0 #9877ff; }
   .view-tabs button.active::after { display: none; }
   .view-tabs button span { margin-left: auto; }
-  .sidebar-footer { z-index: 3; grid-column: 1; grid-row: 2; align-self: end; display: grid; margin: 0 14px 14px; padding: 12px; border: 1px solid var(--target-line); border-radius: 12px; background: #1a182d; }
+  .sidebar-footer { z-index: 3; grid-column: 1; grid-row: 3; align-self: end; display: grid; margin: 0 14px 14px; padding: 12px; border: 1px solid var(--target-line); border-radius: 12px; background: #1a182d; }
   .sidebar-footer .logout-button { width: 100%; padding: 9px 10px; }
-  .view-content, .state-panel, .loading-grid { grid-column: 2; grid-row: 1 / span 2; width: min(100%, 1360px); margin: 0 auto; }
+  .view-content, .state-panel, .loading-grid { grid-column: 2; grid-row: 1 / span 3; width: min(100%, 1360px); margin: 0 auto; }
   .view-content { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); align-content: start; gap: 16px; padding: 44px clamp(32px, 4vw, 58px) 48px; }
   .command-hero { grid-column: 1 / span 5; min-height: 176px; padding: 24px; }
   .command-hero h1 { font-size: clamp(28px, 2.4vw, 38px); }
