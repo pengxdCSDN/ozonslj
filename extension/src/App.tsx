@@ -292,15 +292,6 @@ export function App() {
           </select>
           <CaretDown size={13} weight="bold" aria-hidden />
         </label>
-        <button
-          className="logout-button"
-          type="button"
-          title={`退出 ${auth.user.display_name}`}
-          onClick={async () => {
-            await logout();
-            setAuth({ status: "anonymous" });
-          }}
-        >退出</button>
       </header>
 
       <section className="route-strip" aria-label="店铺连接状态">
@@ -316,13 +307,28 @@ export function App() {
 
       <nav className="view-tabs" aria-label="主要功能">
         <button type="button" className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}>
-          经营概览
+          <ChartLineUp size={17} weight="duotone" aria-hidden />经营概览
         </button>
         <button type="button" className={view === "products" ? "active" : ""} onClick={() => setView("products")}>
-          商品与库存
+          <Package size={17} weight="duotone" aria-hidden />商品与库存
           {metrics.empty > 0 ? <span>{metrics.empty}</span> : null}
         </button>
       </nav>
+
+      <aside className="sidebar-footer" aria-label="当前登录用户">
+        <div className="sidebar-user">
+          <span className="sidebar-user-avatar" aria-hidden>{auth.user.display_name.slice(0, 1).toUpperCase()}</span>
+          <span><strong>{auth.user.display_name}</strong><small>{auth.user.role}</small></span>
+        </div>
+        <button
+          className="logout-button"
+          type="button"
+          onClick={async () => {
+            await logout();
+            setAuth({ status: "anonymous" });
+          }}
+        >退出登录</button>
+      </aside>
 
       {state.status === "loading" ? (
         <section className="loading-grid" aria-label="正在加载运营数据">

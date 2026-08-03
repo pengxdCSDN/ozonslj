@@ -23,8 +23,17 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .brand-copy span { color: #76738c; }
 .brand-copy strong { color: #fff; }
 .workspace-switcher, .logout-button { border-color: var(--target-line); color: #e9e7f5; background: #201e35; }
+.workspace-switcher:focus-within { box-shadow: inset 0 0 0 1px #9272ff; }
+.workspace-switcher select:focus-visible { outline: 0; }
 .workspace-switcher option { color: #f5f4ff; background: #18162a; }
 .logout-button:hover { background: #2b2845; }
+.sidebar-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--target-line); background: #151426; }
+.sidebar-user { display: flex; min-width: 0; align-items: center; gap: 9px; }
+.sidebar-user-avatar { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border-radius: 9px; color: #fff; background: #312750; font-size: 11px; font-weight: 800; }
+.sidebar-user > span:last-child { display: grid; min-width: 0; gap: 2px; }
+.sidebar-user strong { overflow: hidden; color: #f5f4ff; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-user small { color: var(--target-muted); font-size: 8px; text-transform: uppercase; }
+.sidebar-footer .logout-button { flex: 0 0 auto; padding: 7px 9px; font-size: 9px; }
 .route-strip { border-color: var(--target-line); background: #121121; }
 .route-line { background: #39364f; }
 .route-node { color: var(--target-muted); }
@@ -83,7 +92,6 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   .brand-copy strong { font-size: 15px; }
   .masthead .workspace-switcher { grid-column: 1 / -1; grid-row: 2; align-self: start; margin: 16px -20px 0; padding: 14px 20px; border: 0; border-top: 1px solid var(--target-line); border-bottom: 1px solid var(--target-line); border-radius: 0; background: #181729; }
   .masthead .workspace-switcher select { max-width: 142px; }
-  .masthead .logout-button { position: fixed; left: 16px; bottom: 18px; z-index: 8; width: 228px; padding: 10px 12px; }
   .route-strip { display: none; }
   .view-tabs { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; gap: 7px; padding: 26px 14px 72px; border-right: 1px solid var(--target-line); border-bottom: 0; background: var(--target-sidebar); }
   .view-tabs::before { margin: 0 10px 5px; color: #5f5c70; font-size: 9px; font-weight: 700; letter-spacing: .12em; content: "运营中心"; }
@@ -92,6 +100,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   .view-tabs button.active { border-color: rgb(139 105 246 / 24%); box-shadow: inset 3px 0 #9877ff; }
   .view-tabs button.active::after { display: none; }
   .view-tabs button span { margin-left: auto; }
+  .sidebar-footer { z-index: 3; grid-column: 1; grid-row: 2; align-self: end; display: grid; margin: 0 14px 14px; padding: 12px; border: 1px solid var(--target-line); border-radius: 12px; background: #1a182d; }
+  .sidebar-footer .logout-button { width: 100%; padding: 9px 10px; }
   .view-content, .state-panel, .loading-grid { grid-column: 2; grid-row: 1 / span 2; width: min(100%, 1360px); margin: 0 auto; }
   .view-content { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); align-content: start; gap: 16px; padding: 44px clamp(32px, 4vw, 58px) 48px; }
   .command-hero { grid-column: 1 / span 5; min-height: 176px; padding: 24px; }
@@ -109,7 +119,6 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 
 @media (min-width: 1500px) {
   .app-shell { grid-template-columns: 276px minmax(0, 1fr); }
-  .masthead .logout-button { width: 244px; }
   .view-content { width: min(100%, 1420px); }
 }
 
