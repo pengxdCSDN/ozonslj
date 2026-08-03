@@ -269,7 +269,7 @@ export function App() {
   return (
     <main className="app-shell">
       <header className="masthead">
-        <div className="brand-mark" aria-hidden>O</div>
+        <div className="brand-mark" aria-hidden><Cube size={19} weight="fill" /></div>
         <div className="brand-copy">
           <span>Ozon 跨境运营</span>
           <strong>本地控制台</strong>
