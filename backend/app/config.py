@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     sync_heartbeat_seconds: int = Field(default=20, ge=5, le=120)
     ozon_mode: Literal["stub", "live"] = "stub"
     ozon_base_url: HttpUrl = HttpUrl("https://api-seller.ozon.ru")
+    ozon_credential_key_file: Path = Path("secrets/ozon_credential_key")
+    ozon_credential_key_version: int = Field(default=1, ge=1)
     ozon_client_id: str | None = None
     ozon_api_key: str | None = None
     log_level: LogLevel = "DEBUG"
