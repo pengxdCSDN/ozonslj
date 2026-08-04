@@ -29,6 +29,26 @@ export interface CurrentUser {
   workspace_ids: string[];
 }
 
+export type SyncJobStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "partial"
+  | "failed"
+  | "cancelled";
+
+export interface SyncJob {
+  id: string;
+  workspace_id: string;
+  resource_type: "products" | "stocks" | "orders" | "postings" | "all";
+  sync_mode: "initial" | "incremental" | "reconcile";
+  status: SyncJobStatus;
+  created_at: string;
+  completed_at: string | null;
+  error_code: string | null;
+  error_message: string | null;
+}
+
 interface StoreWorkspaceList {
   items: StoreWorkspace[];
 }
@@ -152,6 +172,30 @@ export async function fetchProductOffers(
   }
 
   return (await response.json()) as ProductOfferPage;
+}
+
+export async function createSyncJob(
+  workspaceId: string,
+  signal?: AbortSignal
+): Promise<SyncJob> {
+  const response = await apiFetch(
+    `/v1/store-workspaces/${encodeURIComponent(workspaceId)}/sync-jobs`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resource_type: "products", sync_mode: "incremental" }),
+      signal
+    }
+  );
+  if (response.status === 409) throw new Error("当前店铺已有同步任务正在执行");
+  if (!response.ok) throw new Error(`同步任务创建失败，状态码 ${response.status}`);
+  return (await response.json()) as SyncJob;
+}
+
+export async function fetchSyncJob(jobId: string, signal?: AbortSignal): Promise<SyncJob> {
+  const response = await apiFetch(`/v1/sync-jobs/${encodeURIComponent(jobId)}`, { signal });
+  if (!response.ok) throw new Error(`同步状态查询失败，状态码 ${response.status}`);
+  return (await response.json()) as SyncJob;
 }
 
 export async function getSelectedWorkspaceId(): Promise<string | null> {

@@ -14,9 +14,11 @@ import {
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  createSyncJob,
   fetchCurrentUser,
   fetchProductOffers,
   fetchStoreWorkspaces,
+  fetchSyncJob,
   getSelectedWorkspaceId,
   login,
   logout,
@@ -39,6 +41,27 @@ type LoadState =
   | { status: "error"; message: string };
 type View = "overview" | "products";
 type StockFilter = "all" | "available" | "risk" | "empty";
+type SyncUiState =
+  | { status: "idle" }
+  | { status: "queued" | "running" }
+  | { status: "succeeded" }
+  | { status: "error"; message: string };
+
+const ACTIVE_SYNC_STATUSES = new Set(["queued", "running"]);
+
+function waitFor(milliseconds: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      globalThis.clearTimeout(timeoutId);
+      reject(new DOMException("同步状态轮询已取消", "AbortError"));
+    };
+    const timeoutId = globalThis.setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, milliseconds);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
 
 const STOCK_FILTER_OPTIONS = [
   { value: "all", label: "全部库存" },
@@ -225,8 +248,10 @@ export function App() {
   const [query, setQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [syncState, setSyncState] = useState<SyncUiState>({ status: "idle" });
   const [workspaces, setWorkspaces] = useState<StoreWorkspace[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspace] = useState<string | null>(null);
+  const syncControllerRef = useRef<AbortController | null>(null);
   const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
@@ -248,7 +273,6 @@ export function App() {
     try {
       const data = await fetchProductOffers(workspaceId, signal);
       setState({ status: "ready", data });
-      setLastSyncedAt(new Date());
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setState({
@@ -295,6 +319,49 @@ export function App() {
     void loadOffers(selectedWorkspaceId, controller.signal);
     return () => controller.abort();
   }, [loadOffers, selectedWorkspaceId]);
+
+  useEffect(() => {
+    syncControllerRef.current?.abort();
+    syncControllerRef.current = null;
+    setSyncState({ status: "idle" });
+  }, [selectedWorkspaceId]);
+
+  useEffect(() => () => syncControllerRef.current?.abort(), []);
+
+  const startSync = useCallback(async () => {
+    if (selectedWorkspaceId === null || ACTIVE_SYNC_STATUSES.has(syncState.status)) return;
+    syncControllerRef.current?.abort();
+    const controller = new AbortController();
+    syncControllerRef.current = controller;
+    setSyncState({ status: "queued" });
+    try {
+      let job = await createSyncJob(selectedWorkspaceId, controller.signal);
+      while (ACTIVE_SYNC_STATUSES.has(job.status)) {
+        setSyncState({ status: job.status === "running" ? "running" : "queued" });
+        await waitFor(800, controller.signal);
+        job = await fetchSyncJob(job.id, controller.signal);
+      }
+      if (job.status !== "succeeded") {
+        setSyncState({
+          status: "error",
+          message: job.error_message ?? `同步任务以“${job.status}”状态结束`
+        });
+        return;
+      }
+      const refreshedOffers = await fetchProductOffers(selectedWorkspaceId, controller.signal);
+      setState({ status: "ready", data: refreshedOffers });
+      setLastSyncedAt(job.completed_at ? new Date(job.completed_at) : new Date());
+      setSyncState({ status: "succeeded" });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setSyncState({
+        status: "error",
+        message: error instanceof Error ? error.message : "同步任务执行失败"
+      });
+    } finally {
+      if (syncControllerRef.current === controller) syncControllerRef.current = null;
+    }
+  }, [selectedWorkspaceId, syncState.status]);
 
   const offers = state.status === "ready" ? state.data.items : [];
   const selectedWorkspace = workspaces.find(({ id }) => id === selectedWorkspaceId);
@@ -435,10 +502,21 @@ export function App() {
               <p className="hero-note">
                 数据来自 PostgreSQL。最后同步：
                 {lastSyncedAt ? lastSyncedAt.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "尚未同步"}
+                {syncState.status === "error" ? <span className="sync-error" role="alert"> · {syncState.message}</span> : null}
               </p>
             </div>
-            <button className="sync-button" type="button" onClick={() => void loadOffers(selectedWorkspaceId!)}>
-              <ArrowClockwise size={16} weight="bold" />同步数据
+            <button
+              className={`sync-button ${syncState.status}`}
+              type="button"
+              disabled={selectedWorkspaceId === null || ACTIVE_SYNC_STATUSES.has(syncState.status)}
+              aria-live="polite"
+              onClick={() => void startSync()}
+            >
+              <span className="sync-icon" aria-hidden><ArrowClockwise size={16} weight="bold" /></span>
+              {syncState.status === "queued" ? "正在排队" : null}
+              {syncState.status === "running" ? "正在同步" : null}
+              {syncState.status === "succeeded" ? "同步完成" : null}
+              {syncState.status === "error" || syncState.status === "idle" ? "同步数据" : null}
             </button>
           </section>
 

@@ -12,6 +12,14 @@ class _SyncJobGateway:
     def __init__(self, *, conflict: bool = False) -> None:
         self.conflict = conflict
         self.requested_by: str | None = None
+        self.job = SyncJob(
+            id="sync_1",
+            workspace_id="local",
+            resource_type="products",
+            sync_mode="incremental",
+            status="queued",
+            created_at=datetime(2026, 8, 4, tzinfo=UTC),
+        )
 
     async def create_sync_job(
         self,
@@ -24,14 +32,23 @@ class _SyncJobGateway:
         if self.conflict:
             raise SyncJobAlreadyActiveError(workspace_id)
         self.requested_by = requested_by
-        return SyncJob(
-            id="sync_1",
-            workspace_id=workspace_id,
-            resource_type=resource_type,
-            sync_mode=sync_mode,
-            status="queued",
-            created_at=datetime(2026, 8, 4, tzinfo=UTC),
+        return self.job.model_copy(
+            update={
+                "workspace_id": workspace_id,
+                "resource_type": resource_type,
+                "sync_mode": sync_mode,
+            }
         )
+
+    async def get_sync_job(
+        self,
+        *,
+        job_id: str,
+        workspace_ids: tuple[str, ...],
+    ) -> SyncJob | None:
+        if job_id != self.job.id or self.job.workspace_id not in workspace_ids:
+            return None
+        return self.job
 
 
 def _user(*, workspace_ids: tuple[str, ...] = ("local",)) -> AuthenticatedUser:
@@ -89,3 +106,26 @@ def test_create_sync_job_reports_active_job_conflict() -> None:
 
     assert response.status_code == 409
     assert "已有同步任务" in response.json()["detail"]
+
+
+def test_get_sync_job_returns_authorized_status() -> None:
+    app.dependency_overrides[get_sync_job_gateway] = _SyncJobGateway
+    app.dependency_overrides[get_current_user] = lambda: _user()
+    try:
+        response = TestClient(app).get("/v1/sync-jobs/sync_1")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "queued"
+
+
+def test_get_sync_job_hides_other_workspace_job() -> None:
+    app.dependency_overrides[get_sync_job_gateway] = _SyncJobGateway
+    app.dependency_overrides[get_current_user] = lambda: _user(workspace_ids=("other",))
+    try:
+        response = TestClient(app).get("/v1/sync-jobs/sync_1")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404

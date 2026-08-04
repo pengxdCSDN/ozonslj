@@ -147,6 +147,10 @@ FastAPI 参数校验当前返回标准 `422` 结构。业务功能完善后统�
 `queued` 任务摘要。同一工作区已有 `queued` 或 `running` 任务时返回 `409`；该接口只
 负责可靠入队，不在 HTTP 请求内调用 Ozon 或推进同步水位。
 
+`GET /v1/sync-jobs/{job_id}` 返回当前任务状态、完成时间以及脱敏错误。查询范围由当前
+登录用户的工作区授权决定；任务不存在或属于未授权工作区时统一返回 `404`，避免泄露任务
+是否存在。
+
 ## 4. MVP 规划接口
 
 以下是内部应用契约，不代表 Ozon 上游端点；开发时必须再次确认 Ozon 官方接口版本与字段。
@@ -162,7 +166,7 @@ FastAPI 参数校验当前返回标准 `422` 结构。业务功能完善后统�
 | GET | `/v1/store-workspaces/{id}/customer-orders` | 查询客户订单 |
 | GET | `/v1/store-workspaces/{id}/postings` | 查询履约单 |
 | POST | `/v1/store-workspaces/{id}/sync-jobs` | 创建同步任务（已实现） |
-| GET | `/v1/sync-jobs/{id}` | 查询同步任务状态 |
+| GET | `/v1/sync-jobs/{id}` | 查询同步任务状态（已实现） |
 | GET | `/v1/store-workspaces/{id}/seller-operations` | 查询操作审计 |
 
 ## 5. 分页约定

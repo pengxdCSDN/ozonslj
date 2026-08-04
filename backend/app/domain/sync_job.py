@@ -27,6 +27,9 @@ class SyncJob(BaseModel):
     sync_mode: SyncMode
     status: SyncJobStatus
     created_at: datetime
+    completed_at: datetime | None = None
+    error_code: str | None = None
+    error_message: str | None = None
 
 
 class ClaimedSyncJob(SyncJob):
@@ -44,6 +47,13 @@ class SyncJobGateway(Protocol):
         sync_mode: SyncMode,
         requested_by: str,
     ) -> SyncJob: ...
+
+    async def get_sync_job(
+        self,
+        *,
+        job_id: str,
+        workspace_ids: tuple[str, ...],
+    ) -> SyncJob | None: ...
 
 
 class SyncJobRunnerGateway(Protocol):

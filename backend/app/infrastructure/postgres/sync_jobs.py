@@ -63,6 +63,30 @@ class PostgresSyncJobGateway(SyncJobGateway, SyncJobRunnerGateway):
             raise RuntimeError("同步任务创建后未返回记录")
         return SyncJob.model_validate(row)
 
+    async def get_sync_job(
+        self,
+        *,
+        job_id: str,
+        workspace_ids: tuple[str, ...],
+    ) -> SyncJob | None:
+        if not workspace_ids:
+            return None
+        async with (
+            self._pool.connection() as connection,
+            connection.cursor(row_factory=dict_row) as cursor,
+        ):
+            await cursor.execute(
+                """
+                SELECT id, workspace_id, resource_type, sync_mode, status, created_at,
+                       completed_at, error_code, error_message
+                FROM sync_jobs
+                WHERE id = %s AND workspace_id = ANY(%s)
+                """,
+                (job_id, list(workspace_ids)),
+            )
+            row = await cursor.fetchone()
+        return None if row is None else SyncJob.model_validate(row)
+
     async def claim_next(self, *, lease_seconds: int) -> ClaimedSyncJob | None:
         """原子领取最早排队任务或接管已过期任务。"""
 

@@ -122,7 +122,14 @@ input:focus-visible { outline: 0; }
 .command-hero .eyebrow, .eyebrow { color: #9a81fa; }
 .command-hero h1 em { color: #9a7bff; }
 .hero-note { color: #918da4; }
-.sync-button { border: 1px solid #4b3b77; color: #e7ddff; background: #2c234c; }
+.sync-button { border: 1px solid #4b3b77; color: #e7ddff; background: #2c234c; transition: border-color 150ms ease, background 150ms ease, color 150ms ease, box-shadow 150ms ease; }
+.sync-button:hover:not(:disabled) { border-color: #6b55a5; background: #36295a; box-shadow: 0 8px 22px rgb(80 54 150 / 20%); }
+.sync-button:disabled { cursor: wait; opacity: 1; }
+.sync-button.queued, .sync-button.running { border-color: #65509a; color: #d9ceff; background: #292244; }
+.sync-button.succeeded { border-color: rgb(43 216 162 / 42%); color: #7ae8c6; background: rgb(20 73 61 / 44%); }
+.sync-button.queued .sync-icon, .sync-button.running .sync-icon { display: inline-flex; animation: sync-spin 1.2s linear infinite; }
+.sync-error { color: #ff8098; }
+@keyframes sync-spin { to { transform: rotate(360deg); } }
 .metric-rail article, .priority-list, .product-table, .filter-control, .square-button, .state-panel { border-color: var(--target-line); color: #f5f4ff; background: var(--target-surface); }
 .search-field {
   border-color: #302e45;

@@ -14,7 +14,7 @@ from backend.app.domain.sync_job import (
     SyncResourceType,
 )
 
-router = APIRouter(prefix="/v1/store-workspaces", tags=["sync-jobs"])
+router = APIRouter(tags=["sync-jobs"])
 
 
 class CreateSyncJobRequest(BaseModel):
@@ -23,7 +23,7 @@ class CreateSyncJobRequest(BaseModel):
 
 
 @router.post(
-    "/{workspace_id}/sync-jobs",
+    "/v1/store-workspaces/{workspace_id}/sync-jobs",
     response_model=SyncJob,
     status_code=status.HTTP_201_CREATED,
 )
@@ -52,3 +52,15 @@ async def create_sync_job(
             status_code=status.HTTP_409_CONFLICT,
             detail="该工作区已有同步任务正在排队或运行",
         ) from error
+
+
+@router.get("/v1/sync-jobs/{job_id}", response_model=SyncJob)
+async def get_sync_job(
+    job_id: str,
+    gateway: Annotated[SyncJobGateway, Depends(get_sync_job_gateway)],
+    user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+) -> SyncJob:
+    job = await gateway.get_sync_job(job_id=job_id, workspace_ids=user.workspace_ids)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="同步任务不存在")
+    return job
