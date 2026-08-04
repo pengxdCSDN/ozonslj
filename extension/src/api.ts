@@ -29,6 +29,21 @@ export interface CurrentUser {
   workspace_ids: string[];
 }
 
+export interface CreatedSellerAccount {
+  seller_account_id: string;
+  workspace_id: string;
+  display_name: string;
+  workspace_name: string;
+  status: "active";
+}
+
+export interface CreateSellerAccountInput {
+  display_name: string;
+  workspace_name: string;
+  client_id: string;
+  api_key: string;
+}
+
 export type SyncJobStatus =
   | "queued"
   | "running"
@@ -156,6 +171,24 @@ export async function fetchStoreWorkspaces(
   }
 
   return ((await response.json()) as StoreWorkspaceList).items;
+}
+
+export async function createSellerAccount(
+  input: CreateSellerAccountInput,
+  signal?: AbortSignal
+): Promise<CreatedSellerAccount> {
+  const response = await apiFetch("/v1/seller-accounts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    signal
+  });
+  if (response.status === 403) throw new Error("仅管理员可以添加店铺账号");
+  if (response.status === 409) throw new Error("该 Client-Id 已连接，请勿重复添加");
+  if (response.status === 422) throw new Error("Ozon 凭据验证失败，请检查后重试");
+  if (response.status === 503) throw new Error("服务器尚未配置凭据加密，请联系管理员");
+  if (!response.ok) throw new Error(`店铺账号创建失败，状态码 ${response.status}`);
+  return (await response.json()) as CreatedSellerAccount;
 }
 
 export async function fetchProductOffers(

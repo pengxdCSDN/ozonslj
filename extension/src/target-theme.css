@@ -24,6 +24,22 @@ input:focus-visible { outline: 0; }
 .brand-copy span { color: #76738c; }
 .brand-copy strong { color: #fff; }
 .workspace-switcher, .logout-button { border-color: var(--target-line); color: #e9e7f5; background: #201e35; }
+.workspace-control { border-color: var(--target-line); background: #181729; }
+.add-workspace-button { border-color: #3d375c; color: #c6b4ff; background: #28213f; transition: border-color 150ms ease, background 150ms ease, transform 150ms ease; }
+.add-workspace-button:hover { border-color: #8067d8; background: #332851; transform: translateY(-1px); }
+.account-dialog { border-color: #3b3753; color: #f5f4ff; background: linear-gradient(155deg, #1d1b31, #12111f); box-shadow: 0 34px 100px rgb(0 0 0 / 55%); }
+.account-dialog-heading h2 { color: #fff; }
+.dialog-close { border-color: #3a3650; color: #8f8b9d; }
+.dialog-close:hover { color: #fff; background: #28243d; }
+.credential-assurance { border-color: rgb(43 216 162 / 24%); color: #5fe1b9; background: rgb(16 70 58 / 35%); }
+.credential-assurance small { color: #8d9c99; }
+.account-field { color: #ddd9ea; }
+.account-field input { border-color: #34314a; color: #fff; background: #111020; transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease; }
+.account-field input:hover { border-color: #45405f; background: #141225; }
+.account-field input:focus-visible { border-color: #8067d8; outline: 0; background: #151329; box-shadow: 0 0 0 3px rgb(143 112 255 / 13%); }
+.account-form-error { color: #ff718e; }
+.secondary-button { border-color: #3a3650; color: #bbb6ca; }
+.secondary-button:hover { color: #fff; background: #28243d; }
 .workspace-switcher { display: block; padding: 6px; }
 .select-menu { position: relative; min-width: 0; }
 .select-menu-trigger {
@@ -179,9 +195,10 @@ input:focus-visible { outline: 0; }
   .masthead { grid-column: 1; grid-row: 1; display: grid; grid-template-columns: auto 1fr; align-content: center; padding: 12px 20px; border-right: 1px solid var(--target-line); }
   .brand-mark { width: 40px; height: 40px; }
   .brand-copy strong { font-size: 15px; }
-  .app-shell > .workspace-switcher { grid-column: 1; grid-row: 2; display: block; margin: 0; padding: 6px 14px; border: 0; border-top: 1px solid var(--target-line); border-right: 1px solid var(--target-line); border-bottom: 1px solid var(--target-line); border-radius: 0; background: #181729; }
-  .app-shell > .workspace-switcher .select-menu-trigger { height: 41px; }
-  .app-shell > .workspace-switcher .select-menu-popover { top: calc(100% + 5px); right: 12px; left: 12px; }
+  .app-shell > .workspace-control { grid-column: 1; grid-row: 2; padding: 6px 14px; border-top: 1px solid var(--target-line); border-right: 1px solid var(--target-line); border-bottom: 1px solid var(--target-line); }
+  .app-shell > .workspace-control .workspace-switcher { display: block; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+  .app-shell > .workspace-control .select-menu-trigger { height: 41px; }
+  .app-shell > .workspace-control .select-menu-popover { top: calc(100% + 5px); }
   .route-strip { display: none; }
   .view-tabs { grid-column: 1; grid-row: 3; display: flex; flex-direction: column; gap: 7px; padding: 24px 14px 126px; border-right: 1px solid var(--target-line); border-bottom: 0; background: var(--target-sidebar); }
   .view-tabs::before { margin: 0 10px 5px; color: #5f5c70; font-size: 9px; font-weight: 700; letter-spacing: .12em; content: "运营中心"; }

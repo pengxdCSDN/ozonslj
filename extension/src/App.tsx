@@ -7,14 +7,18 @@ import {
   Cube,
   MagnifyingGlass,
   Package,
+  Plus,
+  ShieldCheck,
   SlidersHorizontal,
   Storefront,
-  WarningCircle
+  WarningCircle,
+  X
 } from "@phosphor-icons/react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createSyncJob,
+  createSellerAccount,
   fetchCurrentUser,
   fetchProductOffers,
   fetchStoreWorkspaces,
@@ -241,6 +245,82 @@ function LoginPanel({ onAuthenticated }: { onAuthenticated: (user: CurrentUser) 
   );
 }
 
+function AddSellerAccountDialog({
+  onClose,
+  onCreated
+}: {
+  onClose: () => void;
+  onCreated: (workspaceId: string) => Promise<void>;
+}) {
+  const [displayName, setDisplayName] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !submitting) onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose, submitting]);
+
+  return (
+    <div className="account-dialog-backdrop" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget && !submitting) onClose();
+    }}>
+      <section className="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-dialog-title">
+        <div className="account-dialog-heading">
+          <div>
+            <p className="eyebrow">店铺连接</p>
+            <h2 id="account-dialog-title">添加 Ozon 卖家账号</h2>
+          </div>
+          <button type="button" className="dialog-close" onClick={onClose} disabled={submitting} aria-label="关闭">
+            <X size={17} weight="bold" />
+          </button>
+        </div>
+        <div className="credential-assurance">
+          <ShieldCheck size={20} weight="duotone" aria-hidden />
+          <span><strong>凭据由服务器加密保存</strong><small>Api-Key 不会写入浏览器存储或页面日志。</small></span>
+        </div>
+        <form onSubmit={async (event) => {
+          event.preventDefault();
+          setSubmitting(true);
+          setError(null);
+          try {
+            const created = await createSellerAccount({
+              display_name: displayName,
+              workspace_name: workspaceName,
+              client_id: clientId,
+              api_key: apiKey
+            });
+            setApiKey("");
+            await onCreated(created.workspace_id);
+          } catch (creationError) {
+            setError(creationError instanceof Error ? creationError.message : "店铺账号创建失败");
+          } finally {
+            setSubmitting(false);
+          }
+        }}>
+          <div className="account-form-grid">
+            <label className="account-field"><span>店铺显示名称</span><input required maxLength={120} value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="例如：俄罗斯主店" /></label>
+            <label className="account-field"><span>工作区名称</span><input required maxLength={120} value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} placeholder="例如：主店运营组" /></label>
+            <label className="account-field"><span>Client-Id</span><input required maxLength={200} autoComplete="off" value={clientId} onChange={(event) => setClientId(event.target.value)} placeholder="输入 Ozon Client-Id" /></label>
+            <label className="account-field"><span>Api-Key</span><input required maxLength={500} type="password" autoComplete="new-password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="输入 Ozon Api-Key" /></label>
+          </div>
+          {error ? <p className="account-form-error" role="alert">{error}</p> : null}
+          <div className="account-dialog-actions">
+            <button type="button" className="secondary-button" onClick={onClose} disabled={submitting}>取消</button>
+            <button type="submit" className="primary-button" disabled={submitting}>{submitting ? "正在验证…" : "验证并添加"}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
 export function App() {
   const [auth, setAuth] = useState<AuthState>({ status: "loading" });
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -250,6 +330,7 @@ export function App() {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncState, setSyncState] = useState<SyncUiState>({ status: "idle" });
   const [workspaces, setWorkspaces] = useState<StoreWorkspace[]>([]);
+  const [showAddAccount, setShowAddAccount] = useState(false);
   const [selectedWorkspaceId, setSelectedWorkspace] = useState<string | null>(null);
   const syncControllerRef = useRef<AbortController | null>(null);
   const deferredQuery = useDeferredValue(query);
@@ -421,17 +502,32 @@ export function App() {
         </div>
       </header>
 
-      <SelectMenu
-        ariaLabel="当前店铺工作区"
-        className="workspace-switcher"
-        leading={<span className="online-dot" aria-hidden />}
-        value={selectedWorkspaceId ?? ""}
-        options={workspaces.map((workspace) => ({ value: workspace.id, label: workspace.name }))}
-        onChange={(workspaceId) => {
-          setSelectedWorkspace(workspaceId);
-          void setSelectedWorkspaceId(workspaceId);
-        }}
-      />
+      <div className="workspace-control">
+        <SelectMenu
+          ariaLabel="当前店铺工作区"
+          className="workspace-switcher"
+          leading={<span className="online-dot" aria-hidden />}
+          value={selectedWorkspaceId ?? ""}
+          options={workspaces.map((workspace) => ({ value: workspace.id, label: workspace.name }))}
+          onChange={(workspaceId) => {
+            setSelectedWorkspace(workspaceId);
+            void setSelectedWorkspaceId(workspaceId);
+          }}
+        />
+        {auth.user.role === "admin" ? (
+          <button className="add-workspace-button" type="button" onClick={() => setShowAddAccount(true)} aria-label="添加 Ozon 卖家账号" title="添加店铺">
+            <Plus size={17} weight="bold" />
+          </button>
+        ) : null}
+      </div>
+
+      {showAddAccount ? <AddSellerAccountDialog onClose={() => setShowAddAccount(false)} onCreated={async (workspaceId) => {
+        const availableWorkspaces = await fetchStoreWorkspaces();
+        setWorkspaces(availableWorkspaces);
+        setSelectedWorkspace(workspaceId);
+        await setSelectedWorkspaceId(workspaceId);
+        setShowAddAccount(false);
+      }} /> : null}
 
       <section className="route-strip" aria-label="店铺连接状态">
         <div className="route-node active"><Storefront size={14} weight="fill" /><span>{selectedWorkspace?.name ?? "正在加载工作区"}</span></div>
