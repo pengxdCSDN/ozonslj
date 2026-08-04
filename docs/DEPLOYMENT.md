@@ -27,6 +27,23 @@
 - `.env`：镜像仓库前缀与应用镜像标签。
 - `secrets/postgres_password`：仅包含 PostgreSQL 强随机密码，属主组为 `root:10001`，权限 `640`；
   组编号与容器内非 root 应用用户一致。
+- `secrets/ozon_credential_key`：仅包含 Fernet 主密钥，供 API/Worker 加密 Ozon Api-Key；权限和属主组与
+  PostgreSQL Secret 一致。该文件不得进入 Git、镜像、`.env` 或日志，也不得与数据库密码复用。
+
+首次部署卖家账号功能前，在服务器的部署目录生成密钥文件：
+
+```bash
+cd /opt/ozonslj/app/deploy
+install -d -m 700 secrets
+docker compose --env-file .env run --rm --no-deps api \
+  python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())' \
+  > secrets/ozon_credential_key
+chown root:10001 secrets/ozon_credential_key
+chmod 640 secrets/ozon_credential_key
+```
+
+生成后只检查文件存在、权限和非空，不要把密钥内容打印到终端或交接记录。`.env` 中的
+`OZON_CREDENTIAL_KEY_VERSION` 初始为 `1`；后续轮换必须先设计旧版本解密与数据重加密流程，不能直接覆盖文件。
 
 ## 资源预算
 

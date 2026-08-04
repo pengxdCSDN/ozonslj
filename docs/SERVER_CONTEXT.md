@@ -25,6 +25,8 @@
 - 服务器项目目录：`/opt/ozonslj/app`。
 - PostgreSQL 备份目录：`/opt/ozonslj/backups`。
 - 主机密钥目录：`/opt/ozonslj/secrets`，权限应保持为 `700`。
+- 应用部署目录还包含未纳入 Git 的 `deploy/secrets/ozon_credential_key`，由 Compose 只读挂载到
+  API/Worker 的 `/run/secrets/ozon_credential_key`；只记录路径、权限和版本，不记录密钥内容。
 - Compose 入口：`/opt/ozonslj/app/deploy`。
 - 当前开发节点通过公网 IP + HTTP 访问；内部试用或正式数据进入前必须配置域名、HTTPS 和正式认证。
 
@@ -46,6 +48,8 @@
 - Redis 不映射宿主机端口。
 - API 与 Worker 可访问外部网络，以便后续调用 Ozon API。
 - PostgreSQL 密码通过 Compose Secret 文件注入，不进入仓库、镜像或普通环境变量。
+- Ozon Api-Key 使用独立 Fernet 主密钥加密；主密钥同样通过 Compose Secret 文件注入，禁止与 PostgreSQL
+  密码复用，禁止输出到命令日志或交接文档。
 - 不在命令输出、交接或日志中记录服务器密码、数据库密码、私钥路径内容或业务凭据。
 
 ## 常用只读验证
