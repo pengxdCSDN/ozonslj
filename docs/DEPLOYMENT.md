@@ -110,3 +110,37 @@ docker compose --env-file .env exec -e PYTHONPATH=/app api \
 5. 验证健康检查、数据库迁移、容器日志和外部 HTTP 访问。
 
 正式发布应使用不可变版本标签或镜像摘要；`dev` 标签仅用于当前开发节点。
+
+### 推送并重建 API/Worker
+
+云服务器为 2 核 2 GB，应用镜像统一由阿里云 ACR 自动构建；服务器只拉取镜像，不在本机执行 Docker 构建。一次可复现的发布顺序如下：
+
+1. 本地完成检查、提交并推送目标分支。
+2. 登录服务器，确认 `/opt/ozonslj/app` 工作树干净，再执行 `git pull --ff-only`。
+3. 在 `/opt/ozonslj/app/deploy` 执行 `docker compose --env-file .env config --quiet`。
+4. 等待 ACR 自动构建完成，然后执行 `docker compose --env-file .env pull api worker`。
+5. 不要只根据可变的 `dev` 标签判断发布成功。使用 `docker image inspect` 核对镜像创建时间和摘要，并在镜像内检查本次发布的关键文件；若仍是旧镜像，等待 ACR 构建结束后重新拉取。
+6. 仅重建应用进程：`docker compose --env-file .env up -d --no-deps api worker`。未修改 PostgreSQL、Redis 或 Web 镜像时，不重建这些服务。
+7. 核对 API 与 Worker 的镜像摘要一致，并验证容器状态、`/api/health/live`、`/api/health/ready`、新增路由、启动日志和公网静态资源。
+
+推荐的服务器命令：
+
+```bash
+cd /opt/ozonslj/app
+git status --short
+git pull --ff-only
+
+cd deploy
+docker compose --env-file .env config --quiet
+docker compose --env-file .env pull api worker
+docker image inspect "$APP_IMAGE" --format '{{.Id}} {{.Created}}'
+docker compose --env-file .env run --rm --no-deps api test -f /app/path/to/release-marker.py
+docker compose --env-file .env up -d --no-deps api worker
+docker compose --env-file .env ps
+docker inspect -f '{{.Config.Image}} {{.Image}}' ozonslj-api-1 ozonslj-worker-1
+curl -fsS http://127.0.0.1/api/health/live
+curl -fsS http://127.0.0.1/api/health/ready
+docker compose --env-file .env logs --tail=100 api worker
+```
+
+其中 `$APP_IMAGE` 使用 `.env` 中的应用镜像完整地址；`release-marker.py` 替换为本次版本必然包含的关键文件。发布结束后还应请求公网首页，核对 HTML 引用的新 JS/CSS 哈希文件均返回 `200`。
