@@ -129,7 +129,19 @@ FastAPI 参数校验当前返回标准 `422` 结构。业务功能完善后统�
 该接口只返回扩展展示与切换所需的最小摘要，不返回 `Client-Id`、`Api-Key`、密文或
 凭据版本。扩展只持久化选中的工作区编号，并在每次商品请求中显式传递该编号。
 
-### 3.5 创建同步任务
+### 3.5 创建卖家账号与工作区
+
+`POST /v1/seller-accounts`
+
+仅 `admin` 角色可调用。请求包含 `display_name`、`workspace_name`、`client_id` 和 `api_key`。
+后端先验证 Ozon 凭据，再加密 Api-Key，并在同一 PostgreSQL 事务中创建卖家账号、工作区和
+创建者成员关系。响应只返回内部账号/工作区标识、显示名称和连接状态，不返回 `Client-Id`、
+`Api-Key`、密文或凭据版本。
+
+Stub 模式仅验证输入边界；Live 模式在官方账号验证端点完成复核前返回 `422`，不得把未验证
+凭据保存为可同步账号。重复 `Client-Id` 返回 `409`，凭据加密未配置返回 `503`。
+
+### 3.6 创建同步任务
 
 `POST /v1/store-workspaces/{workspace_id}/sync-jobs`
 

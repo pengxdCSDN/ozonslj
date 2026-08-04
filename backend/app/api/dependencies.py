@@ -3,6 +3,7 @@ from typing import Annotated, Protocol, cast
 from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 
 from backend.app.application.identity import IdentityService
+from backend.app.application.seller_accounts import SellerAccountService
 from backend.app.domain.identity import AuthenticatedUser
 from backend.app.domain.store_workspace import StoreWorkspaceGateway
 from backend.app.domain.sync_job import SyncJobGateway
@@ -49,6 +50,16 @@ def get_readiness_probe(request: Request) -> ReadinessProbe:
 
 def get_identity_service(request: Request) -> IdentityService:
     return cast(IdentityService, request.app.state.identity_service)
+
+
+def get_seller_account_service(request: Request) -> SellerAccountService:
+    service = getattr(request.app.state, "seller_account_service", None)
+    if not isinstance(service, SellerAccountService):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Ozon 凭据加密尚未配置",
+        )
+    return service
 
 
 def get_session_cookie_secure(request: Request) -> bool:
