@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = False
     login_max_attempts: int = Field(default=5, ge=1, le=20)
     login_window_seconds: int = Field(default=300, ge=60, le=3600)
+    worker_poll_seconds: int = Field(default=5, ge=1, le=60)
+    sync_lease_seconds: int = Field(default=60, ge=30, le=600)
+    sync_heartbeat_seconds: int = Field(default=20, ge=5, le=120)
     ozon_mode: Literal["stub", "live"] = "stub"
     ozon_base_url: HttpUrl = HttpUrl("https://api-seller.ozon.ru")
     ozon_client_id: str | None = None

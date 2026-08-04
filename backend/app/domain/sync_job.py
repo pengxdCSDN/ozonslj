@@ -12,6 +12,10 @@ class SyncJobAlreadyActiveError(RuntimeError):
     """同一工作区已有排队中或运行中的同步任务。"""
 
 
+class SyncJobLeaseLostError(RuntimeError):
+    """当前 Worker 的任务租约已过期或被其他尝试接管。"""
+
+
 class SyncJob(BaseModel):
     """提交给后台 Worker 的同步任务摘要。"""
 
@@ -25,6 +29,12 @@ class SyncJob(BaseModel):
     created_at: datetime
 
 
+class ClaimedSyncJob(SyncJob):
+    """Worker 已领取任务；attempt_count 是状态写入的栅栏令牌。"""
+
+    attempt_count: int
+
+
 class SyncJobGateway(Protocol):
     async def create_sync_job(
         self,
@@ -34,3 +44,13 @@ class SyncJobGateway(Protocol):
         sync_mode: SyncMode,
         requested_by: str,
     ) -> SyncJob: ...
+
+
+class SyncJobRunnerGateway(Protocol):
+    async def claim_next(self, *, lease_seconds: int) -> ClaimedSyncJob | None: ...
+
+    async def heartbeat(self, job: ClaimedSyncJob, *, lease_seconds: int) -> None: ...
+
+    async def mark_succeeded(self, job: ClaimedSyncJob) -> None: ...
+
+    async def mark_failed(self, job: ClaimedSyncJob, *, code: str, message: str) -> None: ...
