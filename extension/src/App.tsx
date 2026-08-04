@@ -11,7 +11,7 @@ import {
   Storefront,
   WarningCircle
 } from "@phosphor-icons/react";
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   fetchCurrentUser,
@@ -39,6 +39,84 @@ type LoadState =
   | { status: "error"; message: string };
 type View = "overview" | "products";
 type StockFilter = "all" | "available" | "risk" | "empty";
+
+const STOCK_FILTER_OPTIONS = [
+  { value: "all", label: "全部库存" },
+  { value: "available", label: "库存正常" },
+  { value: "risk", label: "低库存" },
+  { value: "empty", label: "缺货" }
+] as const;
+
+function SelectMenu({
+  ariaLabel,
+  className,
+  leading,
+  value,
+  options,
+  onChange
+}: {
+  ariaLabel: string;
+  className?: string;
+  leading?: React.ReactNode;
+  value: string;
+  options: readonly { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <div className={`select-menu ${className ?? ""}`} ref={rootRef}>
+      <button
+        className="select-menu-trigger"
+        type="button"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        {leading}<span>{selected?.label ?? "请选择"}</span>
+        <CaretDown className="select-menu-caret" size={13} weight="bold" aria-hidden />
+      </button>
+      {open ? (
+        <div className="select-menu-popover" role="listbox" aria-label={ariaLabel}>
+          {options.map((option) => (
+            <button
+              className={option.value === value ? "selected" : ""}
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              key={option.value}
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+            >
+              <span>{option.label}</span>{option.value === value ? <CheckCircle size={15} weight="fill" aria-hidden /> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 const LOW_STOCK_THRESHOLD = 15;
 
@@ -276,24 +354,17 @@ export function App() {
         </div>
       </header>
 
-      <label className="workspace-switcher">
-        <span className="online-dot" aria-hidden />
-        <span className="sr-only">当前店铺工作区</span>
-        <select
-          aria-label="当前店铺工作区"
-          value={selectedWorkspaceId ?? ""}
-          onChange={(event) => {
-            const workspaceId = event.target.value;
-            setSelectedWorkspace(workspaceId);
-            void setSelectedWorkspaceId(workspaceId);
-          }}
-        >
-          {workspaces.map((workspace) => (
-            <option key={workspace.id} value={workspace.id}>{workspace.name}</option>
-          ))}
-        </select>
-        <CaretDown size={13} weight="bold" aria-hidden />
-      </label>
+      <SelectMenu
+        ariaLabel="当前店铺工作区"
+        className="workspace-switcher"
+        leading={<span className="online-dot" aria-hidden />}
+        value={selectedWorkspaceId ?? ""}
+        options={workspaces.map((workspace) => ({ value: workspace.id, label: workspace.name }))}
+        onChange={(workspaceId) => {
+          setSelectedWorkspace(workspaceId);
+          void setSelectedWorkspaceId(workspaceId);
+        }}
+      />
 
       <section className="route-strip" aria-label="店铺连接状态">
         <div className="route-node active"><Storefront size={14} weight="fill" /><span>{selectedWorkspace?.name ?? "正在加载工作区"}</span></div>
@@ -401,13 +472,14 @@ export function App() {
               <MagnifyingGlass size={17} aria-hidden /><span className="sr-only">搜索商品</span>
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索商品名称或报价编号" />
             </label>
-            <div className="filter-control">
-              <SlidersHorizontal size={16} aria-hidden />
-              <select aria-label="库存筛选" value={stockFilter} onChange={(event) => setStockFilter(event.target.value as StockFilter)}>
-                <option value="all">全部库存</option><option value="available">库存正常</option><option value="risk">低库存</option><option value="empty">缺货</option>
-              </select>
-              <CaretDown size={12} aria-hidden />
-            </div>
+            <SelectMenu
+              ariaLabel="库存筛选"
+              className="filter-control"
+              leading={<SlidersHorizontal size={16} aria-hidden />}
+              value={stockFilter}
+              options={STOCK_FILTER_OPTIONS}
+              onChange={(value) => setStockFilter(value as StockFilter)}
+            />
           </div>
           <section className="catalog-summary" aria-live="polite"><span>显示 {filteredOffers.length} 个商品</span><span>{query ? `关键词“${query}”` : "全部商品"}</span></section>
           <section className="product-table" aria-label="商品列表">
