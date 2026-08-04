@@ -16,7 +16,8 @@ body {
   color: #f5f4ff;
   background: radial-gradient(circle at 94% 92%, rgb(7 91 132 / 20%), transparent 32%), var(--target-bg);
 }
-button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #a88fff; outline-offset: 2px; }
+button:focus-visible, select:focus-visible { outline: 2px solid #a88fff; outline-offset: 2px; }
+input:focus-visible { outline: 0; }
 .app-shell { color: #f5f4ff; background: linear-gradient(180deg, rgb(21 18 40 / 94%), rgb(9 8 24 / 96%) 38%); }
 .masthead { border-color: var(--target-line); color: #fff; background: rgb(24 22 42 / 96%); }
 .brand-mark, .login-mark { border: 0; color: #fff; background: linear-gradient(145deg, #a34fff, #6c63ff); box-shadow: 0 0 24px rgb(139 105 246 / 34%); font-family: inherit; }
@@ -110,7 +111,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .login-card { border-color: var(--target-line); color: #f5f4ff; background: #171629; box-shadow: 0 22px 70px rgb(0 0 0 / 34%); }
 .login-note, .auth-loading { color: var(--target-muted); }
 .login-field { color: #e9e7f5; }
-.login-field input { border-color: var(--target-line); color: #fff; background: #0f0e20; }
+.login-field input { border-color: #34314a; color: #fff; background: #111020; transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease; }
+.login-field input:hover { border-color: #45405f; background: #141225; }
+.login-field input:focus-visible { border-color: #8067d8; background: #151329; box-shadow: 0 0 0 3px rgb(143 112 255 / 13%), inset 0 1px 0 rgb(255 255 255 / 3%); }
 .login-error { color: #ff718e; }
 .login-button, .primary-button { color: #fff; background: linear-gradient(135deg, #916dff, #765df0); box-shadow: 0 10px 24px rgb(119 85 236 / 22%); }
 
@@ -120,7 +123,22 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .command-hero h1 em { color: #9a7bff; }
 .hero-note { color: #918da4; }
 .sync-button { border: 1px solid #4b3b77; color: #e7ddff; background: #2c234c; }
-.metric-rail article, .priority-list, .product-table, .search-field, .filter-control, .square-button, .state-panel { border-color: var(--target-line); color: #f5f4ff; background: var(--target-surface); }
+.metric-rail article, .priority-list, .product-table, .filter-control, .square-button, .state-panel { border-color: var(--target-line); color: #f5f4ff; background: var(--target-surface); }
+.search-field {
+  border-color: #302e45;
+  border-radius: 12px;
+  color: #77738d;
+  background: linear-gradient(180deg, #171827, #141522);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 2%);
+  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+.search-field:hover { border-color: #413c5b; background: linear-gradient(180deg, #191a2b, #161724); }
+.search-field:focus-within {
+  border-color: #7861c9;
+  background: linear-gradient(180deg, #1b1a31, #171629);
+  box-shadow: 0 0 0 3px rgb(143 112 255 / 12%), inset 0 1px 0 rgb(255 255 255 / 4%);
+}
+.search-field:focus-within > svg { color: #a58cff; }
 .metric-rail article:first-child { background: linear-gradient(145deg, #201b39, #141626); }
 .metric-rail article:nth-child(2) { background: linear-gradient(145deg, #211727, #151522); }
 .metric-rail article:nth-child(3) { background: linear-gradient(145deg, #111c2b, #141625); }
@@ -141,7 +159,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .empty-search { color: var(--target-muted); }
 .table-head { border-color: var(--target-line); color: #77748a; background: #11101f; }
 .search-field input { color: #f5f4ff; }
-.search-field input::placeholder { color: #666378; }
+.search-field input::placeholder { color: #716d82; }
 .filter-control { padding: 0; }
 .filter-control .select-menu-trigger { min-height: 40px; padding: 9px 11px; }
 .filter-control .select-menu-popover { min-width: 150px; }
