@@ -9,6 +9,7 @@ from backend.app.api.routes.auth import router as auth_router
 from backend.app.api.routes.health import router as health_router
 from backend.app.api.routes.product_offers import router as product_offers_router
 from backend.app.api.routes.store_workspaces import router as store_workspaces_router
+from backend.app.api.routes.sync_jobs import router as sync_jobs_router
 from backend.app.application.identity import IdentityService
 from backend.app.config import Settings, get_settings
 from backend.app.infrastructure.login_rate_limit import RedisLoginRateLimiter
@@ -18,6 +19,7 @@ from backend.app.infrastructure.postgres.identity import PostgresIdentityGateway
 from backend.app.infrastructure.postgres.product_offers import (
     PostgresProductOfferGateway,
 )
+from backend.app.infrastructure.postgres.sync_jobs import PostgresSyncJobGateway
 from backend.app.infrastructure.postgres.workspaces import (
     PostgresStoreWorkspaceGateway,
 )
@@ -40,6 +42,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
         )
         app.state.product_offer_gateway = PostgresProductOfferGateway(database.pool)
         app.state.store_workspace_gateway = PostgresStoreWorkspaceGateway(database.pool)
+        app.state.sync_job_gateway = PostgresSyncJobGateway(database.pool)
         app.state.identity_service = IdentityService(PostgresIdentityGateway(database.pool))
         app.state.session_cookie_secure = resolved_settings.session_cookie_secure
         app.state.login_rate_limiter = RedisLoginRateLimiter(
@@ -72,6 +75,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(store_workspaces_router)
+    app.include_router(sync_jobs_router)
     app.include_router(product_offers_router)
     return app
 

@@ -5,6 +5,7 @@ from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 from backend.app.application.identity import IdentityService
 from backend.app.domain.identity import AuthenticatedUser
 from backend.app.domain.store_workspace import StoreWorkspaceGateway
+from backend.app.domain.sync_job import SyncJobGateway
 from backend.app.infrastructure.ozon.gateway import ProductOfferGateway
 
 
@@ -32,6 +33,12 @@ def get_store_workspace_gateway(request: Request) -> StoreWorkspaceGateway:
     """从应用生命周期状态获取 PostgreSQL 工作区仓储。"""
 
     return cast(StoreWorkspaceGateway, request.app.state.store_workspace_gateway)
+
+
+def get_sync_job_gateway(request: Request) -> SyncJobGateway:
+    """从应用生命周期状态获取 PostgreSQL 同步任务仓储。"""
+
+    return cast(SyncJobGateway, request.app.state.sync_job_gateway)
 
 
 def get_readiness_probe(request: Request) -> ReadinessProbe:

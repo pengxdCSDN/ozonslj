@@ -129,6 +129,24 @@ FastAPI 参数校验当前返回标准 `422` 结构。业务功能完善后统�
 该接口只返回扩展展示与切换所需的最小摘要，不返回 `Client-Id`、`Api-Key`、密文或
 凭据版本。扩展只持久化选中的工作区编号，并在每次商品请求中显式传递该编号。
 
+### 3.5 创建同步任务
+
+`POST /v1/store-workspaces/{workspace_id}/sync-jobs`
+
+请求示例：
+
+```json
+{
+  "resource_type": "products",
+  "sync_mode": "incremental"
+}
+```
+
+`resource_type` 支持 `products`、`stocks`、`orders`、`postings` 和 `all`；`sync_mode`
+支持 `initial`、`incremental` 和 `reconcile`，默认 `incremental`。成功时返回 `201` 和
+`queued` 任务摘要。同一工作区已有 `queued` 或 `running` 任务时返回 `409`；该接口只
+负责可靠入队，不在 HTTP 请求内调用 Ozon 或推进同步水位。
+
 ## 4. MVP 规划接口
 
 以下是内部应用契约，不代表 Ozon 上游端点；开发时必须再次确认 Ozon 官方接口版本与字段。
@@ -143,7 +161,7 @@ FastAPI 参数校验当前返回标准 `422` 结构。业务功能完善后统�
 | GET | `/v1/store-workspaces/{id}/stock-positions` | 查询库存位置 |
 | GET | `/v1/store-workspaces/{id}/customer-orders` | 查询客户订单 |
 | GET | `/v1/store-workspaces/{id}/postings` | 查询履约单 |
-| POST | `/v1/store-workspaces/{id}/sync-jobs` | 创建同步任务 |
+| POST | `/v1/store-workspaces/{id}/sync-jobs` | 创建同步任务（已实现） |
 | GET | `/v1/sync-jobs/{id}` | 查询同步任务状态 |
 | GET | `/v1/store-workspaces/{id}/seller-operations` | 查询操作审计 |
 
