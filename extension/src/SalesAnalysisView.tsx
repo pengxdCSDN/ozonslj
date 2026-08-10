@@ -1,0 +1,11 @@
+import { useState } from "react";
+import { analyzeAndSaveSales, listSalesAnalysisReports, type SalesAnalysis } from "./api";
+
+export function SalesAnalysisView({ workspaceId }: { workspaceId: string }) {
+  const [reports, setReports] = useState<SalesAnalysis[]>([]);
+  const [message, setMessage] = useState("销售分析只生成建议，不修改业务事实");
+  const [busy, setBusy] = useState(false);
+  const analyze = async () => { setBusy(true); try { const report = await analyzeAndSaveSales(workspaceId, { current_sales_minor: 8000, previous_sales_minor: 10000, current_orders: 8, previous_orders: 10, current_window: "this-week", previous_window: "last-week" }); setReports((current) => [report, ...current]); setMessage("销售分析报告已保存"); } catch (error) { setMessage(error instanceof Error ? error.message : "销售分析失败"); } finally { setBusy(false); } };
+  const load = async () => { setBusy(true); try { setReports(await listSalesAnalysisReports(workspaceId)); setMessage("已加载销售分析历史"); } catch (error) { setMessage(error instanceof Error ? error.message : "销售历史加载失败"); } finally { setBusy(false); } };
+  return <div className="view-content"><section className="page-heading compact"><div><p className="eyebrow">报告与智能助手 / AI-003</p><h1>销售分析</h1><p>对比统计窗口，生成销售变化、异常和机会建议。</p></div></section><section className="panel"><div className="section-heading"><div><p className="eyebrow">只读分析</p><h2>销售变化</h2></div><div className="button-row"><button className="secondary-button" disabled={busy} onClick={() => void analyze()}>运行并保存分析</button><button className="secondary-button" disabled={busy} onClick={() => void load()}>加载历史</button></div></div><p className="form-message">{message}</p>{reports.length ? reports.map((result, index) => <div className="quality-result" key={`${result.current_sales_minor}-${index}`}><strong>销售变化 {result.change_percent?.toFixed(2) ?? "无"}% · 订单变化 {result.order_change_percent?.toFixed(2) ?? "无"}%</strong><span>当前销售 {result.current_sales_minor} · 当前订单 {result.current_orders} · {result.incomplete ? "数据不完整" : "数据完整"}</span>{[...result.anomalies, ...result.opportunities].map((item) => <small key={item}>{item}</small>)}<em>{result.read_only ? "只读建议" : "需复核"}</em></div>) : <div className="empty-search"><strong>尚未运行销售分析</strong><span>零基线会显示为数据不足，不伪造百分比。</span></div>}</section></div>;
+}

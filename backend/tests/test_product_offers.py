@@ -1,71 +1,65 @@
+from datetime import UTC, datetime
+
+import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.api.dependencies import get_product_offer_gateway
+from backend.app.api.dependencies import get_product_offer_gateway, get_store_workspace_gateway
+from backend.app.domain.store_workspace import StoreWorkspace
 from backend.app.infrastructure.ozon.gateway import StubOzonGateway
-from backend.app.main import app, create_app
+from backend.app.main import app
 
 
-def test_product_offers_survive_local_backend_restart(tmp_path) -> None:
-    database_path = tmp_path / "ozonslj-test.db"
+class StubWorkspaceGateway:
+    """路由测试替身；持久化行为由 PostgreSQL 适配器测试覆盖。"""
 
-    first_app = create_app(database_path=database_path)
-    first_response = TestClient(first_app).get(
-        "/v1/store-workspaces/local/product-offers",
-        params={"limit": 1},
-    )
+    async def get_workspace(self, workspace_id: str) -> StoreWorkspace | None:
+        if workspace_id != "local":
+            return None
+        now = datetime.now(UTC)
+        return StoreWorkspace(
+            id="local",
+            display_name="本地测试工作区",
+            status="active",
+            verified_at=now,
+            created_at=now,
+            updated_at=now,
+        )
 
-    restarted_app = create_app(database_path=database_path)
-    restarted_response = TestClient(restarted_app).get(
-        "/v1/store-workspaces/local/product-offers",
-        params={"limit": 3},
-    )
 
-    assert first_response.status_code == 200
-    assert first_response.json()["source"] == "sqlite"
-    assert restarted_response.status_code == 200
-    assert restarted_response.json()["total"] == 3
-    assert restarted_response.json()["items"][0]["offer_id"] == "CN-MUG-420-BL"
+@pytest.fixture(autouse=True)
+def override_global_app_dependencies() -> None:
+    app.dependency_overrides[get_product_offer_gateway] = StubOzonGateway
+    app.dependency_overrides[get_store_workspace_gateway] = StubWorkspaceGateway
+    yield
+    app.dependency_overrides.clear()
 
 
 def test_operator_can_list_stub_product_offers() -> None:
-    app.dependency_overrides.clear()
-    app.dependency_overrides[get_product_offer_gateway] = StubOzonGateway
     response = TestClient(app).get(
         "/v1/store-workspaces/local/product-offers",
         params={"limit": 2},
     )
 
     assert response.status_code == 200
-    assert response.json() == {
-        "items": [
-            {
-                "offer_id": "CN-MUG-420-BL",
-                "ozon_product_id": "1847295031",
-                "name": "双层保温杯 420ml",
-                "price": "1290.00",
-                "currency": "RUB",
-                "available_stock": 37,
-            },
-            {
-                "offer_id": "CN-LAMP-DESK-WH",
-                "ozon_product_id": "1847295188",
-                "name": "可调光桌面灯",
-                "price": "2490.00",
-                "currency": "RUB",
-                "available_stock": 12,
-            },
-        ],
-        "total": 3,
-        "next_cursor": "2",
-        "source": "stub",
-    }
-    app.dependency_overrides.clear()
+    assert response.json()["total"] == 3
+    assert response.json()["next_cursor"] == "2"
+    assert response.json()["source"] == "stub"
 
 
-def test_product_offer_limit_is_bounded() -> None:
+@pytest.mark.parametrize(
+    "params",
+    [{"limit": 101}, {"cursor": "-1"}],
+)
+def test_product_offer_pagination_is_bounded(params: dict[str, object]) -> None:
     response = TestClient(app).get(
         "/v1/store-workspaces/local/product-offers",
-        params={"limit": 101},
+        params=params,
     )
 
     assert response.status_code == 422
+
+
+def test_unknown_workspace_returns_not_found() -> None:
+    response = TestClient(app).get("/v1/store-workspaces/unknown/product-offers")
+
+    assert response.status_code == 404

@@ -1,6 +1,9 @@
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+ProductOfferSource = Literal["ozon", "postgresql", "stub"]
 
 
 class ProductOffer(BaseModel):
@@ -18,5 +21,4 @@ class ProductOfferPage(BaseModel):
     items: list[ProductOffer]
     total: int = Field(ge=0)
     next_cursor: str | None = None
-    source: str
-
+    source: ProductOfferSource

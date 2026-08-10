@@ -1,0 +1,11 @@
+import { useState } from "react";
+import { authorizeAndSaveReadonlyTool, listReadonlyToolHistory, type ReadonlyToolDecision } from "./api";
+
+export function ReadonlyToolsView({ workspaceId }: { workspaceId: string }) {
+  const [results, setResults] = useState<ReadonlyToolDecision[]>([]);
+  const [message, setMessage] = useState("工具必须经过白名单和参数过滤，SQL 与写入始终拒绝");
+  const [busy, setBusy] = useState(false);
+  const check = async () => { setBusy(true); try { const requests = [{ tool: "sales_summary", parameters: { workspace_id: workspaceId, window: "7d" } }, { tool: "execute_sql", parameters: {} }, { tool: "stock_summary", parameters: { sql: "SELECT 1" } }]; setResults(await Promise.all(requests.map((item) => authorizeAndSaveReadonlyTool(workspaceId, item.tool, item.parameters)))); setMessage("工具授权结果已保存"); } catch (error) { setMessage(error instanceof Error ? error.message : "工具授权检查失败"); } finally { setBusy(false); } };
+  const load = async () => { setBusy(true); try { setResults(await listReadonlyToolHistory(workspaceId)); setMessage("已加载工具授权历史"); } catch (error) { setMessage(error instanceof Error ? error.message : "授权历史加载失败"); } finally { setBusy(false); } };
+  return <div className="view-content"><section className="page-heading compact"><div><p className="eyebrow">报告与智能助手 / AI-002</p><h1>参数化只读工具</h1><p>智能助手只能调用白名单业务查询，SQL、任意查询和写入参数会被拒绝并记录。</p></div></section><section className="panel"><div className="section-heading"><div><p className="eyebrow">安全边界</p><h2>工具授权检查</h2></div><div className="button-row"><button className="secondary-button" disabled={busy} onClick={() => void check()}>检查并保存授权</button><button className="secondary-button" disabled={busy} onClick={() => void load()}>加载历史</button></div></div><p className="form-message">{message}</p>{results.length ? results.map((item, index) => <div className="operation-row" key={`${item.tool}-${index}`}><span><strong>{item.tool}</strong><small>{item.sql_allowed ? "允许 SQL" : "禁止 SQL"} · 参数已过滤：{Object.keys(item.parameters).join("、") || "无"}</small></span><b>{item.allowed ? "允许" : "拒绝"}</b><em>{item.reason}</em></div>) : <div className="empty-search"><strong>尚未执行工具授权检查</strong><span>所有工具调用必须经过白名单、工作区上下文和参数过滤。</span></div>}</section></div>;
+}

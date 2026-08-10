@@ -1,0 +1,77 @@
+import asyncio
+from typing import Any
+
+from backend.app.domain.stock_position import StockPosition, StockPositionPage
+from backend.app.infrastructure.postgresql.session import PostgresSessionFactory, TenantContext
+
+
+class PostgresStockPositionGateway:
+    """读取 PostgreSQL 中按内部组织和店铺工作区隔离的库存事实。"""
+
+    def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        self._sessions = sessions
+        self._context = context
+
+    async def list_stock_positions(
+        self,
+        *,
+        workspace_id: str,
+        cursor: str | None,
+        limit: int,
+    ) -> StockPositionPage:
+        return await asyncio.to_thread(
+            self._list_stock_positions,
+            workspace_id,
+            int(cursor) if cursor is not None else 0,
+            limit,
+        )
+
+    def _list_stock_positions(
+        self,
+        workspace_id: str,
+        offset: int,
+        limit: int,
+    ) -> StockPositionPage:
+        # SQL 显式限定内部组织与工作区，RLS 同时作为不可绕过的数据库隔离边界。
+        with self._sessions.transaction(self._context) as connection:
+            count_row = connection.execute(
+                """
+                SELECT count(*) AS total
+                FROM stock_positions
+                WHERE organization_id = %s AND workspace_id = %s
+                """,
+                (self._context.organization_id, workspace_id),
+            ).fetchone()
+            rows = connection.execute(
+                """
+                SELECT offer_id, warehouse_id, warehouse_name, fulfillment_type,
+                       available_quantity, reserved_quantity, synced_at
+                FROM stock_positions
+                WHERE organization_id = %s AND workspace_id = %s
+                ORDER BY offer_id, fulfillment_type, warehouse_id
+                LIMIT %s OFFSET %s
+                """,
+                (self._context.organization_id, workspace_id, limit, offset),
+            ).fetchall()
+
+        total = int(count_row["total"]) if count_row is not None else 0
+        items = [_stock_position_from_row(row) for row in rows]
+        end = offset + len(items)
+        return StockPositionPage(
+            items=items,
+            total=total,
+            next_cursor=str(end) if end < total else None,
+        )
+
+
+def _stock_position_from_row(row: dict[str, Any]) -> StockPosition:
+    """将已由数据库约束校验的库存行映射为只读领域模型。"""
+    return StockPosition(
+        offer_id=str(row["offer_id"]),
+        warehouse_id=str(row["warehouse_id"]),
+        warehouse_name=(str(row["warehouse_name"]) if row["warehouse_name"] else None),
+        fulfillment_type=row["fulfillment_type"],
+        available_quantity=int(row["available_quantity"]),
+        reserved_quantity=int(row["reserved_quantity"]),
+        synced_at=row["synced_at"],
+    )

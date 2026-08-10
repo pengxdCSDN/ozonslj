@@ -1,0 +1,23 @@
+{
+  "version": "1.3.1",
+  "organization": "Python Best Practices · ozonslj 项目定制版",
+  "date": "July 2026",
+  "abstract": "Python software engineering guidelines for agent consumption. 71 rules across 8 categories, prioritized by impact from data modeling and error handling down to naming and import hygiene. The ozonslj project customization requires developer-authored comments and docstrings to use Simplified Chinese for public interfaces and non-obvious logic. Each rule is observational: it describes the pattern and cost, shows incorrect and correct code, and cites primary sources where language or library behavior requires it. Rules assume Python 3.11+ as a baseline.",
+  "references": [
+    "https://docs.python.org/3/library/typing.html",
+    "https://docs.python.org/3/library/dataclasses.html",
+    "https://docs.python.org/3/library/exceptions.html",
+    "https://docs.python.org/3/reference/simple_stmts.html#the-assert-statement",
+    "https://docs.pydantic.dev/",
+    "https://mypy.readthedocs.io/",
+    "https://docs.astral.sh/ruff/",
+    "https://peps.python.org/pep-0008/",
+    "https://peps.python.org/pep-0544/",
+    "https://peps.python.org/pep-0604/",
+    "https://peps.python.org/pep-0615/",
+    "https://peps.python.org/pep-0661/",
+    "https://peps.python.org/pep-0695/",
+    "https://peps.python.org/pep-0702/",
+    "https://github.com/pydantic/pydantic-ai"
+  ]
+}

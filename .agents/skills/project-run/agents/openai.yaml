@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Run"
+  short_description: "Run ozonslj work with durable project context"
+  default_prompt: "Use $project-run to continue this ozonslj task from repository context through verification and handoff."

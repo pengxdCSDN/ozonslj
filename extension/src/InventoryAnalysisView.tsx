@@ -1,0 +1,11 @@
+import { useState } from "react";
+import { analyzeAndSaveInventory, listInventoryAnalysisReports, type InventoryAnalysis } from "./api";
+
+export function InventoryAnalysisView({ workspaceId }: { workspaceId: string }) {
+  const [reports, setReports] = useState<InventoryAnalysis[]>([]);
+  const [message, setMessage] = useState("库存分析只生成建议，不修改库存或采购数据");
+  const [busy, setBusy] = useState(false);
+  const analyze = async () => { setBusy(true); try { const report = await analyzeAndSaveInventory(workspaceId, { available_units: 5, inbound_units: 20, average_daily_sales: 2, safety_days: 7, overstock_days: 60 }); setReports((current) => [report, ...current]); setMessage("库存分析报告已保存"); } catch (error) { setMessage(error instanceof Error ? error.message : "库存分析失败"); } finally { setBusy(false); } };
+  const load = async () => { setBusy(true); try { setReports(await listInventoryAnalysisReports(workspaceId)); setMessage("已加载库存分析历史"); } catch (error) { setMessage(error instanceof Error ? error.message : "库存历史加载失败"); } finally { setBusy(false); } };
+  return <div className="view-content"><section className="page-heading compact"><div><p className="eyebrow">报告与智能助手 / AI-004</p><h1>库存分析</h1><p>识别缺货、积压、周转和补货风险，生成只读建议。</p></div></section><section className="panel"><div className="section-heading"><div><p className="eyebrow">只读分析</p><h2>库存覆盖</h2></div><div className="button-row"><button className="secondary-button" disabled={busy} onClick={() => void analyze()}>运行并保存分析</button><button className="secondary-button" disabled={busy} onClick={() => void load()}>加载历史</button></div></div><p className="form-message">{message}</p>{reports.length ? reports.map((result, index) => <div className="quality-result" key={`${result.available_units}-${index}`}><strong>可用库存 {result.available_units} · 在途 {result.inbound_units} · 覆盖 {result.days_of_cover?.toFixed(1) ?? "无"} 天</strong><span>{result.stockout_risk ? "存在缺货风险" : result.overstock_risk ? "存在积压风险" : "库存状态正常"} · {result.incomplete ? "数据不完整" : "数据完整"}</span>{result.recommendations.map((item) => <small key={item}>{item}</small>)}<em>{result.read_only ? "只读建议" : "需复核"}</em></div>) : <div className="empty-search"><strong>尚未运行库存分析</strong><span>分析只生成补货和周转建议。</span></div>}</section></div>;
+}

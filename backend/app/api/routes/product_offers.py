@@ -1,9 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from backend.app.api.dependencies import get_product_offer_gateway
+from backend.app.api.dependencies import (
+    get_product_offer_gateway,
+    get_store_workspace_gateway,
+)
 from backend.app.domain.product_offer import ProductOfferPage
+from backend.app.domain.store_workspace import StoreWorkspaceGateway
 from backend.app.infrastructure.ozon.gateway import ProductOfferGateway
 
 router = APIRouter(prefix="/v1/store-workspaces", tags=["product-offers"])
@@ -13,11 +17,36 @@ router = APIRouter(prefix="/v1/store-workspaces", tags=["product-offers"])
 async def list_product_offers(
     workspace_id: str,
     gateway: Annotated[ProductOfferGateway, Depends(get_product_offer_gateway)],
-    cursor: str | None = None,
+    workspace_gateway: Annotated[
+        StoreWorkspaceGateway,
+        Depends(get_store_workspace_gateway),
+    ],
+    cursor: Annotated[str | None, Query(pattern=r"^\d+$")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> ProductOfferPage:
-    # The local workspace is the only accepted workspace until persistence/auth is added.
-    if workspace_id != "local":
-        return ProductOfferPage(items=[], total=0, next_cursor=None, source="stub")
-    return await gateway.list_product_offers(cursor=cursor, limit=limit)
-
+    workspace = await workspace_gateway.get_workspace(workspace_id)
+    if workspace is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "workspace_not_found", "message": "工作区不存在"},
+        )
+    if workspace.status == "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "workspace_pending", "message": "工作区尚未验证"},
+        )
+    if workspace.status == "invalid":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "workspace_invalid", "message": "工作区凭据无效"},
+        )
+    if workspace.status == "disabled":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "workspace_disabled", "message": "工作区已停用"},
+        )
+    return await gateway.list_product_offers(
+        workspace_id=workspace_id,
+        cursor=cursor,
+        limit=limit,
+    )

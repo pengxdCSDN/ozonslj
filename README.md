@@ -1,6 +1,9 @@
 # ozonslj
 
-面向 Ozon 跨境卖家的本地 Chrome 运营插件。项目由 React/TypeScript 扩展、Python FastAPI 后端和 SQLite 数据库组成，无需 Docker。
+面向 Ozon 跨境卖家的 Chrome 运营插件。项目由 React/TypeScript 扩展、Python FastAPI 后端、PostgreSQL 业务数据库和 Redis 缓存/任务基础设施组成。
+
+当前已支持多个卖家工作区、Fernet + Secret 版本化凭据加密、独立凭据验证、
+工作区切换与商品缓存隔离。浏览器仅保存当前工作区 ID，不保存 Ozon 凭据。
 
 ## 快速开始
 
