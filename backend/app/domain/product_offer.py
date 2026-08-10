@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-ProductOfferSource = Literal["ozon", "postgres", "stub"]
+ProductOfferSource = Literal["ozon", "postgresql", "stub"]
 
 
 class ProductOffer(BaseModel):

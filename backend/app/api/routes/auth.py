@@ -5,24 +5,21 @@ from pydantic import BaseModel, Field, field_validator
 
 from backend.app.api.dependencies import (
     LoginRateLimiter,
+    get_default_organization_id,
     get_identity_service,
     get_login_rate_limiter,
     get_request_session_token,
     get_session_cookie_secure,
 )
 from backend.app.application.identity import IdentityService
-from backend.app.domain.identity import AuthenticatedUser, OperatorRole
+from backend.app.domain.identity import AuthenticatedUser, OrganizationRole
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
-IdentityServiceDependency = Annotated[IdentityService, Depends(get_identity_service)]
-SecureCookieDependency = Annotated[bool, Depends(get_session_cookie_secure)]
-SessionTokenDependency = Annotated[str | None, Depends(get_request_session_token)]
-LoginRateLimiterDependency = Annotated[LoginRateLimiter, Depends(get_login_rate_limiter)]
 
 
 class LoginRequest(BaseModel):
     email: str = Field(min_length=3, max_length=254)
-    password: str = Field(min_length=8, max_length=256)
+    password: str = Field(min_length=12, max_length=256)
 
     @field_validator("email")
     @classmethod
@@ -37,8 +34,7 @@ class CurrentUserResponse(BaseModel):
     id: str
     email: str
     display_name: str
-    role: OperatorRole
-    workspace_ids: list[str]
+    role: OrganizationRole
 
     @classmethod
     def from_domain(cls, user: AuthenticatedUser) -> "CurrentUserResponse":
@@ -46,8 +42,7 @@ class CurrentUserResponse(BaseModel):
             id=user.id,
             email=user.email,
             display_name=user.display_name,
-            role=user.role,
-            workspace_ids=list(user.workspace_ids),
+            role=user.organization_role,
         )
 
 
@@ -60,22 +55,26 @@ async def login(
     payload: LoginRequest,
     request: Request,
     response: Response,
-    service: IdentityServiceDependency,
-    secure_cookie: SecureCookieDependency,
-    limiter: LoginRateLimiterDependency,
+    service: Annotated[IdentityService, Depends(get_identity_service)],
+    limiter: Annotated[LoginRateLimiter, Depends(get_login_rate_limiter)],
+    secure_cookie: Annotated[bool, Depends(get_session_cookie_secure)],
+    organization_id: Annotated[str, Depends(get_default_organization_id)],
 ) -> LoginResponse:
     client_key = request.client.host if request.client else "unknown"
     retry_after = await limiter.retry_after(payload.email, client_key)
     if retry_after is not None:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="登录尝试过多，请稍后重试",
+            detail={"code": "login_rate_limited", "message": "登录尝试过多，请稍后重试"},
             headers={"Retry-After": str(retry_after)},
         )
-    result = await service.login(payload.email, payload.password)
+    result = await service.login(payload.email, payload.password, organization_id)
     if result is None:
         await limiter.record_failure(payload.email, client_key)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="邮箱或密码错误")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "invalid_credentials", "message": "邮箱或密码无效"},
+        )
     await limiter.clear(payload.email, client_key)
     response.set_cookie(
         "ozonslj_session",
@@ -86,6 +85,7 @@ async def login(
         samesite="lax",
         path="/",
     )
+    response.headers["Cache-Control"] = "no-store"
     user = CurrentUserResponse.from_domain(result.user)
     return LoginResponse(
         **user.model_dump(),
@@ -95,21 +95,27 @@ async def login(
 
 @router.get("/me", response_model=CurrentUserResponse)
 async def me(
-    service: IdentityServiceDependency,
-    session: SessionTokenDependency,
+    response: Response,
+    service: Annotated[IdentityService, Depends(get_identity_service)],
+    token: Annotated[str | None, Depends(get_request_session_token)],
 ) -> CurrentUserResponse:
-    user = await service.authenticate(session) if session else None
+    user = await service.authenticate(token) if token else None
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="登录已失效")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "authentication_required", "message": "登录已失效"},
+        )
+    response.headers["Cache-Control"] = "no-store"
     return CurrentUserResponse.from_domain(user)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     response: Response,
-    service: IdentityServiceDependency,
-    session: SessionTokenDependency,
+    service: Annotated[IdentityService, Depends(get_identity_service)],
+    token: Annotated[str | None, Depends(get_request_session_token)],
 ) -> None:
-    if session:
-        await service.logout(session)
+    if token:
+        await service.logout(token)
     response.delete_cookie("ozonslj_session", path="/", httponly=True, samesite="lax")
+    response.headers["Cache-Control"] = "no-store"

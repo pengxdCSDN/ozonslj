@@ -1,60 +1,40 @@
-# ozonslj 云服务器上下文
+# ozonslj 开发云服务器上下文
 
-> 用途：供后续 Codex 会话恢复云端部署上下文。本文禁止记录密码、私钥、数据库口令、Ozon 凭据、ACR 令牌或密钥文件内容。
+> 本文只记录可复用部署事实和路径，不记录密码、私钥内容、数据库口令、Ozon 凭据、ACR 令牌或 Fernet 密钥内容。实际部署事实源来自已部署工作树的同名文档与 `DEPLOYMENT.md`。
 
-## 事实来源
+## 1. 服务器与连接
 
-- 当前已确认需求：`docs/REQUIREMENTS_V4.md`
-- 当前架构评审稿：`docs/ARCHITECTURE_V4.md`
-- 部署操作说明：`docs/DEPLOYMENT.md`
-- PostgreSQL 事实结构：`database/postgres/migrations/`
-- 交接文件：`C:\Users\ashi7\AppData\Local\Temp\ozonslj-handoff-2026-08-03.md`
+- 开发云服务器：`root@8.148.215.217`。
+- SSH 身份文件：`C:\Users\ashi7\.ssh\ozonslj_server`；自动化检查使用 `BatchMode=yes` 和 `IdentitiesOnly=yes`。
+- 规格：Linux，2 核 CPU、2GB 内存、约 4GB Swap；Swap 仅作突发保护。
+- 项目目录：`/opt/ozonslj/app`；Compose 入口：`/opt/ozonslj/app/deploy`。
+- 公网只开放 Nginx 80；当前开发节点使用公网 IP + HTTP，正式数据进入前配置域名、HTTPS 和正式认证。
 
-## 正确开发基线
+## 2. 已存在的服务与资源预算
 
-- 工作树：`C:\Users\ashi7\.codex\worktrees\1c6c\ozonslj`
-- 分支：`codex/deployment-base-images`
-- 交接时提交：`5b8ee1f`（`ops: 配置数据库定时备份与日志轮转`）
-- PostgreSQL 是唯一业务数据库；禁止恢复 SQLite 运行链路或维护第二套 DDL。
-- 继续开发前必须检查工作树状态并保留所有未提交修改。
-
-## 服务器与部署
-
-- 运行环境：Linux 云服务器，2 核 CPU、2GB 内存，已有约 4GB Swap。
-- 部署方式：Docker Compose。
-- 服务器项目目录：`/opt/ozonslj/app`。
-- PostgreSQL 备份目录：`/opt/ozonslj/backups`。
-- 主机密钥目录：`/opt/ozonslj/secrets`，权限应保持为 `700`。
-- 应用部署目录还包含未纳入 Git 的 `deploy/secrets/ozon_credential_key`，由 Compose 只读挂载到
-  API/Worker 的 `/run/secrets/ozon_credential_key`；只记录路径、权限和版本，不记录密钥内容。
-- Compose 入口：`/opt/ozonslj/app/deploy`。
-- 当前开发节点通过公网 IP + HTTP 访问；内部试用或正式数据进入前必须配置域名、HTTPS 和正式认证。
-
-## 容器组成与资源预算
-
-| 服务 | 资源上限 | 说明 |
+| 服务 | 上限 | 已有约束 |
 |---|---:|---|
-| PostgreSQL 16 | 512MB | `max_connections=30`，`shared_buffers=128MB` |
-| Redis 7.4 | 128MB | 数据上限 96MB，`noeviction` |
+| PostgreSQL 16 | 512MB | `max_connections=30`、`shared_buffers=128MB` |
+| Redis 7.4 | 128MB | 数据上限 96MB、`noeviction` |
 | API | 320MB | 单 Uvicorn Worker |
-| Worker | 192MB | 单进程，后续执行同步任务 |
+| Worker | 192MB | 单进程 |
 | Nginx/Web | 64MB | 静态资源与反向代理 |
 
-## 网络与安全边界
+PostgreSQL 和 Redis 仅接入 Compose 内部网络。PostgreSQL 只把宿主机 `127.0.0.1:15432` 用于 SSH 隧道；Redis 不映射宿主机端口。
 
-- 公网只开放 Nginx 的 80 端口。
-- PostgreSQL 和 Redis 只接入 Compose 内部网络，不开放公网。
-- PostgreSQL 的宿主机 `127.0.0.1:15432` 只用于 SSH 隧道。
-- Redis 不映射宿主机端口。
-- API 与 Worker 可访问外部网络，以便后续调用 Ozon API。
-- PostgreSQL 密码通过 Compose Secret 文件注入，不进入仓库、镜像或普通环境变量。
-- Ozon Api-Key 使用独立 Fernet 主密钥加密；主密钥同样通过 Compose Secret 文件注入，禁止与 PostgreSQL
-  密码复用，禁止输出到命令日志或交接文档。
-- 不在命令输出、交接或日志中记录服务器密码、数据库密码、私钥路径内容或业务凭据。
+## 3. 已处理的数据库、Secret 与备份
 
-## 常用只读验证
+- PostgreSQL 已是唯一业务数据库，API 与 Worker 使用同一套版本化迁移。
+- `schema_migrations` 已记录版本和 SHA-256，历史迁移禁止修改；不要在本仓库重复设计第二套迁移账本。
+- PostgreSQL 密码通过 Compose Secret 注入。
+- Ozon Api-Key 已使用独立 Fernet 主密钥加密；密钥只读挂载到 API/Worker 的 `/run/secrets/ozon_credential_key`，不得与数据库密码复用。
+- 备份目录：`/opt/ozonslj/backups`。
+- 已有 `backup_postgres.sh`、`restore_postgres_drill.sh`、03:15 cron 模板和日志轮转模板；恢复演练创建隔离临时数据库，禁止覆盖运行库。
+- 2026-08-04 只读核验发现：脚本和模板存在、备份目录中有 2026-07-31 与 2026-08-03 两份备份、cron 服务运行，但 `/etc/cron.d` 和 root crontab 尚未安装 ozonslj 任务。因此“每日自动备份”当前不能标记为生效；应安装已有模板后再观察下一次执行和日志轮转。
 
-登录服务器后：
+## 4. 只读检查顺序
+
+登录服务器后先执行：
 
 ```bash
 cd /opt/ozonslj/app/deploy
@@ -64,37 +44,17 @@ curl -fsS http://127.0.0.1/api/health/live
 curl -fsS http://127.0.0.1/api/health/ready
 ```
 
-运行任何变更命令前，先完成以上只读检查。不得直接在生产数据库执行未经迁移文件记录的 DDL。
+任何部署、迁移或容器重建前都必须先完成只读检查。不得输出 Secret，不得直接执行未进入版本化迁移的 DDL。
 
-## 迁移、备份与恢复
+## 5. 发布方式
 
-- API 与 Worker 使用同一套版本化 PostgreSQL 迁移。
-- `schema_migrations` 保存版本和校验和；历史迁移禁止修改。
-- 结构升级前必须创建备份并验证。
-- 每天 03:15（Asia/Shanghai）执行 PostgreSQL 自定义格式备份。
-- 本地备份保留 14 天；开发阶段接受服务器与备份同时丢失的单点风险。
-- 恢复演练必须创建隔离临时数据库，不得覆盖运行中的 `ozonslj` 数据库。
+- 镜像由阿里云 ACR 构建，服务器只拉取，禁止在 2GB 节点本地构建。
+- 发布顺序：本地检查 → 提交推送 → 等待 ACR → Compose 配置校验 → 拉取镜像 → 仅重建变更服务 → 健康、镜像摘要和日志核验。
+- API/Worker 使用同一应用镜像；未修改 PostgreSQL、Redis、Nginx 时不得重建这些服务。
 
-```bash
-bash /opt/ozonslj/app/deploy/scripts/backup_postgres.sh
-bash /opt/ozonslj/app/deploy/scripts/restore_postgres_drill.sh \
-  /opt/ozonslj/backups/ozonslj-YYYYMMDDTHHMMSSZ.dump
-```
+当前仓库新增开发不得重复设计平行迁移账本、备份体系或凭据密钥方案。状态判断必须区分“代码/模板已存在”“服务器已安装”“实际执行已验证”；当前仅备份定时任务安装仍有缺口。
+## 2026-08-09 开发状态同步
 
-## 发布约束
-
-- 镜像由阿里云 ACR 从指定 Git 引用构建；2GB 服务器不本地构建镜像。
-- 使用不可变版本标签或镜像摘要；`dev` 仅用于开发节点。
-- 发布顺序：代码检查 → 构建/推送镜像 → Compose 配置校验 → 拉取 → 重建 → 健康检查 → 迁移/日志核验。
-- 部署前核对运行镜像是否包含提交 `d8f364d` 之后的金额格式修复。
-
-## SSH 连接入口
-
-服务器连接命令：
-
-```bash
-ssh -i C:\Users\ashi7\.ssh\ozonslj_server root@8.148.215.217
-```
-
-已授权公钥文件为 `C:\Users\ashi7\.ssh\ozonslj_server.pub`。优先使用
-`BatchMode=yes` 和 `IdentitiesOnly=yes` 执行自动化检查。不要在本文记录密码、私钥内容或带凭据的 URL。
+- 云端部署继续沿用现有 PostgreSQL + Redis Compose 基线，不引入第二套数据库或 SaaS 组织开发任务。
+- 当前需要外部授权的验证项是只读 Seller 账号、官方接口契约，以及 Worker/Scheduler 和备份恢复的只读 SSH 检查；Secret 不通过聊天传输。
+- 已有备份方案优先复用；只有缺失项才按本项目文档补齐，恢复验证必须使用隔离数据库，不覆盖运行库。

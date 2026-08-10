@@ -1,0 +1,57 @@
+@media (min-width: 900px) {
+  body { min-width: 900px; }
+  .app-shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); grid-template-rows: 74px auto 1fr; min-height: 100dvh; background: radial-gradient(circle at 94% 92%, rgba(10, 93, 128, .22), transparent 32%), linear-gradient(180deg, #0b091b, #090818 42%); }
+  .masthead { position: static; grid-column: 1; grid-row: 1; padding: 17px 22px; border-right: 1px solid var(--line); background: #19172b; }
+  .masthead .icon-button { display: none; }
+  .brand-mark { width: 40px; height: 40px; }
+  .brand strong { font-size: 16px; }
+  .workspace-switcher { grid-column: 1; grid-row: 2; align-self: start; margin: 0; padding: 18px 22px; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; background: #19172b; }
+  .view-tabs { position: static; grid-column: 1; grid-row: 3; display: flex; flex-direction: column; gap: 7px; padding: 24px 14px; border-right: 1px solid var(--line); border-bottom: 0; background: #141323; }
+  .view-tabs::before { margin: 0 10px 5px; color: #5e5b70; font-size: 9px; font-weight: 700; letter-spacing: .12em; content: "运营中心"; }
+  .view-tabs button { justify-content: flex-start; gap: 11px; padding: 12px 14px; border-radius: 9px; font-size: 12px; }
+  .view-tabs button.active { border-color: rgba(139, 105, 246, .22); box-shadow: inset 3px 0 #9877ff; }
+  .view-tabs button span { margin-left: auto; }
+  .view-content, .state-panel, .loading-grid { grid-column: 2; grid-row: 1 / span 3; width: min(100%, 1440px); margin: 0 auto; }
+  .view-content { grid-template-columns: repeat(12, minmax(0, 1fr)); align-content: start; gap: 18px; padding: 38px 42px 48px; }
+  .page-heading { grid-column: 1 / -1; align-items: center; padding: 0 0 8px; }
+  .page-heading h1 { font-size: 30px; }
+  .page-heading p:last-child { font-size: 11px; }
+  .live-badge { padding: 7px 11px; font-size: 9px; }
+  .hero-metric { grid-column: span 6; min-height: 168px; padding: 28px; border-radius: 16px; }
+  .hero-metric strong { font-size: 44px; }
+  .hero-metric > svg { width: 44px; height: 44px; }
+  .metric-grid { grid-column: span 6; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .metric-grid article { display: flex; flex-direction: column; justify-content: center; padding: 25px; border-radius: 16px; }
+  .metric-grid strong { font-size: 31px; }
+  .panel { grid-column: 1 / -1; border-radius: 16px; }
+  .section-heading { padding: 20px 22px 14px; }
+  .section-heading h2 { font-size: 17px; }
+  .text-button { font-size: 10px; }
+  .product-row { grid-template-columns: 44px minmax(0, 1fr) 150px 28px; gap: 14px; padding: 15px 20px; }
+  .product-visual { width: 44px; height: 44px; border-radius: 11px; }
+  .product-identity h3 { font-size: 12px; }
+  .product-identity p, .status-pill { font-size: 9px; }
+  .product-meta strong { font-size: 12px; }
+  .toolbar { grid-column: 1 / -1; grid-template-columns: minmax(280px, 1fr) 130px; }
+  .toolbar label, .toolbar select { min-height: 44px; }
+  .toolbar input, .toolbar select { font-size: 11px; }
+  .list-summary { padding: 16px 20px; font-size: 10px; }
+  .workspace-list { grid-column: 1 / span 5; align-content: start; gap: 10px; }
+  .workspace-card { padding: 11px; }
+  .workspace-main strong { font-size: 11px; }
+  .credential-form { grid-column: 6 / -1; padding: 22px; gap: 13px; border-radius: 16px; }
+  .credential-form + .credential-form { grid-column: 6 / -1; }
+  .credential-form label { font-size: 9px; }
+  .credential-form input { padding: 11px; font-size: 10px; }
+  .form-message { grid-column: 6 / -1; }
+  .state-panel { align-self: start; width: min(calc(100% - 84px), 980px); margin-top: 42px; padding: 70px 30px; }
+  .loading-grid { grid-template-columns: repeat(3, 1fr); padding: 42px; }
+  .loading-grid div:first-child { grid-column: span 3; height: 190px; }
+}
+
+@media (min-width: 1280px) {
+  .app-shell { grid-template-columns: 276px minmax(0, 1fr); }
+  .view-content { padding-inline: 54px; }
+  .hero-metric { grid-column: span 5; }
+  .metric-grid { grid-column: span 7; }
+}

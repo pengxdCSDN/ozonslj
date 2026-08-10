@@ -1,19 +1,200 @@
+from functools import lru_cache
 from typing import Annotated, Protocol, cast
 
-from fastapi import Cookie, Depends, Header, HTTPException, Request, status
+from fastapi import Cookie, Depends, Header, HTTPException, status
+from redis.asyncio import Redis
 
 from backend.app.application.identity import IdentityService
-from backend.app.application.seller_accounts import SellerAccountService
+from backend.app.config import get_settings
+from backend.app.domain.advertising_analysis import AdvertisingAnalysisGateway
+from backend.app.domain.advertising_calendar import AdvertisingCalendarGateway
+from backend.app.domain.advertising_campaign import AdvertisingCampaignGateway
+from backend.app.domain.advertising_keyword_diagnosis import AdvertisingKeywordDiagnosisGateway
+from backend.app.domain.advertising_metrics import AdvertisingMetricsGateway
+from backend.app.domain.advertising_readonly import AdvertisingBoundaryGateway
+from backend.app.domain.advertising_report import AdvertisingReportGateway
+from backend.app.domain.advertising_thresholds import AdvertisingThresholdGateway
+from backend.app.domain.agent_permissions import AgentPermissionGateway
+from backend.app.domain.agent_trigger import AgentTriggerGateway
+from backend.app.domain.audit_event_store import AuditEventGateway
+from backend.app.domain.competition_analysis import CompetitionAnalysisGateway
+from backend.app.domain.competitor_seed import CompetitorSeedGateway
+from backend.app.domain.competitor_selection_analysis import CompetitorSelectionAnalysisGateway
+from backend.app.domain.cost_sensitivity import CostSensitivityGateway
+from backend.app.domain.customer_order import CustomerOrderGateway
+from backend.app.domain.data_freshness import DataFreshnessGateway
+from backend.app.domain.data_provenance import DataProvenanceGateway
+from backend.app.domain.data_quality import QualityFindingGateway
+from backend.app.domain.diff_preview import DiffPreviewGateway
+from backend.app.domain.execution_result_store import ExecutionResultGateway
+from backend.app.domain.external_notification import ExternalNotificationGateway
 from backend.app.domain.identity import AuthenticatedUser
-from backend.app.domain.store_workspace import StoreWorkspaceGateway
+from backend.app.domain.inventory_analysis import InventoryAnalysisGateway
+from backend.app.domain.keyword_import import KeywordImportGateway
+from backend.app.domain.listing_fabe import ListingFabeGateway
+from backend.app.domain.listing_keyword import ListingKeywordGateway
+from backend.app.domain.listing_layering import ListingLayerGateway
+from backend.app.domain.listing_publish import ListingPublishGateway
+from backend.app.domain.listing_risk import ListingRiskGateway
+from backend.app.domain.listing_title_draft import ListingTitleDraftGateway
+from backend.app.domain.listing_version import ListingVersionGateway
+from backend.app.domain.manual_approval import ManualApprovalGateway
+from backend.app.domain.model_adapter import ModelAdapterGateway
+from backend.app.domain.parser_alert import ParserAlertGateway
+from backend.app.domain.performance_credentials import PerformanceCredentialGateway
+from backend.app.domain.posting import PostingGateway
+from backend.app.domain.profit_model import ProfitModelGateway
+from backend.app.domain.public_snapshot import PublicSnapshotGateway
+from backend.app.domain.readback_store import ReadbackVerificationGateway
+from backend.app.domain.readonly_tool import ReadonlyToolGateway
+from backend.app.domain.sales_analysis import SalesAnalysisGateway
+from backend.app.domain.search_attributes import SearchAttributesGateway
+from backend.app.domain.selection_decision_book import SelectionDecisionBookGateway
+from backend.app.domain.selection_expand import ExpandResultGateway
+from backend.app.domain.selection_explore import ExploreOpportunityGateway
+from backend.app.domain.selection_validate import ValidateResultGateway
+from backend.app.domain.seller_fulfillment_snapshot import SellerFulfillmentSnapshotGateway
+from backend.app.domain.seller_operation import SellerOperationGateway
+from backend.app.domain.seller_order_snapshot import SellerOrderSnapshotGateway
+from backend.app.domain.seller_product_snapshot import SellerProductSnapshotGateway
+from backend.app.domain.seller_stock_snapshot import SellerStockSnapshotGateway
+from backend.app.domain.smart_search import SmartSearchGateway
+from backend.app.domain.stock_position import StockPositionGateway
+from backend.app.domain.store_workspace import (
+    CredentialProtector,
+    SellerAccountVerifier,
+    StoreWorkspaceGateway,
+)
+from backend.app.domain.summary_report import SummaryReportGateway
 from backend.app.domain.sync_job import SyncJobGateway
-from backend.app.infrastructure.ozon.gateway import ProductOfferGateway
-
-
-class ReadinessProbe(Protocol):
-    """定义 API 就绪检查所需的最小依赖能力。"""
-
-    async def check(self) -> None: ...
+from backend.app.infrastructure.credential_protection import (
+    FernetCredentialProtector,
+)
+from backend.app.infrastructure.login_rate_limit import RedisLoginRateLimiter
+from backend.app.infrastructure.ozon.account_verifier import (
+    HttpOzonSellerAccountVerifier,
+    StubSellerAccountVerifier,
+)
+from backend.app.infrastructure.ozon.gateway import (
+    ProductOfferGateway,
+)
+from backend.app.infrastructure.postgresql.advertising_analysis import (
+    PostgresAdvertisingAnalysisGateway,
+)
+from backend.app.infrastructure.postgresql.advertising_calendar import (
+    PostgresAdvertisingCalendarGateway,
+)
+from backend.app.infrastructure.postgresql.advertising_campaigns import (
+    PostgresAdvertisingCampaignGateway,
+)
+from backend.app.infrastructure.postgresql.advertising_keyword_diagnosis import (
+    PostgresAdvertisingKeywordDiagnosisGateway,
+)
+from backend.app.infrastructure.postgresql.advertising_metrics import (
+    PostgresAdvertisingMetricsGateway,
+)
+from backend.app.infrastructure.postgresql.advertising_readonly import (
+    PostgresAdvertisingBoundaryGateway,
+)
+from backend.app.infrastructure.postgresql.advertising_reports import (
+    PostgresAdvertisingReportGateway,
+)
+from backend.app.infrastructure.postgresql.advertising_thresholds import (
+    PostgresAdvertisingThresholdGateway,
+)
+from backend.app.infrastructure.postgresql.agent_permissions import PostgresAgentPermissionGateway
+from backend.app.infrastructure.postgresql.agent_triggers import PostgresAgentTriggerGateway
+from backend.app.infrastructure.postgresql.audit_events import PostgresAuditEventGateway
+from backend.app.infrastructure.postgresql.competition_analyses import (
+    PostgresCompetitionAnalysisGateway,
+)
+from backend.app.infrastructure.postgresql.competitor_seeds import PostgresCompetitorSeedGateway
+from backend.app.infrastructure.postgresql.competitor_selection_analysis import (
+    PostgresCompetitorSelectionAnalysisGateway,
+)
+from backend.app.infrastructure.postgresql.cost_sensitivity import PostgresCostSensitivityGateway
+from backend.app.infrastructure.postgresql.customer_orders import (
+    PostgresCustomerOrderGateway,
+)
+from backend.app.infrastructure.postgresql.data_freshness import PostgresDataFreshnessGateway
+from backend.app.infrastructure.postgresql.data_provenance import PostgresDataProvenanceGateway
+from backend.app.infrastructure.postgresql.data_quality import PostgresQualityFindingGateway
+from backend.app.infrastructure.postgresql.diff_previews import PostgresDiffPreviewGateway
+from backend.app.infrastructure.postgresql.execution_results import PostgresExecutionResultGateway
+from backend.app.infrastructure.postgresql.external_notifications import (
+    PostgresExternalNotificationGateway,
+)
+from backend.app.infrastructure.postgresql.identity import PostgresIdentityGateway
+from backend.app.infrastructure.postgresql.inventory_analysis import (
+    PostgresInventoryAnalysisGateway,
+)
+from backend.app.infrastructure.postgresql.keyword_imports import PostgresKeywordImportGateway
+from backend.app.infrastructure.postgresql.listing_fabe import PostgresListingFabeGateway
+from backend.app.infrastructure.postgresql.listing_keyword_layers import PostgresListingLayerGateway
+from backend.app.infrastructure.postgresql.listing_keywords import PostgresListingKeywordGateway
+from backend.app.infrastructure.postgresql.listing_publish import PostgresListingPublishGateway
+from backend.app.infrastructure.postgresql.listing_risks import PostgresListingRiskGateway
+from backend.app.infrastructure.postgresql.listing_title_drafts import (
+    PostgresListingTitleDraftGateway,
+)
+from backend.app.infrastructure.postgresql.listing_versions import PostgresListingVersionGateway
+from backend.app.infrastructure.postgresql.manual_approvals import PostgresManualApprovalGateway
+from backend.app.infrastructure.postgresql.model_adapters import PostgresModelAdapterGateway
+from backend.app.infrastructure.postgresql.parser_alerts import PostgresParserAlertGateway
+from backend.app.infrastructure.postgresql.performance_credentials import (
+    PostgresPerformanceCredentialGateway,
+)
+from backend.app.infrastructure.postgresql.postings import PostgresPostingGateway
+from backend.app.infrastructure.postgresql.product_offers import (
+    PostgresProductOfferGateway,
+)
+from backend.app.infrastructure.postgresql.profit_models import PostgresProfitModelGateway
+from backend.app.infrastructure.postgresql.public_snapshots import PostgresPublicSnapshotGateway
+from backend.app.infrastructure.postgresql.readback_verifications import (
+    PostgresReadbackVerificationGateway,
+)
+from backend.app.infrastructure.postgresql.readonly_tools import PostgresReadonlyToolGateway
+from backend.app.infrastructure.postgresql.sales_analysis import PostgresSalesAnalysisGateway
+from backend.app.infrastructure.postgresql.search_attributes import PostgresSearchAttributesGateway
+from backend.app.infrastructure.postgresql.selection_decision_books import (
+    PostgresSelectionDecisionBookGateway,
+)
+from backend.app.infrastructure.postgresql.selection_expansions import PostgresExpandResultGateway
+from backend.app.infrastructure.postgresql.selection_opportunities import (
+    PostgresExploreOpportunityGateway,
+)
+from backend.app.infrastructure.postgresql.selection_validations import (
+    PostgresValidateResultGateway,
+)
+from backend.app.infrastructure.postgresql.seller_fulfillment_snapshots import (
+    PostgresSellerFulfillmentSnapshotGateway,
+)
+from backend.app.infrastructure.postgresql.seller_operations import (
+    PostgresSellerOperationGateway,
+)
+from backend.app.infrastructure.postgresql.seller_order_snapshots import (
+    PostgresSellerOrderSnapshotGateway,
+)
+from backend.app.infrastructure.postgresql.seller_product_snapshots import (
+    PostgresSellerProductSnapshotGateway,
+)
+from backend.app.infrastructure.postgresql.seller_stock_snapshots import (
+    PostgresSellerStockSnapshotGateway,
+)
+from backend.app.infrastructure.postgresql.session import (
+    PostgresSessionFactory,
+    TenantContext,
+)
+from backend.app.infrastructure.postgresql.smart_search import PostgresSmartSearchGateway
+from backend.app.infrastructure.postgresql.stock_positions import (
+    PostgresStockPositionGateway,
+)
+from backend.app.infrastructure.postgresql.store_workspaces import (
+    PostgresStoreWorkspaceGateway,
+)
+from backend.app.infrastructure.postgresql.summary_reports import PostgresSummaryReportGateway
+from backend.app.infrastructure.postgresql.sync_jobs import PostgresSyncJobGateway
+from backend.app.infrastructure.readiness import InfrastructureReadinessProbe
 
 
 class LoginRateLimiter(Protocol):
@@ -24,75 +205,542 @@ class LoginRateLimiter(Protocol):
     async def clear(self, email: str, client_key: str) -> None: ...
 
 
-def get_product_offer_gateway(request: Request) -> ProductOfferGateway:
-    """从应用生命周期状态获取 PostgreSQL 商品仓储。"""
-
-    return cast(ProductOfferGateway, request.app.state.product_offer_gateway)
+class ReadinessProbe(Protocol):
+    async def check(self) -> None: ...
 
 
-def get_store_workspace_gateway(request: Request) -> StoreWorkspaceGateway:
-    """从应用生命周期状态获取 PostgreSQL 工作区仓储。"""
-
-    return cast(StoreWorkspaceGateway, request.app.state.store_workspace_gateway)
-
-
-def get_sync_job_gateway(request: Request) -> SyncJobGateway:
-    """从应用生命周期状态获取 PostgreSQL 同步任务仓储。"""
-
-    return cast(SyncJobGateway, request.app.state.sync_job_gateway)
+@lru_cache
+def get_postgres_sessions() -> PostgresSessionFactory:
+    settings = get_settings()
+    if settings.database_url is None:
+        raise RuntimeError("DATABASE_URL 未配置")
+    sessions = PostgresSessionFactory(str(settings.database_url))
+    sessions.open()
+    return sessions
 
 
-def get_readiness_probe(request: Request) -> ReadinessProbe:
-    """返回同时检查 PostgreSQL 与 Redis 的就绪探针。"""
-
-    return cast(ReadinessProbe, request.app.state.readiness_probe)
-
-
-def get_identity_service(request: Request) -> IdentityService:
-    return cast(IdentityService, request.app.state.identity_service)
+def close_postgres_sessions() -> None:
+    """仅关闭已经创建的全局连接池，避免关停阶段意外建立新连接。"""
+    if get_postgres_sessions.cache_info().currsize > 0:
+        get_postgres_sessions().close()
+        get_postgres_sessions.cache_clear()
 
 
-def get_seller_account_service(request: Request) -> SellerAccountService:
-    service = getattr(request.app.state, "seller_account_service", None)
-    if not isinstance(service, SellerAccountService):
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Ozon 凭据加密尚未配置",
-        )
-    return service
+@lru_cache
+def get_redis_client() -> Redis:
+    settings = get_settings()
+    if settings.redis_url is None:
+        raise RuntimeError("REDIS_URL 未配置")
+    return cast(Redis, Redis.from_url(str(settings.redis_url), decode_responses=True))
 
 
-def get_session_cookie_secure(request: Request) -> bool:
-    return cast(bool, getattr(request.app.state, "session_cookie_secure", False))
+async def close_redis_client() -> None:
+    if get_redis_client.cache_info().currsize > 0:
+        await get_redis_client().aclose()
+        get_redis_client.cache_clear()
 
 
-def get_login_rate_limiter(request: Request) -> LoginRateLimiter:
-    return cast(LoginRateLimiter, request.app.state.login_rate_limiter)
+def get_identity_service(
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> IdentityService:
+    return IdentityService(PostgresIdentityGateway(sessions))
+
+
+def get_login_rate_limiter(
+    redis: Annotated[Redis, Depends(get_redis_client)],
+) -> LoginRateLimiter:
+    settings = get_settings()
+    return RedisLoginRateLimiter(
+        redis,
+        max_attempts=settings.login_max_attempts,
+        window_seconds=settings.login_window_seconds,
+    )
+
+
+def get_readiness_probe(
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+    redis: Annotated[Redis, Depends(get_redis_client)],
+) -> ReadinessProbe:
+    return InfrastructureReadinessProbe(sessions, redis)
+
+
+def get_session_cookie_secure() -> bool:
+    return get_settings().session_cookie_secure
+
+
+def get_default_organization_id() -> str:
+    """返回当前部署绑定的运营组织，避免客户端参与租户选择。"""
+    return get_settings().default_organization_id
 
 
 def get_request_session_token(
     session: str | None = Cookie(default=None, alias="ozonslj_session"),
     authorization: str | None = Header(default=None),
 ) -> str | None:
-    return session or _bearer_token(authorization)
-
-
-async def get_current_user(
-    request: Request,
-    token: Annotated[str | None, Depends(get_request_session_token)],
-) -> AuthenticatedUser:
-    if token is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="需要登录")
-    user = await get_identity_service(request).authenticate(token)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="登录已失效")
-    return user
-
-
-def _bearer_token(authorization: str | None) -> str | None:
+    if session:
+        return session
     if authorization is None:
         return None
     scheme, separator, token = authorization.partition(" ")
     if separator and scheme.lower() == "bearer" and token:
         return token
     return None
+
+
+async def get_current_user(
+    service: Annotated[IdentityService, Depends(get_identity_service)],
+    token: Annotated[str | None, Depends(get_request_session_token)],
+) -> AuthenticatedUser:
+    user = await service.authenticate(token) if token else None
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "authentication_required", "message": "请先登录"},
+        )
+    return user
+
+
+def get_tenant_context(
+    user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+) -> TenantContext:
+    """只从已验证会话派生数据库租户上下文，禁止客户端自报组织或用户。"""
+    return TenantContext(organization_id=user.organization_id, user_id=user.id)
+
+
+def require_account_manager(
+    user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+) -> AuthenticatedUser:
+    """卖家账户与凭据只允许组织所有者或管理员管理。"""
+    if user.organization_role not in {"owner", "admin"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "insufficient_role", "message": "当前角色不能管理卖家账户"},
+        )
+    return user
+
+
+def get_product_offer_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ProductOfferGateway:
+    return PostgresProductOfferGateway(sessions, context)
+
+
+def get_customer_order_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> CustomerOrderGateway:
+    """使用认证会话的固定内部边界读取脱敏订单。"""
+    return PostgresCustomerOrderGateway(sessions, context)
+
+
+def get_posting_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> PostingGateway:
+    """使用认证会话的固定内部边界读取履约摘要。"""
+    return PostgresPostingGateway(sessions, context)
+
+
+def get_seller_operation_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> SellerOperationGateway:
+    """使用认证会话的固定内部边界读取脱敏审计。"""
+    return PostgresSellerOperationGateway(sessions, context)
+
+
+def get_keyword_import_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> KeywordImportGateway:
+    return PostgresKeywordImportGateway(sessions, context)
+
+
+def get_listing_keyword_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ListingKeywordGateway:
+    return PostgresListingKeywordGateway(sessions, context)
+
+
+def get_listing_layer_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ListingLayerGateway:
+    return PostgresListingLayerGateway(sessions, context)
+
+
+def get_listing_title_draft_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ListingTitleDraftGateway:
+    return PostgresListingTitleDraftGateway(sessions, context)
+
+
+def get_listing_fabe_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ListingFabeGateway:
+    return PostgresListingFabeGateway(sessions, context)
+
+
+def get_listing_risk_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ListingRiskGateway:
+    return PostgresListingRiskGateway(sessions, context)
+
+
+def get_listing_version_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ListingVersionGateway:
+    return PostgresListingVersionGateway(sessions, context)
+
+
+def get_listing_publish_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ListingPublishGateway:
+    return PostgresListingPublishGateway(sessions, context)
+
+
+def get_advertising_keyword_diagnosis_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> AdvertisingKeywordDiagnosisGateway:
+    return PostgresAdvertisingKeywordDiagnosisGateway(sessions, context)
+
+
+def get_advertising_threshold_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> AdvertisingThresholdGateway:
+    return PostgresAdvertisingThresholdGateway(sessions, context)
+
+
+def get_advertising_calendar_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> AdvertisingCalendarGateway:
+    return PostgresAdvertisingCalendarGateway(sessions, context)
+
+
+def get_advertising_boundary_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> AdvertisingBoundaryGateway:
+    return PostgresAdvertisingBoundaryGateway(sessions, context)
+
+
+def get_model_adapter_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ModelAdapterGateway:
+    return PostgresModelAdapterGateway(sessions, context)
+
+
+def get_readonly_tool_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ReadonlyToolGateway:
+    return PostgresReadonlyToolGateway(sessions, context)
+
+
+def get_sales_analysis_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> SalesAnalysisGateway:
+    return PostgresSalesAnalysisGateway(sessions, context)
+
+
+def get_inventory_analysis_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> InventoryAnalysisGateway:
+    return PostgresInventoryAnalysisGateway(sessions, context)
+
+
+def get_advertising_analysis_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> AdvertisingAnalysisGateway:
+    return PostgresAdvertisingAnalysisGateway(sessions, context)
+
+
+def get_competitor_selection_analysis_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> CompetitorSelectionAnalysisGateway:
+    return PostgresCompetitorSelectionAnalysisGateway(sessions, context)
+
+
+def get_summary_report_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> SummaryReportGateway:
+    return PostgresSummaryReportGateway(sessions, context)
+
+
+def get_agent_trigger_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> AgentTriggerGateway:
+    return PostgresAgentTriggerGateway(sessions, context)
+
+
+def get_agent_permission_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> AgentPermissionGateway:
+    return PostgresAgentPermissionGateway(sessions, context)
+
+
+def get_external_notification_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ExternalNotificationGateway:
+    return PostgresExternalNotificationGateway(sessions, context)
+
+
+def get_diff_preview_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> DiffPreviewGateway:
+    return PostgresDiffPreviewGateway(sessions, context)
+
+
+def get_manual_approval_gateway(
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+) -> ManualApprovalGateway:
+    return PostgresManualApprovalGateway(sessions, context)
+
+
+def get_execution_result_gateway(
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+) -> ExecutionResultGateway:
+    return PostgresExecutionResultGateway(sessions, context)
+
+
+def get_readback_verification_gateway(
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+) -> ReadbackVerificationGateway:
+    return PostgresReadbackVerificationGateway(sessions, context)
+
+
+def get_audit_event_gateway(
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+) -> AuditEventGateway:
+    return PostgresAuditEventGateway(sessions, context)
+
+
+def get_data_freshness_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> DataFreshnessGateway:
+    return PostgresDataFreshnessGateway(sessions, context)
+
+
+def get_data_provenance_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> DataProvenanceGateway:
+    return PostgresDataProvenanceGateway(sessions, context)
+
+
+def get_search_attributes_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> SearchAttributesGateway:
+    return PostgresSearchAttributesGateway(sessions, context)
+
+
+def get_smart_search_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> SmartSearchGateway:
+    return PostgresSmartSearchGateway(sessions, context)
+
+
+def get_competitor_seed_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> CompetitorSeedGateway:
+    return PostgresCompetitorSeedGateway(sessions, context)
+
+
+def get_competition_analysis_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> CompetitionAnalysisGateway:
+    return PostgresCompetitionAnalysisGateway(sessions, context)
+
+
+def get_cost_sensitivity_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> CostSensitivityGateway:
+    return PostgresCostSensitivityGateway(sessions, context)
+
+
+def get_profit_model_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ProfitModelGateway:
+    return PostgresProfitModelGateway(sessions, context)
+
+
+def get_public_snapshot_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> PublicSnapshotGateway:
+    return PostgresPublicSnapshotGateway(sessions, context)
+
+
+def get_parser_alert_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ParserAlertGateway:
+    return PostgresParserAlertGateway(sessions, context)
+
+
+def get_explore_opportunity_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ExploreOpportunityGateway:
+    return PostgresExploreOpportunityGateway(sessions, context)
+
+
+def get_validate_result_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ValidateResultGateway:
+    return PostgresValidateResultGateway(sessions, context)
+
+
+def get_selection_decision_book_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> SelectionDecisionBookGateway:
+    return PostgresSelectionDecisionBookGateway(sessions, context)
+
+
+def get_expand_result_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> ExpandResultGateway:
+    return PostgresExpandResultGateway(sessions, context)
+
+
+def get_quality_finding_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> QualityFindingGateway:
+    """返回带组织上下文的质量隔离适配器，禁止通过请求参数切换租户。"""
+    return PostgresQualityFindingGateway(sessions, context)
+
+
+def get_sync_job_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> SyncJobGateway:
+    """同步任务始终写入 PostgreSQL，Redis 仅承担后续可重建投递。"""
+    return PostgresSyncJobGateway(sessions, context)
+
+
+def get_stock_position_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> StockPositionGateway:
+    """使用认证会话派生的内部边界读取库存，客户端不能指定组织。"""
+    return PostgresStockPositionGateway(sessions, context)
+
+
+def get_store_workspace_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> StoreWorkspaceGateway:
+    return PostgresStoreWorkspaceGateway(
+        sessions,
+        context,
+    )
+
+
+def get_seller_order_snapshot_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> SellerOrderSnapshotGateway:
+    return PostgresSellerOrderSnapshotGateway(sessions, context)
+
+
+def get_seller_stock_snapshot_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> SellerStockSnapshotGateway:
+    return PostgresSellerStockSnapshotGateway(sessions, context)
+
+
+def get_seller_fulfillment_snapshot_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> SellerFulfillmentSnapshotGateway:
+    return PostgresSellerFulfillmentSnapshotGateway(sessions, context)
+
+
+def get_seller_product_snapshot_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> SellerProductSnapshotGateway:
+    return PostgresSellerProductSnapshotGateway(sessions, context)
+
+
+@lru_cache
+def get_credential_protector() -> CredentialProtector:
+    settings = get_settings()
+    return FernetCredentialProtector(
+        settings.ozon_credential_key_file,
+        key_version=settings.ozon_credential_key_version,
+    )
+
+
+def get_performance_credential_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+    protector: Annotated[CredentialProtector, Depends(get_credential_protector)],
+) -> PerformanceCredentialGateway:
+    """提供 Performance API 凭据网关，确保令牌加密边界只存在于后端。"""
+    return PostgresPerformanceCredentialGateway(sessions, context, protector)
+
+
+def get_advertising_campaign_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> AdvertisingCampaignGateway:
+    return PostgresAdvertisingCampaignGateway(sessions, context)
+
+
+def get_advertising_report_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> AdvertisingReportGateway:
+    return PostgresAdvertisingReportGateway(sessions, context)
+
+
+def get_advertising_metrics_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> AdvertisingMetricsGateway:
+    return PostgresAdvertisingMetricsGateway(sessions, context)
+
+
+@lru_cache
+def get_seller_account_verifier() -> SellerAccountVerifier:
+    settings = get_settings()
+    if settings.ozon_mode == "stub":
+        return StubSellerAccountVerifier()
+    return HttpOzonSellerAccountVerifier(str(settings.ozon_base_url))

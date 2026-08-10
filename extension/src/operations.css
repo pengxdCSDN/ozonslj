@@ -1,0 +1,130 @@
+/* 运营事实页在侧边栏中采用紧凑布局，避免库存、订单和履约摘要产生横向滚动。 */
+.view-tabs {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.operation-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.operation-summary article {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: #9f88f7;
+  background: #171629;
+}
+
+.operation-summary span,
+.operation-row small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.operation-summary strong {
+  color: #f1eef8;
+  font-size: 18px;
+}
+
+.operation-panel {
+  content-visibility: auto;
+}
+
+.operation-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 10px;
+  padding: 11px 12px;
+  border-top: 1px solid rgba(42, 40, 66, 0.75);
+  font-size: 8px;
+}
+
+.operation-row > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.operation-row strong {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operation-row b {
+  font-size: 9px;
+}
+
+.operation-row em {
+  grid-column: 2;
+  color: #a991fb;
+  font-style: normal;
+  text-align: right;
+}
+
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 0 14px 14px;
+}
+
+.job-card {
+  display: grid;
+  gap: 4px;
+  margin: 0 14px 14px;
+  padding: 10px;
+  border-left: 3px solid var(--violet);
+  color: #cfc5ef;
+  background: #201b37;
+  font-size: 9px;
+}
+
+.job-card span,
+.job-card small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.task-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 8px;
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 20px;
+}
+
+.auth-card {
+  display: grid;
+  width: min(100%, 360px);
+  gap: 10px;
+  padding: 28px 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #18162a, #111726);
+}
+
+.auth-card h1 { margin: 0; font-size: 24px; }
+.auth-note { margin: 0 0 8px; color: var(--muted); font-size: 10px; }
+.auth-card form { display: grid; gap: 10px; }
+.auth-card label { display: grid; gap: 5px; color: #8f8b9d; font-size: 9px; font-weight: 700; }
+.auth-card input { padding: 10px; border: 1px solid var(--line); border-radius: 8px; color: #eeeaf8; background: #0e0d1d; }
+.auth-card .primary-button { margin-top: 4px; }
+.auth-state { display: grid; min-height: 100dvh; place-items: center; color: var(--muted); font-size: 11px; }
+.header-actions { display: flex; align-items: center; gap: 6px; }
+.user-name { max-width: 100px; overflow: hidden; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.task-error { color: var(--rose); font-size: 9px; }
+.quality-shortcut { align-self: start; margin: 8px 14px 0; }
+.quality-result { display: grid; gap: 8px; margin-top: 12px; }
+.import-panel { display: grid; gap: 10px; }
+.import-panel textarea { width: 100%; min-height: 150px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; color: #eeeaf8; background: #0e0d1d; font: 10px/1.5 ui-monospace, monospace; resize: vertical; }

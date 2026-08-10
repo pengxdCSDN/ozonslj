@@ -23,9 +23,9 @@ async def readiness(
 ) -> HealthResponse:
     try:
         await probe.check()
-    except Exception as exc:
+    except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="服务依赖尚未就绪",
-        ) from exc
+            detail={"code": "infrastructure_unavailable", "message": "依赖服务尚未就绪"},
+        ) from error
     return HealthResponse(status="ok")

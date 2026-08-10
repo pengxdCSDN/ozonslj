@@ -1,0 +1,11 @@
+import { useState } from "react";
+import { analyzeAndSaveCompetitorSelection, listCompetitorSelectionReports, type CompetitorSelectionAnalysis } from "./api";
+
+export function CompetitorSelectionAnalysisView({ workspaceId }: { workspaceId: string }) {
+  const [reports, setReports] = useState<CompetitorSelectionAnalysis[]>([]);
+  const [message, setMessage] = useState("公开样本结果仅用于决策辅助");
+  const [busy, setBusy] = useState(false);
+  const analyze = async () => { setBusy(true); try { const report = await analyzeAndSaveCompetitorSelection(workspaceId, { sample_count: 5, opportunity_count: 2, median_price_minor: 2500, top_competitor_rating: 4.8, source_window: "2026-08" }); setReports((current) => [report, ...current]); setMessage("竞品与选品分析报告已保存"); } catch (error) { setMessage(error instanceof Error ? error.message : "分析失败"); } finally { setBusy(false); } };
+  const load = async () => { setBusy(true); try { setReports(await listCompetitorSelectionReports(workspaceId)); setMessage("已加载分析历史"); } catch (error) { setMessage(error instanceof Error ? error.message : "分析历史加载失败"); } finally { setBusy(false); } };
+  return <div className="view-content"><section className="page-heading compact"><div><p className="eyebrow">报告与智能助手 / AI-006</p><h1>竞品与选品分析</h1><p>汇总公开样本与选品机会，明确采样估算边界。</p></div></section><section className="panel"><div className="section-heading"><div><p className="eyebrow">公开样本 + 选品结果</p><h2>机会摘要</h2></div><div className="button-row"><button className="secondary-button" disabled={busy} onClick={() => void analyze()}>运行并保存分析</button><button className="secondary-button" disabled={busy} onClick={() => void load()}>加载历史</button></div></div><p className="form-message">{message}</p>{reports.length ? reports.map((result, index) => <div className="quality-result" key={`${result.sample_count}-${result.opportunity_count}-${index}`}><strong>采样估算 · 样本 {result.sample_count} · 机会 {result.opportunity_count}</strong><span>{result.caveat}</span>{[...result.highlights, ...result.recommendations].map((item) => <small key={item}>{item}</small>)}<em>{result.read_only ? "只读建议" : "需复核"}</em></div>) : <div className="empty-search"><strong>尚未运行竞品与选品分析</strong><span>结果不会自动采购、上架或投放广告。</span></div>}</section></div>;
+}

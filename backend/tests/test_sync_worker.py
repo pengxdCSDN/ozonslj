@@ -1,105 +1,110 @@
 import asyncio
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-import pytest
-
-from backend.app.application.sync_worker import SyncExecutionError, SyncWorker
-from backend.app.domain.sync_job import ClaimedSyncJob
+from backend.app.application.sync_worker import SyncWorker
+from backend.app.domain.sync_job import SyncJob, SyncJobMessage, SyncResult
 
 
-def _job() -> ClaimedSyncJob:
-    return ClaimedSyncJob(
-        id="sync_1",
-        workspace_id="local",
-        resource_type="products",
-        sync_mode="incremental",
-        status="running",
-        created_at=datetime(2026, 8, 4, tzinfo=UTC),
-        attempt_count=2,
+def _job() -> SyncJob:
+    now = datetime.now(UTC)
+    return SyncJob(
+        id="sync-1", workspace_id="store-1", resource_type="stock", status="running",
+        processed_count=0, failure_count=0, attempt_count=1, max_attempts=3,
+        next_attempt_at=now, created_at=now, lease_owner="worker-1",
+        lease_expires_at=now,
     )
 
 
-class _Gateway:
-    def __init__(self, job: ClaimedSyncJob | None) -> None:
-        self.job = job
-        self.heartbeats = 0
-        self.succeeded = False
-        self.failure: tuple[str, str] | None = None
+@dataclass
+class FakeConsumer:
+    message: SyncJobMessage | None = field(
+        default_factory=lambda: SyncJobMessage(message_id="1-0", job_id="sync-1")
+    )
+    acknowledged: list[str] = field(default_factory=list)
 
-    async def claim_next(self, *, lease_seconds: int) -> ClaimedSyncJob | None:
-        assert lease_seconds == 1
-        return self.job
+    async def read_one(self, *, block_ms: int) -> SyncJobMessage | None:
+        del block_ms
+        return self.message
 
-    async def heartbeat(self, job: ClaimedSyncJob, *, lease_seconds: int) -> None:
-        assert job.attempt_count == 2
-        self.heartbeats += 1
-
-    async def mark_succeeded(self, job: ClaimedSyncJob) -> None:
-        self.succeeded = True
-
-    async def mark_failed(self, job: ClaimedSyncJob, *, code: str, message: str) -> None:
-        self.failure = (code, message)
+    async def acknowledge(self, message_id: str) -> None:
+        self.acknowledged.append(message_id)
 
 
-class _SuccessfulHandler:
-    async def execute(self, job: ClaimedSyncJob) -> None:
-        await asyncio.sleep(0.03)
+@dataclass
+class FakeJobs:
+    claimed: SyncJob | None = field(default_factory=_job)
+    complete_persisted: bool = True
+    failed: tuple[str, str] | None = None
+
+    async def claim_sync_job(self, **kwargs: object) -> SyncJob | None:
+        del kwargs
+        return self.claimed
+
+    async def heartbeat_sync_job(self, **kwargs: object) -> bool:
+        del kwargs
+        return True
+
+    async def complete_sync_job(self, **kwargs: object) -> bool:
+        del kwargs
+        return self.complete_persisted
+
+    async def fail_sync_job(self, **kwargs: object) -> bool:
+        self.failed = (str(kwargs["error_code"]), str(kwargs["error_message"]))
+        return True
 
 
-class _FailedHandler:
-    async def execute(self, job: ClaimedSyncJob) -> None:
-        raise SyncExecutionError("UPSTREAM_TIMEOUT", "Ozon 请求超时")
+class SuccessHandler:
+    async def run(self, job: SyncJob) -> SyncResult:
+        del job
+        return SyncResult(processed_count=8, failure_count=0)
 
 
-class _UnexpectedFailedHandler:
-    async def execute(self, job: ClaimedSyncJob) -> None:
-        raise RuntimeError("Api-Key=不得进入任务记录")
+class SecretFailureHandler:
+    async def run(self, job: SyncJob) -> SyncResult:
+        del job
+        raise RuntimeError("Api-Key=should-never-be-persisted")
 
 
-@pytest.mark.asyncio
-async def test_worker_renews_lease_and_completes_job() -> None:
-    gateway = _Gateway(_job())
-    worker = SyncWorker(gateway, _SuccessfulHandler(), lease_seconds=1, heartbeat_seconds=0.01)
-
-    assert await worker.run_once() is True
-    assert gateway.heartbeats >= 1
-    assert gateway.succeeded is True
-    assert gateway.failure is None
-
-
-@pytest.mark.asyncio
-async def test_worker_records_safe_execution_error() -> None:
-    gateway = _Gateway(_job())
-    worker = SyncWorker(gateway, _FailedHandler(), lease_seconds=1, heartbeat_seconds=0.01)
-
-    assert await worker.run_once() is True
-    assert gateway.succeeded is False
-    assert gateway.failure == ("UPSTREAM_TIMEOUT", "Ozon 请求超时")
-
-
-@pytest.mark.asyncio
-async def test_worker_redacts_unexpected_error_message() -> None:
-    gateway = _Gateway(_job())
+def test_worker_acknowledges_only_after_completion_persists() -> None:
+    jobs = FakeJobs()
+    consumer = FakeConsumer()
     worker = SyncWorker(
-        gateway,
-        _UnexpectedFailedHandler(),
-        lease_seconds=1,
-        heartbeat_seconds=0.01,
+        jobs, consumer, {"stock": SuccessHandler()}, worker_id="worker-1"
     )
 
-    assert await worker.run_once() is True
-    assert gateway.failure == ("UNEXPECTED_SYNC_ERROR", "同步任务发生未分类错误")
-    assert "Api-Key" not in gateway.failure[1]
+    assert asyncio.run(worker.process_one()) is True
+    assert consumer.acknowledged == ["1-0"]
 
 
-@pytest.mark.asyncio
-async def test_worker_returns_false_when_queue_is_empty() -> None:
-    gateway = _Gateway(None)
-    worker = SyncWorker(gateway, _SuccessfulHandler(), lease_seconds=1, heartbeat_seconds=0.01)
+def test_worker_does_not_ack_when_completion_is_not_persisted() -> None:
+    jobs = FakeJobs(complete_persisted=False)
+    consumer = FakeConsumer()
+    worker = SyncWorker(
+        jobs, consumer, {"stock": SuccessHandler()}, worker_id="worker-1"
+    )
 
-    assert await worker.run_once() is False
+    assert asyncio.run(worker.process_one()) is False
+    assert consumer.acknowledged == []
 
 
-def test_worker_rejects_heartbeat_not_shorter_than_lease() -> None:
-    with pytest.raises(ValueError, match="心跳间隔"):
-        SyncWorker(_Gateway(None), _SuccessfulHandler(), lease_seconds=30, heartbeat_seconds=30)
+def test_duplicate_message_without_lease_is_safely_acknowledged() -> None:
+    jobs = FakeJobs(claimed=None)
+    consumer = FakeConsumer()
+    worker = SyncWorker(jobs, consumer, {}, worker_id="worker-1")
+
+    assert asyncio.run(worker.process_one()) is True
+    assert consumer.acknowledged == ["1-0"]
+
+
+def test_handler_exception_is_redacted_before_retry() -> None:
+    jobs = FakeJobs()
+    consumer = FakeConsumer()
+    worker = SyncWorker(
+        jobs, consumer, {"stock": SecretFailureHandler()}, worker_id="worker-1"
+    )
+
+    assert asyncio.run(worker.process_one()) is True
+    assert jobs.failed == ("sync_handler_failed", "同步处理失败")
+    assert "Api-Key" not in str(jobs.failed)
+    assert consumer.acknowledged == ["1-0"]

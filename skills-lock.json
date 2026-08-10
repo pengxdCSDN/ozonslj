@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "database-schema-design": {
+      "source": "akillness/oh-my-skills",
+      "sourceType": "github",
+      "skillPath": ".agent-skills/database-schema-design/SKILL.md",
+      "computedHash": "8700b46bb23f74819d5bc2c099018513d89ace43616868a07612fcbb39e73c05"
+    },
     "design-taste-frontend": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
@@ -24,6 +30,12 @@
       "sourceType": "github",
       "skillPath": "skills/.curated/playwright/SKILL.md",
       "computedHash": "844a180ab348b8d13044a320b8306e6263e1cda75e158e479a463225e43a5eb1"
+    },
+    "python-best-practices": {
+      "source": "nathan-gage/python-skills",
+      "sourceType": "github",
+      "skillPath": "skills/python-best-practices/SKILL.md",
+      "computedHash": "21243c5d941b12cef58d3d0528aed61c47c06e658e8765c45572fd50c5624c35"
     },
     "security-best-practices": {
       "source": "openai/skills",

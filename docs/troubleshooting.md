@@ -1,40 +1,70 @@
-# 故障排查与经验记录
+# Troubleshooting
 
-## 前端控件出现浏览器原生样式
+本文件记录可复现或高成本的开发环境故障。每条记录包含现象、原因判断、恢复办法和预防措施。
 
-### 表现
+## 2026-07-31：前端验证异常等待约 47 分钟
 
-- 深色界面中的下拉选项显示为生硬的系统蓝色列表。
-- 箭头看似可点击，但实际交互区域只覆盖原生控件。
-- 无边框搜索框聚焦后，文字输入区出现独立的硬紫色矩形。
+### 现象
 
-### 原因
+在 Windows Codex 工作区内验证扩展前端时，一次组合命令长时间没有返回。工具记录该执行单元耗时 `2803.5` 秒（约 46 分 43 秒），但随后读取结果时显示命令本身只用了约 `2.5` 秒并正常退出。同期还出现：
 
-- 原生 `<select>` 的选项面板主要由操作系统和浏览器绘制，CSS 无法稳定匹配品牌视觉。
-- 全局 `input:focus-visible` 直接作用于内部输入元素，与外层搜索容器的边界重复。
+- `pnpm typecheck` / `pnpm build` 因无交互终端触发 `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`。
+- 从仓库根目录直接调用 Vite 时找不到 `sidepanel.html`。
+- Vite 清空 `extension/dist/assets` 时因 Windows 文件占用或权限限制报 `EPERM`。
+- Playwright 通过 npx 启动时，npm 缓存目录创建临时文件报 `EPERM`。
 
-### 处理准则
+### 原因判断
 
-- 品牌化工作区和筛选菜单使用共享的可访问自定义 `listbox`，整块触发区可点击，并支持 Esc、点击外部关闭和明确焦点。
-- 复合输入控件由外层容器通过 `:focus-within` 承接边框和柔和外辉光，内部输入框不再绘制第二层轮廓。
-- Web 与 Chrome 插件共用同一 DOM 和设计令牌；修改后分别构建并通过实际页面截图复核。
+主要耗时不是 TypeScript 编译或文件清理，而是 Codex 工具执行单元、子进程状态或结果回传出现异常等待。依据是工具显示约 47 分钟墙钟时间，而同一执行单元最终报告的实际命令时间只有约 2.5 秒。
 
-## 前端代码已修改但线上仍显示旧界面
+放大因素包括：
 
-### 排查顺序
+1. 把类型检查、构建和清理组合在同一命令中，无法快速判断具体卡点。
+2. pnpm 检测到现有 `node_modules` 与当前运行环境不一致，尝试进行需要交互确认的目录处理。
+3. Vite 命令工作目录错误，入口文件相对于错误目录解析。
+4. `extension/dist` 或 npm 缓存被其他进程占用，触发 Windows `EPERM`。
+5. 对失败命令进行多轮串行重试，累计增加等待时间。
 
-1. 确认修改已生成新的带哈希 JS/CSS 文件，并由 `deploy/web/index.html` 引用。
-2. 确认提交已推送到部署分支，服务器仓库已快进到该提交。
-3. 请求公网首页并核对其中的资源哈希，再请求资源确认返回 `200`。
-4. 最后使用 `Ctrl + F5` 清除浏览器页面缓存；不要把缓存问题误判为代码未生效。
+### 解决办法
 
-### 部署边界
+将验证步骤拆开，并给每一步设置独立、较短的超时时间：
 
-- 纯前端静态资源更新不重建 PostgreSQL、Redis、API 或 Worker。
-- 服务器更新前先执行只读 `git status --short`；工作树不干净时停止部署。
+```powershell
+# 在仓库根目录执行类型检查
+.\extension\node_modules\.bin\tsc.CMD -b extension\tsconfig.json --pretty false
 
-## 多工作树中 Python 检查命令不可用
+# 在 extension 目录执行 Vite
+Set-Location .\extension
+.\node_modules\.bin\vite.CMD build `
+    --configLoader runner `
+    --outDir ..\verify-dist `
+    --emptyOutDir false
+```
 
-- 不假设每个 Codex worktree 都有独立 `.venv`。
-- 先检查项目共享虚拟环境和系统 Python 的依赖是否齐全，再运行 pytest、Ruff 与 mypy。
-- pytest 在受限工作树中可使用 `-p no:cacheprovider`，避免仅因无法写 `.pytest_cache` 产生噪声。
+构建成功后，只清理经过绝对路径校验的临时目录：
+
+```powershell
+$verifyPath = (Resolve-Path -LiteralPath '..\verify-dist').Path
+if ($verifyPath -eq 'D:\learn\gpt\ozonslj\verify-dist') {
+    Remove-Item -LiteralPath $verifyPath -Recurse -Force
+}
+```
+
+如果必须使用 pnpm，在无交互环境中先设置：
+
+```powershell
+$env:CI = 'true'
+pnpm typecheck
+pnpm build
+```
+
+如果 npm 或 Playwright 缓存仍报 `EPERM`，先确认没有遗留的 Node、Vite 或浏览器自动化进程，再使用已批准的非沙箱执行权限；不要循环重试同一个失败命令。
+
+### 预防措施
+
+- 不把类型检查、生产构建、截图和临时目录清理放进同一个长命令。
+- 首次无输出超过合理时间时终止并分步诊断，不等待几十分钟。
+- Vite 始终从 `extension` 目录运行，或显式提供正确的 root/入口。
+- 被占用的 `dist` 不作为验证输出目录；使用工作区内独立的 `verify-dist`。
+- Playwright 在一个浏览器会话内完成导航与多张截图，减少重复 npx 和浏览器启动。
+- 记录每条验证命令的退出码；超时或被终止的命令不得计为通过。

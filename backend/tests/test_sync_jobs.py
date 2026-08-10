@@ -2,130 +2,159 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
-from backend.app.api.dependencies import get_current_user, get_sync_job_gateway
-from backend.app.domain.identity import AuthenticatedUser
-from backend.app.domain.sync_job import SyncJob, SyncJobAlreadyActiveError
-from backend.app.main import app
+from backend.app.api.dependencies import get_store_workspace_gateway, get_sync_job_gateway
+from backend.app.domain.store_workspace import StoreWorkspace
+from backend.app.domain.sync_job import SyncJob, SyncJobPage, SyncResourceType
+from backend.app.main import create_app
 
 
-class _SyncJobGateway:
-    def __init__(self, *, conflict: bool = False) -> None:
-        self.conflict = conflict
-        self.requested_by: str | None = None
-        self.job = SyncJob(
-            id="sync_1",
-            workspace_id="local",
-            resource_type="products",
-            sync_mode="incremental",
-            status="queued",
-            created_at=datetime(2026, 8, 4, tzinfo=UTC),
-        )
-
-    async def create_sync_job(
-        self,
-        *,
-        workspace_id: str,
-        resource_type: str,
-        sync_mode: str,
-        requested_by: str,
-    ) -> SyncJob:
-        if self.conflict:
-            raise SyncJobAlreadyActiveError(workspace_id)
-        self.requested_by = requested_by
-        return self.job.model_copy(
-            update={
-                "workspace_id": workspace_id,
-                "resource_type": resource_type,
-                "sync_mode": sync_mode,
-            }
-        )
-
-    async def get_sync_job(
-        self,
-        *,
-        job_id: str,
-        workspace_ids: tuple[str, ...],
-    ) -> SyncJob | None:
-        if job_id != self.job.id or self.job.workspace_id not in workspace_ids:
-            return None
-        return self.job
-
-
-def _user(*, workspace_ids: tuple[str, ...] = ("local",)) -> AuthenticatedUser:
-    return AuthenticatedUser(
-        id="operator-1",
-        email="operator@example.com",
-        display_name="Operator",
-        role="operator",
-        workspace_ids=workspace_ids,
+def _job() -> SyncJob:
+    now = datetime.now(UTC)
+    return SyncJob(
+        id="sync-1", workspace_id="store-1", resource_type="stock", status="queued",
+        processed_count=0, failure_count=0, attempt_count=0, max_attempts=3,
+        next_attempt_at=now, created_at=now,
     )
 
 
-def test_create_sync_job_returns_queued_job() -> None:
-    gateway = _SyncJobGateway()
-    app.dependency_overrides[get_sync_job_gateway] = lambda: gateway
-    app.dependency_overrides[get_current_user] = lambda: _user()
-    try:
-        response = TestClient(app).post(
-            "/v1/store-workspaces/local/sync-jobs",
-            json={"resource_type": "products"},
+class StubJobs:
+    async def create_sync_job(
+        self, *, workspace_id: str, resource_type: SyncResourceType, idempotency_key: str
+    ) -> SyncJob:
+        del workspace_id, resource_type, idempotency_key
+        return _job()
+
+    async def get_sync_job(self, job_id: str) -> SyncJob | None:
+        return _job() if job_id == "sync-1" else None
+
+    async def list_sync_jobs(
+        self, *, workspace_id: str, cursor: str | None, limit: int
+    ) -> SyncJobPage:
+        del workspace_id, cursor, limit
+        return SyncJobPage(items=[_job()], total=1)
+
+    async def request_cancel_sync_job(self, *, job_id: str) -> bool:
+        return job_id == "sync-1"
+
+    async def retry_sync_job(self, *, job_id: str) -> SyncJob | None:
+        return _job() if job_id == "sync-1" else None
+
+
+class StubWorkspaces:
+    async def get_workspace(self, workspace_id: str) -> StoreWorkspace | None:
+        if workspace_id == "missing":
+            return None
+        now = datetime.now(UTC)
+        return StoreWorkspace(
+            id=workspace_id, display_name="测试工作区", status="active", verified_at=now,
+            created_at=now, updated_at=now,
         )
-    finally:
-        app.dependency_overrides.clear()
-
-    assert response.status_code == 201
-    assert response.json()["status"] == "queued"
-    assert response.json()["sync_mode"] == "incremental"
-    assert gateway.requested_by == "operator-1"
 
 
-def test_create_sync_job_rejects_unauthorized_workspace() -> None:
-    app.dependency_overrides[get_sync_job_gateway] = _SyncJobGateway
-    app.dependency_overrides[get_current_user] = lambda: _user(workspace_ids=())
-    try:
-        response = TestClient(app).post(
-            "/v1/store-workspaces/other/sync-jobs",
-            json={"resource_type": "products"},
-        )
-    finally:
-        app.dependency_overrides.clear()
-
-    assert response.status_code == 403
+def _client() -> TestClient:
+    app = create_app()
+    app.dependency_overrides[get_sync_job_gateway] = StubJobs
+    app.dependency_overrides[get_store_workspace_gateway] = StubWorkspaces
+    return TestClient(app)
 
 
-def test_create_sync_job_reports_active_job_conflict() -> None:
-    app.dependency_overrides[get_sync_job_gateway] = lambda: _SyncJobGateway(conflict=True)
-    app.dependency_overrides[get_current_user] = lambda: _user()
-    try:
-        response = TestClient(app).post(
-            "/v1/store-workspaces/local/sync-jobs",
-            json={"resource_type": "stocks", "sync_mode": "reconcile"},
-        )
-    finally:
-        app.dependency_overrides.clear()
+def test_create_and_get_persisted_sync_job() -> None:
+    client = _client()
+    created = client.post(
+        "/v1/store-workspaces/store-1/sync-jobs",
+        headers={"Idempotency-Key": "stock-sync-001"},
+        json={"resource_type": "stock"},
+    )
+    fetched = client.get("/v1/sync-jobs/sync-1")
 
-    assert response.status_code == 409
-    assert "已有同步任务" in response.json()["detail"]
+    assert created.status_code == 202
+    assert created.headers["location"] == "/v1/sync-jobs/sync-1"
+    assert created.headers["retry-after"] == "2"
+    assert created.headers["cache-control"] == "no-store"
+    assert fetched.status_code == 200
+    assert fetched.json()["status"] == "queued"
 
 
-def test_get_sync_job_returns_authorized_status() -> None:
-    app.dependency_overrides[get_sync_job_gateway] = _SyncJobGateway
-    app.dependency_overrides[get_current_user] = lambda: _user()
-    try:
-        response = TestClient(app).get("/v1/sync-jobs/sync_1")
-    finally:
-        app.dependency_overrides.clear()
+def test_create_requires_idempotency_key_and_known_resource() -> None:
+    client = _client()
+    assert client.post(
+        "/v1/store-workspaces/store-1/sync-jobs", json={"resource_type": "stock"}
+    ).status_code == 422
+
+
+def test_list_sync_jobs_returns_workspace_history() -> None:
+    client = _client()
+
+    response = client.get("/v1/store-workspaces/store-1/sync-jobs?limit=20")
 
     assert response.status_code == 200
-    assert response.json()["status"] == "queued"
+    assert response.json()["items"][0]["id"] == "sync-1"
+    assert response.json()["total"] == 1
+    assert response.headers["cache-control"] == "no-store"
 
 
-def test_get_sync_job_hides_other_workspace_job() -> None:
-    app.dependency_overrides[get_sync_job_gateway] = _SyncJobGateway
-    app.dependency_overrides[get_current_user] = lambda: _user(workspace_ids=("other",))
-    try:
-        response = TestClient(app).get("/v1/sync-jobs/sync_1")
-    finally:
-        app.dependency_overrides.clear()
+def test_list_sync_jobs_rejects_invalid_cursor_and_limit() -> None:
+    client = _client()
+
+    assert client.get("/v1/store-workspaces/store-1/sync-jobs?cursor=abc").status_code == 422
+    assert client.get("/v1/store-workspaces/store-1/sync-jobs?limit=101").status_code == 422
+
+
+def test_missing_workspace_is_not_exposed_as_task_history() -> None:
+    response = _client().get("/v1/store-workspaces/missing/sync-jobs")
 
     assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "workspace_not_found"
+
+
+def test_cancel_and_retry_responses_are_not_cacheable() -> None:
+    client = _client()
+
+    cancelled = client.post("/v1/sync-jobs/sync-1/cancel")
+    retried = client.post("/v1/sync-jobs/sync-1/retry")
+
+    assert cancelled.headers["cache-control"] == "no-store"
+    assert retried.headers["cache-control"] == "no-store"
+
+
+def test_cancel_and_retry_return_latest_task_fact() -> None:
+    client = _client()
+
+    cancelled = client.post("/v1/sync-jobs/sync-1/cancel")
+    retried = client.post("/v1/sync-jobs/sync-1/retry")
+
+    assert cancelled.status_code == 200
+    assert retried.status_code == 200
+    assert retried.json()["id"] == "sync-1"
+
+
+def test_cancel_unknown_task_is_rejected() -> None:
+    client = _client()
+
+    response = client.post("/v1/sync-jobs/unknown/cancel")
+
+    assert response.status_code == 409
+    assert client.post("/v1/sync-jobs/unknown/retry").status_code == 409
+    assert client.post(
+        "/v1/store-workspaces/store-1/sync-jobs",
+        headers={"Idempotency-Key": "invalid-resource"},
+        json={"resource_type": "finance"},
+    ).status_code == 422
+
+
+def test_cancel_and_retry_advertise_follow_up_polling() -> None:
+    client = _client()
+
+    cancelled = client.post("/v1/sync-jobs/sync-1/cancel")
+    retried = client.post("/v1/sync-jobs/sync-1/retry")
+
+    assert cancelled.headers["retry-after"] == "2"
+    assert retried.headers["location"] == "/v1/sync-jobs/sync-1"
+    assert retried.headers["retry-after"] == "2"
+
+
+def test_unknown_sync_job_read_returns_not_found() -> None:
+    response = _client().get("/v1/sync-jobs/unknown")
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "sync_job_not_found"
