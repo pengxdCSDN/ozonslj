@@ -20,6 +20,10 @@ class StoreWorkspace(BaseModel):
     updated_at: datetime
 
 
+class WorkspaceNotFoundError(LookupError):
+    """请求的卖家工作区不存在或不属于当前部署的数据边界。"""
+
+
 class CreateStoreWorkspace(BaseModel):
     """创建卖家工作区时接收的凭据，不允许额外字段绕过接口边界。"""
 
