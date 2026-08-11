@@ -31,8 +31,21 @@ def main() -> int:
             versions.append(int(match.group(1)))
         if "sqlite" in text.casefold():
             errors.append(f"{migration.name} 不得包含 SQLite 语句")
-        if "CREATE TABLE" not in text and "ALTER TABLE" not in text:
+        if not any(
+            statement in text
+            for statement in ("CREATE TABLE", "ALTER TABLE", "COMMENT ON TABLE", "COMMENT ON COLUMN")
+        ):
             errors.append(f"{migration.name} 不包含表结构变更语句")
+
+        if migration.name.endswith("sql_rag_comments.sql"):
+            required_fragments = (
+                "COMMENT ON TABLE",
+                "COMMENT ON COLUMN",
+                "SQL-RAG 中文表字段说明不完整",
+            )
+            for fragment in required_fragments:
+                if fragment not in text:
+                    errors.append(f"{migration.name} 缺少 SQL-RAG 注释门槛：{fragment}")
 
     if len(versions) != len(set(versions)):
         errors.append("迁移文件版本号重复")

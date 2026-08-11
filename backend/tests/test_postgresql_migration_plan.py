@@ -19,7 +19,7 @@ def test_new_database_uses_authoritative_schema_and_migrations() -> None:
     assert plan[0].name == "initial"
     assert plan[1].version == 2
     assert plan[1].name == "multi_tenant_saas"
-    assert plan[-1].source_version == 88
+    assert plan[-1].source_version == 89
 
 
 def test_legacy_database_gets_explicit_compatibility_steps() -> None:
@@ -34,6 +34,20 @@ def test_legacy_database_gets_explicit_compatibility_steps() -> None:
     assert [migration.version for migration in plan[:3]] == [3, 4, 5]
     assert plan[3].source_version == 3
     assert plan[3].version == 6
+
+
+def test_upgraded_legacy_database_can_receive_later_migrations() -> None:
+    """旧基线升级后必须继续识别偏移版本账本，不能在下一次发布被判为未知。"""
+    first_plan = build_migration_plan(dict(LEGACY_BASELINE))
+    applied = {
+        **LEGACY_BASELINE,
+        **{migration.version: migration.checksum for migration in first_plan[:-1]},
+    }
+
+    remaining = build_migration_plan(applied)
+
+    assert [migration.source_version for migration in remaining] == [89]
+    assert [migration.version for migration in remaining] == [92]
 
 
 def test_unknown_or_modified_legacy_baseline_is_rejected() -> None:

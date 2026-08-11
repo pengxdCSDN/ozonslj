@@ -107,24 +107,17 @@ def build_migration_plan(applied: dict[int, str]) -> tuple[Migration, ...]:
     if not applied:
         return (_migration(1, "initial", base_sql, source_version=1), *authoritative)
 
-    if applied == LEGACY_BASELINE:
-        modern_v2 = authoritative[0]
-        later = tuple(
-            _migration(
-                migration.source_version + 3,
-                migration.name,
-                migration.sql,
-                source_version=migration.source_version,
+    if all(applied.get(version) == checksum for version, checksum in LEGACY_BASELINE.items()):
+        legacy_complete = _build_legacy_migration_plan(authoritative)
+        expected_legacy = {
+            **LEGACY_BASELINE,
+            **{migration.version: migration.checksum for migration in legacy_complete},
+        }
+        if all(expected_legacy.get(version) == checksum for version, checksum in applied.items()):
+            return tuple(
+                migration for migration in legacy_complete if migration.version not in applied
             )
-            for migration in authoritative[1:]
-            if migration.source_version is not None
-        )
-        return (
-            _migration(3, "legacy_identity_tables_preserved", _LEGACY_PRESERVE_SQL),
-            _migration(4, modern_v2.name, modern_v2.sql, source_version=2),
-            _migration(5, "legacy_operator_backfill", _LEGACY_BACKFILL_SQL),
-            *later,
-        )
+        raise PostgresMigrationError("旧版数据库迁移账本包含未知或已修改的迁移，已停止自动升级")
 
     complete = (_migration(1, "initial", base_sql, source_version=1), *authoritative)
     expected = {migration.version: migration.checksum for migration in complete}
@@ -204,6 +197,29 @@ def _migration(
         sql=sql,
         checksum=hashlib.sha256(sql.encode("utf-8")).hexdigest(),
         source_version=source_version,
+    )
+
+
+def _build_legacy_migration_plan(
+    authoritative: tuple[Migration, ...],
+) -> tuple[Migration, ...]:
+    """生成旧云端基线的稳定版本映射，后续启动可继续追加新迁移。"""
+    modern_v2 = authoritative[0]
+    later = tuple(
+        _migration(
+            migration.source_version + 3,
+            migration.name,
+            migration.sql,
+            source_version=migration.source_version,
+        )
+        for migration in authoritative[1:]
+        if migration.source_version is not None
+    )
+    return (
+        _migration(3, "legacy_identity_tables_preserved", _LEGACY_PRESERVE_SQL),
+        _migration(4, modern_v2.name, modern_v2.sql, source_version=2),
+        _migration(5, "legacy_operator_backfill", _LEGACY_BACKFILL_SQL),
+        *later,
     )
 
 
