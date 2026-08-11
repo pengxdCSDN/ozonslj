@@ -31,10 +31,13 @@ def main() -> int:
             versions.append(int(match.group(1)))
         if "sqlite" in text.casefold():
             errors.append(f"{migration.name} 不得包含 SQLite 语句")
-        if not any(
-            statement in text
-            for statement in ("CREATE TABLE", "ALTER TABLE", "COMMENT ON TABLE", "COMMENT ON COLUMN")
-        ):
+        schema_statements = (
+            "CREATE TABLE",
+            "ALTER TABLE",
+            "COMMENT ON TABLE",
+            "COMMENT ON COLUMN",
+        )
+        if not any(statement in text for statement in schema_statements):
             errors.append(f"{migration.name} 不包含表结构变更语句")
 
         if migration.name.endswith("sql_rag_comments.sql"):
