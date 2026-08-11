@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import psycopg
+from psycopg import sql
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 _BASE_SCHEMA_PATH = _PROJECT_ROOT / "database" / "postgresql_schema.sql"
@@ -17,6 +18,21 @@ LEGACY_BASELINE: dict[int, str] = {
 }
 
 _TRANSACTION_CONTROL_RE = re.compile(r"(?im)^\s*(?:BEGIN|COMMIT);\s*$")
+
+# 这些表在早期迁移中以试验版结构创建，后续迁移又用同名表承载正式的组织级模型。
+# PostgreSQL 的 CREATE TABLE IF NOT EXISTS 不会补齐字段，因此执行正式迁移前把旧结构完整移入
+# legacy_archive schema。表、索引、约束和历史数据都会保留，且不会与 public 中的新结构重名。
+_SUPERSEDED_TABLES_BY_SOURCE_VERSION: dict[int, str] = {
+    58: "listing_fabe_drafts",
+    59: "listing_smart_search_reports",
+    60: "listing_risk_reports",
+    61: "listing_versions",
+    62: "listing_publish_commands",
+    64: "advertising_threshold_versions",
+    67: "model_adapter_configs",
+    74: "agent_triggers",
+    76: "external_notification_configs",
+}
 
 _LEGACY_PRESERVE_SQL = """
 ALTER TABLE workspace_memberships RENAME TO legacy_workspace_memberships;
@@ -136,6 +152,7 @@ def migrate_postgres(dsn: str) -> None:
             cursor.execute("SELECT version, checksum FROM schema_migrations ORDER BY version")
             applied = {int(row[0]): str(row[1]) for row in cursor.fetchall()}
             for migration in build_migration_plan(applied):
+                _archive_superseded_table(cursor, migration.source_version)
                 # 历史 SQL 文件可能自带 BEGIN/COMMIT；若直接执行会提前提交外层迁移事务。
                 # 仅移除独立行的事务控制语句，SQL 校验和仍基于原文件，历史审计不变。
                 try:
@@ -193,3 +210,43 @@ def _migration(
 def _without_transaction_control(sql: str) -> str:
     """让迁移运行器独占事务边界，保证任一迁移失败时整批回滚。"""
     return _TRANSACTION_CONTROL_RE.sub("", sql)
+
+
+def _archive_superseded_table(
+    cursor: psycopg.Cursor[tuple[object, ...]], source_version: int | None
+) -> None:
+    """正式同名表创建前归档缺少 organization_id 的试验版结构。"""
+    table_name = _SUPERSEDED_TABLES_BY_SOURCE_VERSION.get(source_version or -1)
+    if table_name is None:
+        return
+
+    cursor.execute(
+        """
+        SELECT
+            to_regclass(%s) IS NOT NULL,
+            EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = %s
+                  AND column_name = 'organization_id'
+            )
+        """,
+        (f"public.{table_name}", table_name),
+    )
+    row = cursor.fetchone()
+    if row is None or not bool(row[0]) or bool(row[1]):
+        return
+
+    cursor.execute("CREATE SCHEMA IF NOT EXISTS legacy_archive")
+    cursor.execute(
+        """
+        COMMENT ON SCHEMA legacy_archive IS
+        '迁移期间保留的旧版试验结构；仅供审计与人工数据核对，不作为当前业务查询来源。'
+        """
+    )
+    cursor.execute(
+        sql.SQL("ALTER TABLE public.{} SET SCHEMA legacy_archive").format(
+            sql.Identifier(table_name)
+        )
+    )

@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from backend.app.infrastructure.postgresql.migrations import (
+    _SUPERSEDED_TABLES_BY_SOURCE_VERSION,
     LEGACY_BASELINE,
     PostgresMigrationError,
     _without_transaction_control,
@@ -59,3 +60,20 @@ def test_embedded_transaction_control_is_removed_before_execution() -> None:
     assert "BEGIN;" not in executable
     assert "COMMIT;" not in executable
     assert "CREATE TABLE example" in executable
+
+
+def test_all_redeclared_tables_have_an_explicit_archive_boundary() -> None:
+    """同名正式表上线前必须归档试验版结构，避免 IF NOT EXISTS 掩盖字段缺失。"""
+    expected = {
+        58: "listing_fabe_drafts",
+        59: "listing_smart_search_reports",
+        60: "listing_risk_reports",
+        61: "listing_versions",
+        62: "listing_publish_commands",
+        64: "advertising_threshold_versions",
+        67: "model_adapter_configs",
+        74: "agent_triggers",
+        76: "external_notification_configs",
+    }
+
+    assert expected == _SUPERSEDED_TABLES_BY_SOURCE_VERSION
