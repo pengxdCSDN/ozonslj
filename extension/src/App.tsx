@@ -88,6 +88,14 @@ const NAV_GROUPS: { label: string; items: { view: View; label: string }[] }[] = 
   { label: "系统工具", items: [{ view: "performance-credentials", label: "Performance 凭据" }, { view: "seller-product-sync", label: "Seller 数据同步" }, { view: "agent-permissions", label: "Agent 权限" }, { view: "external-notifications", label: "外部通知" }] },
 ];
 
+const VIEW_LABELS: Partial<Record<View, string>> = {
+  overview: "运营总览",
+  products: "商品与库存",
+  operations: "运营事实",
+  tasks: "任务中心",
+  ...Object.fromEntries(NAV_GROUPS.flatMap((group) => group.items.map((item) => [item.view, item.label])))
+};
+
 function AdvancedNavigation({ view, onNavigate }: { view: View; onNavigate: (next: View) => void }) {
   return <div className="advanced-navigation">{NAV_GROUPS.map((group) => <details key={group.label} open={group.items.some((item) => item.view === view)}><summary>{group.label}<CaretDown size={12} /></summary><div>{group.items.map((item) => <button type="button" className={view === item.view ? "active" : ""} onClick={() => onNavigate(item.view)} key={item.view}>{item.label}</button>)}</div></details>)}</div>;
 }
@@ -277,6 +285,7 @@ export function App() {
   const metrics = useMemo(() => offers.reduce((sum, offer) => { sum.stock += offer.available_stock; sum.value += Number(offer.price) * offer.available_stock; if (!offer.available_stock) sum.empty++; else if (offer.available_stock <= LOW_STOCK_THRESHOLD) sum.risk++; return sum; }, { stock: 0, risk: 0, empty: 0, value: 0 }), [offers]);
   const filteredOffers = useMemo(() => { const needle = deferredQuery.trim().toLocaleLowerCase(); return offers.filter((offer) => (!needle || offer.name.toLocaleLowerCase().includes(needle) || offer.offer_id.toLocaleLowerCase().includes(needle)) && (stockFilter === "all" || (stockFilter === "available" && offer.available_stock > LOW_STOCK_THRESHOLD) || (stockFilter === "risk" && offer.available_stock > 0 && offer.available_stock <= LOW_STOCK_THRESHOLD) || (stockFilter === "empty" && !offer.available_stock))); }, [deferredQuery, offers, stockFilter]);
   const active = selectedWorkspace?.status === "active";
+  const currentViewLabel = VIEW_LABELS[view] ?? "当前功能";
   if (authLoading) return <div className="auth-state">正在恢复登录状态…</div>;
   if (!authUser) return <LoginView busy={authLoading} error={authError} onLogin={async (email, password) => { setAuthLoading(true); setAuthError(""); try { setAuthUser(await login(email, password)); } catch (error) { setAuthError(error instanceof Error ? error.message : "登录失败"); } finally { setAuthLoading(false); } }} />;
   return <main className="app-shell">
@@ -385,7 +394,7 @@ export function App() {
     {view === "data-quality-schema" && active ? <DataQualitySchemaView workspaceId={selectedWorkspaceId} /> : null}
     {view === "erp-import" && active ? <ErpImportView /> : null}
     {workspaceError ? <StatePanel icon={<WarningCircle size={27} />} title="本地服务未连接" body={workspaceError} action="重新连接" onAction={() => void refreshWorkspaces()} /> : null}
-    {!workspaceError && view !== "accounts" && !active ? <StatePanel icon={<Key size={27} />} title={selectedWorkspace ? STATUS_LABELS[selectedWorkspace.status] : "还没有店铺"} body="请先完成 Ozon Seller 凭据验证，再读取商品与库存数据。" action="管理店铺连接" onAction={() => setView("accounts")} /> : null}
+    {!workspaceError && view !== "accounts" && !active ? <StatePanel icon={<Key size={27} />} title={selectedWorkspace ? `${currentViewLabel}暂不可用` : "还没有店铺"} body={selectedWorkspace ? `当前店铺状态为“${STATUS_LABELS[selectedWorkspace.status]}”。请先完成 Ozon Seller 凭据验证，再使用${currentViewLabel}。` : "请先连接并验证 Ozon Seller 店铺，再使用运营功能。"} action="管理店铺连接" onAction={() => setView("accounts")} /> : null}
     {view !== "accounts" && active && state.status === "loading" ? <div className="loading-grid"><div /><div /><div /></div> : null}
     {view !== "accounts" && active && state.status === "error" ? <StatePanel icon={<WarningCircle size={27} />} title="商品读取失败" body={state.message} action="重新加载" onAction={() => void loadOffers()} /> : null}
     {state.status === "ready" && view === "overview" ? <div className="view-content"><PageHeading label="运营总览" title="晚上好，运营人" note={`${selectedWorkspace?.display_name} · ${lastSyncedAt?.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })} 更新`} /><section className="hero-metric"><div><span>在库商品总量</span><strong>{metrics.stock.toLocaleString()}</strong><small><b>↑ 已同步</b> Ozon 实时库存</small></div><Cube size={34} weight="duotone" /></section><section className="metric-grid"><article><span>库存货值</span><strong>{Math.round(metrics.value / 1000).toLocaleString()}k</strong><small>按当前售价估算</small></article><article className="risk"><span>风险 SKU</span><strong>{metrics.risk + metrics.empty}</strong><small>{metrics.empty} 项已缺货</small></article></section><section className="panel"><div className="section-heading"><div><p className="eyebrow">库存信号</p><h2>优先处理</h2></div><button className="text-button" onClick={() => setView("products")}>查看全部 <ArrowRight size={14} /></button></div>{offers.filter((o) => o.available_stock <= LOW_STOCK_THRESHOLD).slice(0, 4).map((o) => <ProductRow offer={o} key={o.offer_id} />)}{!metrics.risk && !metrics.empty ? <div className="healthy-state"><CheckCircle size={22} />当前库存状态健康</div> : null}</section></div> : null}
