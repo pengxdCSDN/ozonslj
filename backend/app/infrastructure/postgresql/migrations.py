@@ -138,7 +138,12 @@ def migrate_postgres(dsn: str) -> None:
             for migration in build_migration_plan(applied):
                 # 历史 SQL 文件可能自带 BEGIN/COMMIT；若直接执行会提前提交外层迁移事务。
                 # 仅移除独立行的事务控制语句，SQL 校验和仍基于原文件，历史审计不变。
-                cursor.execute(_without_transaction_control(migration.sql))
+                try:
+                    cursor.execute(_without_transaction_control(migration.sql))
+                except psycopg.Error as error:
+                    raise PostgresMigrationError(
+                        f"PostgreSQL 迁移 v{migration.version} {migration.name!r} 执行失败"
+                    ) from error
                 cursor.execute(
                     """
                     INSERT INTO schema_migrations (version, name, checksum)
