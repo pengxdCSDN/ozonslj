@@ -26,7 +26,7 @@ class PostgresAdvertisingMetricsGateway:
             connection.execute(
                 """
                 INSERT INTO advertising_metric_snapshots
-                    (id, organization_id, workspace_id, window, currency,
+                    (id, organization_id, workspace_id, metric_window, currency,
                      inputs, metrics, complete)
                 VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s)
                 """,

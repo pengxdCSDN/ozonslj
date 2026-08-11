@@ -43,5 +43,6 @@ def test_metrics_snapshot_persists_inputs_and_derived_result() -> None:
     assert sessions.context == context
     query, params = connection.execute.call_args.args
     assert "advertising_metric_snapshots" in query
+    assert "metric_window" in query
     assert params[1:3] == ("org-1", "workspace-1")
     assert '"impressions": 100' in params[5]
