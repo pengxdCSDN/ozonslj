@@ -1,5 +1,26 @@
 # Troubleshooting
 
+## 2026-08-11：发布后登录返回 HTTP 500
+
+### 现象
+
+API、Worker、PostgreSQL 和 Redis 均健康，但登录接口返回 500；API 日志显示
+`relation "users" does not exist`。
+
+### 原因判断
+
+应用镜像已包含当前身份代码，却仍只打包早期 `database/postgres/migrations`。服务器迁移账本
+停留在 `0001 initial`、`0002 identity_sessions`，API 启动也没有执行权威迁移，因此代码和
+数据库结构不一致。
+
+### 恢复办法与预防措施
+
+- 镜像只打包 `database/postgresql_schema.sql` 与 `database/migrations/`。
+- PostgreSQL 连接池开放前执行带咨询锁的版本化迁移；失败时不允许服务进入就绪状态。
+- 旧云端账本仅在名称和 SHA-256 精确匹配时走受控兼容路径，禁止手工建表、修改历史校验和或
+  直接把当前 `0002` 覆盖到已占用版本。
+- 发布前使用隔离数据库演练旧基线升级，并确认运营人员、工作区授权和会话表映射完成。
+
 本文件记录可复现或高成本的开发环境故障。每条记录包含现象、原因判断、恢复办法和预防措施。
 
 ## 2026-07-31：前端验证异常等待约 47 分钟

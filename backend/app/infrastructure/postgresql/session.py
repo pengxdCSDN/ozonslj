@@ -7,6 +7,8 @@ from psycopg import Connection
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
+from backend.app.infrastructure.postgresql.migrations import migrate_postgres
+
 
 @dataclass(frozen=True, slots=True)
 class TenantContext:
@@ -39,6 +41,8 @@ class PostgresSessionFactory:
             raise ValueError("PostgreSQL 连接池大小无效")
         # API 默认最多占用 5 个连接，为 Worker、迁移、备份和运维预留云端
         # max_connections=30 的余量。连接池延迟打开，模块导入不会访问网络。
+        self._database_url = database_url
+        self._migrate_on_open = pool is None
         self._pool = pool or ConnectionPool(
             conninfo=database_url,
             min_size=min_size,
@@ -49,6 +53,10 @@ class PostgresSessionFactory:
 
     def open(self) -> None:
         """显式打开连接池并等待最小连接就绪，使启动失败可被部署平台观察。"""
+        # API 与 Worker 都可能率先访问数据库；迁移运行器通过咨询锁串行化升级。
+        # 升级失败时不开放连接池，避免新代码在旧 schema 上继续提供流量。
+        if self._migrate_on_open:
+            migrate_postgres(self._database_url)
         self._pool.open(wait=True)
 
     def close(self) -> None:
