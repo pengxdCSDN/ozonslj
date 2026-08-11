@@ -27,6 +27,18 @@ export interface CreateWorkspaceRequest extends StoreCredentials {
   display_name: string;
 }
 
+export interface CreateSellerAccountRequest {
+  display_name: string;
+  workspace_name: string;
+  client_id: string;
+  api_key: string;
+}
+
+export interface CreatedSellerAccount {
+  seller_account_id: string;
+  workspace_id: string;
+}
+
 export interface ProductOffer {
   offer_id: string;
   ozon_product_id: string | null;
@@ -224,6 +236,16 @@ export async function logout(): Promise<void> {
 
 export function fetchStoreWorkspaces(signal?: AbortSignal): Promise<StoreWorkspace[]> {
   return requestJson("/v1/store-workspaces", { signal });
+}
+
+/** 管理员创建卖家账户和首个工作区；凭据只进入请求体，不写入浏览器存储。 */
+export function createSellerAccount(
+  request: CreateSellerAccountRequest
+): Promise<CreatedSellerAccount> {
+  return requestJson("/v1/seller-accounts", {
+    method: "POST",
+    body: JSON.stringify(request)
+  });
 }
 
 export function createStoreWorkspace(
