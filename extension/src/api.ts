@@ -18,6 +18,33 @@ export interface AuthUser {
 
 let sessionToken: string | null = null;
 
+/**
+ * 生成请求追踪与幂等标识。
+ * HTTP 开发站点可能不暴露 randomUUID，但 getRandomValues 仍可提供密码学安全随机数；
+ * 禁止退化为 Math.random，避免碰撞导致不同写请求被错误视为同一请求。
+ */
+export function createRequestId(): string {
+  const webCrypto = globalThis.crypto;
+  if (typeof webCrypto?.randomUUID === "function") {
+    return webCrypto.randomUUID();
+  }
+  if (typeof webCrypto?.getRandomValues !== "function") {
+    throw new Error("当前浏览器不支持安全随机数，无法创建请求标识");
+  }
+
+  const bytes = webCrypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0"));
+  return [
+    hex.slice(0, 4).join(""),
+    hex.slice(4, 6).join(""),
+    hex.slice(6, 8).join(""),
+    hex.slice(8, 10).join(""),
+    hex.slice(10, 16).join("")
+  ].join("-");
+}
+
 export interface StoreCredentials {
   client_id: string;
   api_key: string;
@@ -188,7 +215,7 @@ async function requestJson<T>(
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      "X-Request-Id": crypto.randomUUID(),
+      "X-Request-Id": createRequestId(),
       ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
       ...init.headers
     }
@@ -327,7 +354,7 @@ export async function fetchTaskData(workspaceId: string, signal?: AbortSignal): 
 export function createSyncJob(workspaceId: string, resourceType: SyncResourceType): Promise<SyncJob> {
   return requestJson(`/v1/store-workspaces/${encodeURIComponent(workspaceId)}/sync-jobs`, {
     method: "POST",
-    headers: { "Idempotency-Key": crypto.randomUUID() },
+    headers: { "Idempotency-Key": createRequestId() },
     body: JSON.stringify({ resource_type: resourceType })
   });
 }
