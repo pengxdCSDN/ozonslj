@@ -28,12 +28,14 @@
   .advanced-navigation details { position: relative; border-radius: 10px; }
   .advanced-navigation details[open] { padding-bottom: 4px; }
   .advanced-navigation details[open]::before { position: absolute; top: 46px; bottom: 10px; left: 20px; width: 1px; background: linear-gradient(#8b69f6, rgba(139, 105, 246, .08)); content: ""; }
-  .advanced-navigation summary { display: flex; min-height: 42px; align-items: center; justify-content: space-between; padding: 10px 13px; border: 1px solid transparent; border-radius: 10px; color: #858198; font-size: 12px; font-weight: 700; letter-spacing: 0; cursor: pointer; list-style: none; }
+  .advanced-navigation summary { display: grid; grid-template-columns: 17px minmax(0, 1fr) 13px; gap: 11px; min-height: 42px; align-items: center; padding: 10px 13px; border: 1px solid transparent; border-radius: 10px; color: #858198; font-size: 12px; font-weight: 700; letter-spacing: 0; cursor: pointer; list-style: none; }
   .advanced-navigation summary:hover { color: #d8d1eb; background: rgba(53, 47, 81, .52); }
   .advanced-navigation summary::-webkit-details-marker { display: none; }
-  .advanced-navigation summary svg { transition: transform .18s ease; }
+  .advanced-navigation summary > svg:first-child { color: #77748a; }
+  .advanced-navigation summary > svg:last-child { justify-self: end; transition: transform .18s ease; }
   .advanced-navigation details[open] summary { border-color: rgba(139, 105, 246, .12); color: #d8d0ef; background: rgba(42, 35, 72, .38); }
-  .advanced-navigation details[open] summary svg { transform: rotate(180deg); }
+  .advanced-navigation details[open] summary > svg:first-child { color: #aa91fb; }
+  .advanced-navigation details[open] summary > svg:last-child { transform: rotate(180deg); }
   .advanced-navigation details > div { display: grid; gap: 2px; padding: 4px 0 2px 28px; }
   .advanced-navigation details button { min-height: 36px; padding: 8px 12px; border-radius: 8px; color: #77738b; font-size: 11px; font-weight: 650; }
   .advanced-navigation details button:hover { color: #d5ccec; background: rgba(71, 60, 108, .42); }

@@ -80,12 +80,12 @@ function QualityQueue({ findings, onResolve }: { findings: import("./api").Quali
 function QualityView({ state, summary, onCheck }: { state: { status: "idle" | "loading" | "ready" | "error"; result?: import("./api").QualityCheckResult; message?: string }; summary?: import("./api").QualitySummary; onCheck: () => void }) { return <div className="view-content"><PageHeading label="数据质量" title="数据质量中心" note="异常结果只作为质量提示，不静默进入运营分析" compact /><section className="panel"><div className="section-heading"><div><p className="eyebrow">DQ-003 / DQ-004 / DQ-005 / DQ-008</p><h2>问题摘要与样本检查</h2></div><button className="secondary-button" onClick={onCheck} disabled={state.status === "loading"}>{state.status === "loading" ? "检查中…" : "开始检查"}</button></div>{summary ? <div className="metric-grid"><div><small>待处理问题</small><strong>{summary.total}</strong></div><div><small>错误</small><strong>{summary.by_severity.error ?? 0}</strong></div><div><small>警告</small><strong>{summary.by_severity.warning ?? 0}</strong></div></div> : null}{state.status === "error" ? <p className="form-message">{state.message}</p> : null}{state.status === "ready" ? <div className="quality-result"><strong>{state.result?.valid ? "样本通过检查" : `发现 ${state.result?.findings.length ?? 0} 个问题`}</strong>{state.result?.findings.map((finding) => <div className="operation-row" key={`${finding.rule_code}-${finding.field_name}`}><span><strong>{finding.rule_code}</strong><small>{finding.field_name}</small></span><em>{finding.message}</em></div>)}</div> : null}{state.status === "idle" ? <div className="empty-search"><strong>尚未执行检查</strong><span>检查会调用后端质量规则，不修改业务事实</span></div> : null}</section></div>; }
 const STATUS_LABELS = { pending: "待验证", active: "已连接", invalid: "凭据无效", disabled: "已停用" } as const;
 
-const NAV_GROUPS: { label: string; items: { view: View; label: string }[] }[] = [
-  { label: "数据准备", items: [{ view: "quality", label: "数据质量" }, { view: "imports", label: "搜索词导入" }, { view: "competitors", label: "竞品种子" }, { view: "sampling", label: "公开采样" }] },
-  { label: "选品研究", items: [{ view: "explore", label: "探索选品" }, { view: "validate", label: "选品验证" }, { view: "competition", label: "竞争分析" }, { view: "profit", label: "利润模型" }] },
-  { label: "内容增长", items: [{ view: "listing-keywords", label: "关键词策略" }, { view: "listing-title", label: "标题草稿" }, { view: "listing-risk", label: "内容风险" }, { view: "listing-publish", label: "受控发布" }] },
-  { label: "广告分析", items: [{ view: "advertising-campaigns", label: "广告活动" }, { view: "advertising-metrics", label: "广告指标" }, { view: "advertising-keywords", label: "关键词诊断" }, { view: "summary-report", label: "汇总报告" }] },
-  { label: "系统工具", items: [{ view: "performance-credentials", label: "Performance 凭据" }, { view: "seller-product-sync", label: "Seller 数据同步" }, { view: "agent-permissions", label: "Agent 权限" }, { view: "external-notifications", label: "外部通知" }] },
+const NAV_GROUPS: { label: string; icon: React.ReactNode; items: { view: View; label: string }[] }[] = [
+  { label: "数据准备", icon: <ShieldCheck size={17} />, items: [{ view: "quality", label: "数据质量" }, { view: "imports", label: "搜索词导入" }, { view: "competitors", label: "竞品种子" }, { view: "sampling", label: "公开采样" }] },
+  { label: "选品研究", icon: <MagnifyingGlass size={17} />, items: [{ view: "explore", label: "探索选品" }, { view: "validate", label: "选品验证" }, { view: "competition", label: "竞争分析" }, { view: "profit", label: "利润模型" }] },
+  { label: "内容增长", icon: <ClipboardText size={17} />, items: [{ view: "listing-keywords", label: "关键词策略" }, { view: "listing-title", label: "标题草稿" }, { view: "listing-risk", label: "内容风险" }, { view: "listing-publish", label: "受控发布" }] },
+  { label: "广告分析", icon: <ChartLineUp size={17} />, items: [{ view: "advertising-campaigns", label: "广告活动" }, { view: "advertising-metrics", label: "广告指标" }, { view: "advertising-keywords", label: "关键词诊断" }, { view: "summary-report", label: "汇总报告" }] },
+  { label: "系统工具", icon: <Key size={17} />, items: [{ view: "performance-credentials", label: "Performance 凭据" }, { view: "seller-product-sync", label: "Seller 数据同步" }, { view: "agent-permissions", label: "Agent 权限" }, { view: "external-notifications", label: "外部通知" }] },
 ];
 
 const VIEW_LABELS: Partial<Record<View, string>> = {
@@ -97,7 +97,7 @@ const VIEW_LABELS: Partial<Record<View, string>> = {
 };
 
 function AdvancedNavigation({ view, onNavigate }: { view: View; onNavigate: (next: View) => void }) {
-  return <div className="advanced-navigation">{NAV_GROUPS.map((group) => <details key={group.label} open={group.items.some((item) => item.view === view)}><summary>{group.label}<CaretDown size={12} /></summary><div>{group.items.map((item) => <button type="button" className={view === item.view ? "active" : ""} onClick={() => onNavigate(item.view)} key={item.view}>{item.label}</button>)}</div></details>)}</div>;
+  return <div className="advanced-navigation">{NAV_GROUPS.map((group) => <details key={group.label} open={group.items.some((item) => item.view === view)}><summary>{group.icon}<span>{group.label}</span><CaretDown size={12} /></summary><div>{group.items.map((item) => <button type="button" className={view === item.view ? "active" : ""} onClick={() => onNavigate(item.view)} key={item.view}>{item.label}</button>)}</div></details>)}</div>;
 }
 
 function WorkspaceSwitcher({ workspaces, selectedId, onChange, title }: { workspaces: StoreWorkspace[]; selectedId: string; onChange: (id: string) => void; title: string }) {
