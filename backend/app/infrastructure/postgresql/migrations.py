@@ -1,4 +1,5 @@
 import hashlib
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,6 +15,8 @@ LEGACY_BASELINE: dict[int, str] = {
     1: "1a01277233c3a926cad706d98c15876c6e9ffe7aef03a2bd8b013fbf76606cc2",
     2: "2c61be3480da0d0072d20922682efcb1d0ab2328d6ee38cf959786ba610599b4",
 }
+
+_TRANSACTION_CONTROL_RE = re.compile(r"(?im)^\s*(?:BEGIN|COMMIT);\s*$")
 
 _LEGACY_PRESERVE_SQL = """
 ALTER TABLE workspace_memberships RENAME TO legacy_workspace_memberships;
@@ -133,7 +136,9 @@ def migrate_postgres(dsn: str) -> None:
             cursor.execute("SELECT version, checksum FROM schema_migrations ORDER BY version")
             applied = {int(row[0]): str(row[1]) for row in cursor.fetchall()}
             for migration in build_migration_plan(applied):
-                cursor.execute(migration.sql)
+                # 历史 SQL 文件可能自带 BEGIN/COMMIT；若直接执行会提前提交外层迁移事务。
+                # 仅移除独立行的事务控制语句，SQL 校验和仍基于原文件，历史审计不变。
+                cursor.execute(_without_transaction_control(migration.sql))
                 cursor.execute(
                     """
                     INSERT INTO schema_migrations (version, name, checksum)
@@ -178,3 +183,8 @@ def _migration(
         checksum=hashlib.sha256(sql.encode("utf-8")).hexdigest(),
         source_version=source_version,
     )
+
+
+def _without_transaction_control(sql: str) -> str:
+    """让迁移运行器独占事务边界，保证任一迁移失败时整批回滚。"""
+    return _TRANSACTION_CONTROL_RE.sub("", sql)

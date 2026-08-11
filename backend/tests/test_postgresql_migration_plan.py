@@ -5,6 +5,7 @@ import pytest
 from backend.app.infrastructure.postgresql.migrations import (
     LEGACY_BASELINE,
     PostgresMigrationError,
+    _without_transaction_control,
     build_migration_plan,
 )
 
@@ -47,3 +48,14 @@ def test_dockerfile_packages_only_authoritative_migration_sources() -> None:
     assert "COPY database/postgresql_schema.sql ./database/postgresql_schema.sql" in dockerfile
     assert "COPY database/migrations ./database/migrations" in dockerfile
     assert "COPY database/postgres " not in dockerfile
+
+
+def test_embedded_transaction_control_is_removed_before_execution() -> None:
+    """历史 SQL 的事务语句不得提前提交迁移运行器的外层事务。"""
+    sql = "BEGIN;\nCREATE TABLE example (id integer);\nCOMMIT;\n"
+
+    executable = _without_transaction_control(sql)
+
+    assert "BEGIN;" not in executable
+    assert "COMMIT;" not in executable
+    assert "CREATE TABLE example" in executable
