@@ -203,8 +203,20 @@ export class ApiError extends Error {
   }
 }
 
-// 云端通过 VITE_API_BASE_URL 注入后端地址；本地开发保留固定默认值，避免空配置请求到当前扩展页面。
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "http://127.0.0.1:8000";
+/**
+ * 解析当前客户端使用的 API 根地址。
+ * Web 页面必须走 Nginx 的同源 `/api` 代理，以便会话 Cookie 随请求发送；Chrome 扩展没有
+ * HTTP(S) 页面源，开发时才回退到本机 FastAPI。显式环境变量始终拥有最高优先级。
+ */
+export function resolveApiBaseUrl(
+  configuredUrl: string | undefined,
+  protocol: string = globalThis.location?.protocol ?? ""
+): string {
+  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
+  return protocol === "http:" || protocol === "https:" ? "/api" : "http://127.0.0.1:8000";
+}
+
+const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL as string | undefined);
 
 async function requestJson<T>(
   path: string,
