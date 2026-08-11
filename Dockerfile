@@ -13,7 +13,8 @@ WORKDIR /app
 
 COPY pyproject.toml ./
 COPY backend ./backend
-COPY database/postgres ./database/postgres
+COPY database/postgresql_schema.sql ./database/postgresql_schema.sql
+COPY database/migrations ./database/migrations
 COPY scripts/create_operator.py ./scripts/create_operator.py
 
 RUN python -m pip install --upgrade pip \
