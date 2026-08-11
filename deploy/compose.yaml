@@ -10,6 +10,8 @@ x-app-common: &app-common
     POSTGRES_DATABASE: ozonslj
     POSTGRES_USER: ozonslj
     POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    # 旧单工作区数据在受控迁移中归入该内部组织；客户端不得选择或覆盖此边界。
+    DEFAULT_ORGANIZATION_ID: legacy-bootstrap
     OZON_CREDENTIAL_KEY_FILE: /run/secrets/ozon_credential_key
     OZON_CREDENTIAL_KEY_VERSION: "${OZON_CREDENTIAL_KEY_VERSION:-1}"
     POSTGRES_POOL_MIN_SIZE: "1"
