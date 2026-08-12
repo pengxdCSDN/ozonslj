@@ -7,6 +7,7 @@ def test_chroma_manifest_is_private_and_resource_bounded() -> None:
     assert "memory: 384M" in manifest
     assert "chroma_data" in manifest
     assert "healthcheck:" in manifest
+    assert "urllib.request" in manifest
     assert "ozonslj_backend" in manifest
     assert "CHROMA_IMAGE_TAG" in manifest
 

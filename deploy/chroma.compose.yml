@@ -13,7 +13,12 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/api/v1/heartbeat || exit 1"]
+      # Chroma 运行时镜像不保证包含 wget；使用内置 Python 标准库探测心跳，避免误报不健康。
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/heartbeat', timeout=3)"
       interval: 30s
       timeout: 5s
       retries: 5
