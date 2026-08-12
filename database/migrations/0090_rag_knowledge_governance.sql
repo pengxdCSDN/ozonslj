@@ -20,7 +20,11 @@ CREATE TABLE IF NOT EXISTS rag_knowledge_sources (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMPTZ,
-    UNIQUE (organization_id, source_locator)
+    UNIQUE (organization_id, source_locator),
+    -- PostgreSQL 的复合外键要求父表存在完全匹配的唯一约束。
+    -- 虽然 id 已是全局主键，仍保留组织范围唯一键，确保下游版本和任务
+    -- 可以通过 (organization_id, source_id) 同时校验租户归属，避免跨组织引用。
+    UNIQUE (organization_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS rag_document_versions (
