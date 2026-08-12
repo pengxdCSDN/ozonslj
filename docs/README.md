@@ -12,6 +12,12 @@
 | [`DATABASE.md`](./DATABASE.md) | PostgreSQL/Redis 数据边界、实体所有权、约束、索引和迁移原则 | 仅存在于旧持久化实现的规则 |
 | [`PROJECT_PLAN.md`](./PROJECT_PLAN.md) | 实施顺序、阶段状态、退出条件和未完成工作 | 永久架构规则 |
 | [`FEATURE_INVENTORY.md`](./FEATURE_INVENTORY.md) | 全部细功能点、页面数量、开发状态和后续顺序 | 需求确认过程或临时进度日志 |
+| [`RAG_REQUIREMENTS.md`](./RAG_REQUIREMENTS.md) | 已确认的知识型混合 RAG 业务范围、边界和验收条件 | 已开发状态或具体技术实现 |
+| [`RAG_ARCHITECTURE.md`](./RAG_ARCHITECTURE.md) | 已确认的知识型混合 RAG 数据职责、安全不变量和运行期工程定档边界 | 临时实施进度 |
+| [`RAG_GOVERNANCE_AND_DATA_MODEL.md`](./RAG_GOVERNANCE_AND_DATA_MODEL.md) | RAG 知识治理实体、生命周期、约束、索引依据和迁移顺序 | HTTP 接口或模型提示词细节 |
+| [`RAG_RETRIEVAL_QUALITY.md`](./RAG_RETRIEVAL_QUALITY.md) | 查询理解、混合检索、精排、证据、拒答、评测和可观测性 | 数据库 DDL 或临时调参记录 |
+| [`RAG_API_TARGET.md`](./RAG_API_TARGET.md) | RAG 知识管理、预览、问答、追踪和反馈的目标 HTTP 契约 | 已实现状态或上游模型私有协议 |
+| [`RAG_IMPLEMENTATION_PLAN.md`](./RAG_IMPLEMENTATION_PLAN.md) | RAG 工作包、依赖关系、测试矩阵、退出条件和实施顺序 | 永久业务规则或临时运行日志 |
 | [`DEVELOPMENT_STANDARDS.md`](./DEVELOPMENT_STANDARDS.md) | 可重复执行的代码、测试、数据和评审规范 | 临时进度 |
 | [`LOCAL_DEVELOPMENT.md`](./LOCAL_DEVELOPMENT.md) | 本地安装、配置、启动、Stub 和检查方式 | 云端生产凭据 |
 | [`troubleshooting.md`](./troubleshooting.md) | 已复现故障的现象、原因、恢复和预防 | 未验证猜测 |
@@ -48,6 +54,8 @@
 - 历史架构快照：[`ARCHITECTURE-V5.md`](./ARCHITECTURE-V5.md)。
 - V6 中尚未开发的能力继续标记为“已定档待开发”，不能仅因定档而标记为已实现。
 - 已接受 ADR：[ADR-0001：所有环境统一使用 PostgreSQL](./decisions/0001-postgresql-only.md)。
+- RAG 向量索引决策：[ADR-0010：使用独立 Chroma 服务建设知识型混合 RAG](./decisions/0010-chroma-for-knowledge-hybrid-rag.md)。
+- RAG 专项定档基线：[RAG 需求](./RAG_REQUIREMENTS.md)、[RAG 技术架构](./RAG_ARCHITECTURE.md)、[治理与数据模型](./RAG_GOVERNANCE_AND_DATA_MODEL.md)、[检索质量](./RAG_RETRIEVAL_QUALITY.md) 和 [目标 API](./RAG_API_TARGET.md)；核心本地闭环已开发，云端部署验收单独跟踪。
 
 ## 5. 维护检查清单
 

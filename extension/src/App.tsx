@@ -1,4 +1,4 @@
-import { ArrowClockwise, ArrowRight, CaretDown, ChartLineUp, CheckCircle, ClipboardText, Cube, Key, MagnifyingGlass, Package, Plus, ShieldCheck, ShoppingCart, Storefront, Truck, WarningCircle, Warehouse, X } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowRight, CaretDown, ChartLineUp, ChatCircleText, CheckCircle, ClipboardText, Cube, Key, MagnifyingGlass, Package, Plus, ShieldCheck, ShoppingCart, Storefront, Truck, WarningCircle, Warehouse, X } from "@phosphor-icons/react";
 import { type FormEvent, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { cancelSyncJob, createSellerAccount, createStoreWorkspace, createSyncJob, fetchCurrentUser, fetchOperationData, fetchProductOffers, fetchStoreWorkspaces, fetchSyncJob, fetchTaskData, latestOperationSyncAt, login, logout, replaceStoreCredentials, retrySyncJob, type AuthUser, type OperationData, type ProductOffer, type ProductOfferPage, type SellerOperationSummary, type StoreWorkspace, type SyncJob, type SyncResourceType, verifyStoreWorkspace } from "./api";
 import { loadSelectedWorkspaceId, saveSelectedWorkspaceId } from "./workspace-storage";
@@ -68,9 +68,12 @@ import { DataQualitySchemaView } from "./DataQualitySchemaView";
 import { DataQualityDashboardView } from "./DataQualityDashboardView";
 import { ErpImportView } from "./ErpImportView";
 import { KeywordImportView } from "./KeywordImportView";
+import { KnowledgeQueryView } from "./KnowledgeQueryView";
+import { KnowledgeSourcesView } from "./KnowledgeSourcesView";
+import { ModelBudgetView } from "./ModelBudgetView";
 
 type LoadState = { status: "idle" | "loading" } | { status: "ready"; data: ProductOfferPage } | { status: "error"; message: string };
-type View = "overview" | "products" | "operations" | "tasks" | "quality" | "imports" | "competitors" | "sampling-policy" | "sampling" | "snapshots" | "sample-scope" | "parser-alerts" | "explore" | "validate" | "expand" | "decision-book" | "competition" | "profit" | "sensitivity" | "listing-keywords" | "listing-layering" | "listing-title" | "search-attributes" | "fabe" | "smart-search" | "listing-risk" | "listing-versions" | "listing-publish" | "performance-oauth" | "advertising-campaigns" | "advertising-reports" | "advertising-metrics" | "advertising-keywords" | "advertising-thresholds" | "advertising-calendar" | "advertising-readonly" | "model-adapter" | "readonly-tools" | "sales-analysis" | "inventory-analysis" | "advertising-analysis" | "competitor-selection-analysis" | "summary-report" | "agent-triggers" | "agent-permissions" | "external-notifications" | "performance-credentials" | "seller-product-sync" | "seller-stock-sync" | "seller-order-sync" | "seller-fulfillment-sync" | "sync-processor" | "data-source-labels" | "data-quality-schema" | "erp-import" | "accounts";
+type View = "overview" | "products" | "operations" | "tasks" | "quality" | "imports" | "competitors" | "sampling-policy" | "sampling" | "snapshots" | "sample-scope" | "parser-alerts" | "explore" | "validate" | "expand" | "decision-book" | "competition" | "profit" | "sensitivity" | "listing-keywords" | "listing-layering" | "listing-title" | "search-attributes" | "fabe" | "smart-search" | "listing-risk" | "listing-versions" | "listing-publish" | "performance-oauth" | "advertising-campaigns" | "advertising-reports" | "advertising-metrics" | "advertising-keywords" | "advertising-thresholds" | "advertising-calendar" | "advertising-readonly" | "model-adapter" | "model-budget" | "readonly-tools" | "sales-analysis" | "inventory-analysis" | "advertising-analysis" | "competitor-selection-analysis" | "summary-report" | "agent-triggers" | "agent-permissions" | "external-notifications" | "performance-credentials" | "seller-product-sync" | "seller-stock-sync" | "seller-order-sync" | "seller-fulfillment-sync" | "sync-processor" | "data-source-labels" | "data-quality-schema" | "erp-import" | "knowledge-query" | "knowledge-sources" | "accounts";
 type OperationLoadState = { status: "idle" | "loading" } | { status: "ready"; data: OperationData } | { status: "error"; message: string };
 type StockFilter = "all" | "available" | "risk" | "empty";
 type CurrentUser = AuthUser;
@@ -81,11 +84,12 @@ function QualityView({ state, summary, onCheck }: { state: { status: "idle" | "l
 const STATUS_LABELS = { pending: "待验证", active: "已连接", invalid: "凭据无效", disabled: "已停用" } as const;
 
 const NAV_GROUPS: { label: string; icon: React.ReactNode; items: { view: View; label: string }[] }[] = [
+  { label: "知识中心", icon: <ChatCircleText size={17} />, items: [{ view: "knowledge-query", label: "知识问答" }, { view: "knowledge-sources", label: "知识源管理" }] },
   { label: "数据准备", icon: <ShieldCheck size={17} />, items: [{ view: "quality", label: "数据质量" }, { view: "imports", label: "搜索词导入" }, { view: "competitors", label: "竞品种子" }, { view: "sampling", label: "公开采样" }] },
   { label: "选品研究", icon: <MagnifyingGlass size={17} />, items: [{ view: "explore", label: "探索选品" }, { view: "validate", label: "选品验证" }, { view: "competition", label: "竞争分析" }, { view: "profit", label: "利润模型" }] },
   { label: "内容增长", icon: <ClipboardText size={17} />, items: [{ view: "listing-keywords", label: "关键词策略" }, { view: "listing-title", label: "标题草稿" }, { view: "listing-risk", label: "内容风险" }, { view: "listing-publish", label: "受控发布" }] },
   { label: "广告分析", icon: <ChartLineUp size={17} />, items: [{ view: "advertising-campaigns", label: "广告活动" }, { view: "advertising-metrics", label: "广告指标" }, { view: "advertising-keywords", label: "关键词诊断" }, { view: "summary-report", label: "汇总报告" }] },
-  { label: "系统工具", icon: <Key size={17} />, items: [{ view: "performance-credentials", label: "Performance 凭据" }, { view: "seller-product-sync", label: "Seller 数据同步" }, { view: "agent-permissions", label: "Agent 权限" }, { view: "external-notifications", label: "外部通知" }] },
+  { label: "系统工具", icon: <Key size={17} />, items: [{ view: "performance-credentials", label: "Performance 凭据" }, { view: "model-budget", label: "模型额度" }, { view: "seller-product-sync", label: "Seller 数据同步" }, { view: "agent-permissions", label: "Agent 权限" }, { view: "external-notifications", label: "外部通知" }] },
 ];
 
 const VIEW_LABELS: Partial<Record<View, string>> = {
@@ -343,6 +347,9 @@ export function App() {
     <button className="text-button quality-shortcut" onClick={() => setView("data-quality-schema")} type="button"><ShieldCheck size={14} /> Schema 质量</button>
     <button className="text-button quality-shortcut" onClick={() => setView("erp-import")} type="button"><ClipboardText size={14} /> ERP 补充数据</button></>}
     {view === "quality" && active ? <DataQualityDashboardView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "knowledge-query" && active ? <KnowledgeQueryView /> : null}
+    {view === "knowledge-sources" && active ? <KnowledgeSourcesView /> : null}
+    {view === "model-budget" && active ? <ModelBudgetView /> : null}
     {view === "imports" && active && selectedWorkspaceId ? <KeywordImportView workspaceId={selectedWorkspaceId} /> : null}
     {view === "competitors" && active && selectedWorkspaceId ? <CompetitorSeedsView workspaceId={selectedWorkspaceId} /> : null}
     {view === "sampling-policy" && active ? <SamplingPolicyView workspaceId={selectedWorkspaceId} /> : null}

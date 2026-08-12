@@ -161,6 +161,12 @@ Redis Streams + Consumer Group 已确认但尚未开发。Redis 消息只携带�
 - 自动化测试不得访问真实 Ozon 账户、真实公开页面或真实模型服务。
 
 当前已有 `backend/tests/test_postgresql_saas_migration.py` 对迁移关键片段做契约检查；后续必须增加真实隔离 PostgreSQL 的迁移、RLS、并发和恢复集成测试。旧的 `scripts/validate_schema.py` 已删除，不得在文档中继续报告该命令可用。
+
+## 11. 知识型混合 RAG 数据基线（核心已开发，云端验收待完成）
+
+RAG 的 PostgreSQL 目标模型包括知识来源、来源版本、解析产物、切片目录、发布版本、摄取/索引任务、查询追踪、反馈、评测案例、模型配置引用和审计事实。详细实体所有权、约束、索引和迁移顺序以 [RAG 知识治理与数据模型设计](./RAG_GOVERNANCE_AND_DATA_MODEL.md) 为准。
+
+Chroma 只保存已发布切片的向量和最少必要的非敏感过滤元数据，记录 ID 必须与 PostgreSQL `chunk_id` 对账。Chroma 可删除、重建和切换索引版本，不能保存唯一正文、发布状态、权限、凭据或审计事实。`0090` 至 `0094` migration、PostgreSQL 仓储适配器、Chroma 本地/HTTP 适配器和 RAG 查询闭环已实现；剩余工作是开发云实例、备份恢复和资源边界的实际验收。
 ## 2026-08-09 开发状态同步
 
 - Seller 商品、库存、订单和履约快照及其历史查询均以 PostgreSQL 为事实来源；Redis 不保存不可恢复的业务事实。

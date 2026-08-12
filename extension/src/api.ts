@@ -16,6 +16,54 @@ export interface AuthUser {
   role: string;
 }
 
+export interface KnowledgeAnswer {
+  answer_id: string;
+  trace_id: string;
+  status: string;
+  segments: Array<{
+    text: string;
+    intent: string;
+    status: string;
+    answer: string;
+    reason: string | null;
+    normalized_query: string;
+    citations: Array<{ chunk_id: string; source_locator: string; title_path: string[]; score: number; excerpt: string }>;
+  }>;
+  message: string;
+}
+
+export interface KnowledgeSource {
+  id: string;
+  title: string;
+  source_type: string;
+  business_domain: string;
+  source_locator: string;
+  authority_level: string;
+  sensitivity: string;
+  status: string;
+}
+
+export interface ModelBudget {
+  provider_id: string;
+  purpose: string;
+  policy: {
+    daily_token_limit: number;
+    monthly_token_limit: number;
+    daily_request_limit: number;
+    monthly_budget: number;
+    purpose: string;
+  };
+  usage: {
+    daily_tokens: number;
+    monthly_tokens: number;
+    daily_requests: number;
+    monthly_cost: number;
+  };
+  state: "normal" | "warning" | "exceeded";
+  allowed: boolean;
+  reason: string | null;
+}
+
 let sessionToken: string | null = null;
 
 /**
@@ -820,3 +868,35 @@ export interface QualitySchemaFinding { row_index: number; field: string; rule_c
 export interface QualitySchemaResult { valid: boolean; checked_rows: number; findings: QualitySchemaFinding[]; isolated_required: boolean; }
 export function checkQualitySchema(payload: Record<string, unknown>): Promise<QualitySchemaResult> { return requestJson("/v1/data-quality/schema-check", { method: "POST", body: JSON.stringify(payload) }); }
 export function checkAndIsolateQualitySchema(workspaceId: string, payload: Record<string, unknown>): Promise<QualitySchemaResult> { return requestJson(`/v1/data-quality/store-workspaces/${encodeURIComponent(workspaceId)}/schema-check-and-isolate`, { method: "POST", body: JSON.stringify(payload) }); }
+
+export function queryKnowledge(question: string): Promise<KnowledgeAnswer> {
+  return requestJson("/v1/knowledge-answers/query", {
+    method: "POST",
+    body: JSON.stringify({ question }),
+  });
+}
+
+export function listKnowledgeSources(): Promise<KnowledgeSource[]> {
+  return requestJson("/v1/knowledge-sources", { method: "GET" });
+}
+
+export function createKnowledgeSource(payload: {
+  title: string;
+  source_type: string;
+  business_domain: string;
+  source_locator: string;
+}): Promise<KnowledgeSource> {
+  return requestJson("/v1/knowledge-sources", {
+    method: "POST", body: JSON.stringify(payload),
+  });
+}
+
+export function submitKnowledgeFeedback(answerId: string, reason: string, note?: string): Promise<{ feedback_id: string; status: string }> {
+  return requestJson(`/v1/knowledge-answers/${encodeURIComponent(answerId)}/feedback`, {
+    method: "POST", body: JSON.stringify({ reason, note }),
+  });
+}
+
+export function listModelBudgets(): Promise<ModelBudget[]> {
+  return requestJson("/v1/model-budgets", { method: "GET" });
+}

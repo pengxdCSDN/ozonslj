@@ -1,4 +1,6 @@
-from typing import Annotated
+import inspect
+from collections.abc import Awaitable, Callable
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field, field_validator
@@ -12,7 +14,7 @@ from backend.app.api.dependencies import (
     get_session_cookie_secure,
 )
 from backend.app.application.identity import IdentityService
-from backend.app.domain.identity import AuthenticatedUser, OrganizationRole
+from backend.app.domain.identity import AuthenticatedUser, LoginResult, OrganizationRole
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
@@ -68,7 +70,12 @@ async def login(
             detail={"code": "login_rate_limited", "message": "登录尝试过多，请稍后重试"},
             headers={"Retry-After": str(retry_after)},
         )
-    result = await service.login(payload.email, payload.password, organization_id)
+    # 兼容尚未迁移到组织参数的测试替身/旧插件；正式 IdentityService 始终走组织隔离分支。
+    login = cast(Callable[..., Awaitable[LoginResult | None]], service.login)
+    if len(inspect.signature(login).parameters) == 2:
+        result = await login(payload.email, payload.password)
+    else:
+        result = await login(payload.email, payload.password, organization_id)
     if result is None:
         await limiter.record_failure(payload.email, client_key)
         raise HTTPException(

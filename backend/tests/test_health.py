@@ -42,3 +42,10 @@ def test_readiness_fails_closed_when_dependency_is_unavailable() -> None:
 
     assert response.status_code == 503
     assert response.json()["detail"]["code"] == "infrastructure_unavailable"
+
+
+def test_rag_health_is_not_configured_by_default(monkeypatch) -> None:
+    monkeypatch.delenv("CHROMA_URL", raising=False)
+    response = TestClient(app).get("/health/rag")
+    assert response.status_code == 200
+    assert response.json()["state"] == "not_configured"

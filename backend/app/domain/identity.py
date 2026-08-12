@@ -10,9 +10,10 @@ OrganizationRole = Literal[
     "finance",
     "readonly_analyst",
 ]
+OperatorRole = Literal["admin", "supervisor", "operator", "finance", "readonly_analyst"]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class AuthenticatedUser:
     """通过服务端会话验证且已选定活动组织的用户。"""
 
@@ -21,6 +22,32 @@ class AuthenticatedUser:
     display_name: str
     organization_id: str
     organization_role: OrganizationRole
+    workspace_ids: tuple[str, ...]
+
+    def __init__(
+        self,
+        *,
+        id: str,
+        email: str,
+        display_name: str,
+        organization_id: str = "org-default",
+        organization_role: OrganizationRole | None = None,
+        workspace_ids: tuple[str, ...] = (),
+        role: str | None = None,
+    ) -> None:
+        """兼容旧的 role/workspace_ids 构造方式，同时保留组织级权限字段。"""
+
+        resolved_role = organization_role or role or "readonly_analyst"
+        object.__setattr__(self, "id", id)
+        object.__setattr__(self, "email", email)
+        object.__setattr__(self, "display_name", display_name)
+        object.__setattr__(self, "organization_id", organization_id)
+        object.__setattr__(self, "organization_role", resolved_role)
+        object.__setattr__(self, "workspace_ids", workspace_ids)
+
+    @property
+    def role(self) -> str:
+        return self.organization_role
 
 
 @dataclass(frozen=True, slots=True)

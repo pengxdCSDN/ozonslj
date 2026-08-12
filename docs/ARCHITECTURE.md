@@ -209,6 +209,14 @@ V5.1～V5.3 容器上限合计 1280MB，V5.4 起 1408MB。Swap 只用于故障�
 - [故障降级与恢复策略](./ARCHITECTURE-V6.md#23-故障降级与恢复策略)：PostgreSQL、Redis、外部 API、模型、邮件、磁盘和写入不确定状态。
 - [可观测性与运行门禁](./ARCHITECTURE-V6.md#24-可观测性与运行门禁)：日志、指标、追踪关联、告警和就绪门禁。
 - [分阶段部署与能力开关](./ARCHITECTURE-V6.md#25-分阶段部署与能力开关)：V5.1～V5.5 的进程、适配器、默认关闭能力和上线条件。
+
+## 16. 知识型混合 RAG 扩展（核心闭环已开发，云端验收待完成）
+
+知识型混合 RAG 是现有模块化单体的目标扩展，不改变业务事实存储基线。此前“首期不引入向量数据库”的约束对普通运营业务仍然有效；经 [ADR-0010](./decisions/0010-chroma-for-knowledge-hybrid-rag.md) 确认，知识 RAG 专项必须增加 Chroma，且仅作为可从 PostgreSQL 已发布知识版本重建的语义索引。
+
+目标拓扑在现有 API 与基础设施旁增加 `rag-worker`、Chroma 和厂商无关模型端口。`rag-worker` 与业务同步 Worker 使用独立 Redis Stream、Consumer Group、死信队列、任务类型、凭据和资源限制；PostgreSQL 继续保存任务、租约、发布和治理事实。RAG 任一组件异常不得影响登录、工作区和现有运营 API，也不得以重建 PostgreSQL、Redis 或 Nginx 作为恢复手段。
+
+该扩展已具备 RAG-1 至 RAG-7 的领域模型、治理 migration、API、Chroma 本地/HTTP 适配器、前端页面和测试闭环；RAG-8 的开发云 Chroma/Worker 健康、备份恢复和真实供应商连通性仍待部署验收。实现边界以 [RAG 技术架构](./RAG_ARCHITECTURE.md) 为准，实施状态以 [RAG 实施计划](./RAG_IMPLEMENTATION_PLAN.md) 为准。
 # 当前部署模式：单组织、内部隔离
 
 当前部署是单一运营组织模式。`DEFAULT_ORGANIZATION_ID` 由服务端配置，登录接口和客户端不得提交、选择或切换组织。认证成功后，服务端使用该固定组织建立 PostgreSQL 事务上下文。

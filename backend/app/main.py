@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from redis.asyncio import Redis
 
 from backend.app.api.dependencies import (
     close_postgres_sessions,
@@ -46,6 +45,15 @@ from backend.app.api.routes.external_notifications import router as external_not
 from backend.app.api.routes.health import router as health_router
 from backend.app.api.routes.inventory_analysis import router as inventory_analysis_router
 from backend.app.api.routes.keyword_imports import router as keyword_imports_router
+from backend.app.api.routes.knowledge_answers import router as knowledge_answers_router
+from backend.app.api.routes.knowledge_chunk_previews import (
+    router as knowledge_chunk_previews_router,
+)
+from backend.app.api.routes.knowledge_indexes import router as knowledge_indexes_router
+from backend.app.api.routes.knowledge_ingestion import router as knowledge_ingestion_router
+from backend.app.api.routes.knowledge_sources import router as knowledge_sources_router
+from backend.app.api.routes.knowledge_strategies import router as knowledge_strategies_router
+from backend.app.api.routes.knowledge_tasks import router as knowledge_tasks_router
 from backend.app.api.routes.listing_fabe import router as listing_fabe_router
 from backend.app.api.routes.listing_keywords import router as listing_keywords_router
 from backend.app.api.routes.listing_layering import router as listing_layering_router
@@ -55,8 +63,11 @@ from backend.app.api.routes.listing_title_drafts import router as listing_title_
 from backend.app.api.routes.listing_versions import router as listing_versions_router
 from backend.app.api.routes.manual_approvals import router as manual_approvals_router
 from backend.app.api.routes.model_adapters import router as model_adapters_router
+from backend.app.api.routes.model_budgets import router as model_budgets_router
+from backend.app.api.routes.model_providers import router as model_providers_router
 from backend.app.api.routes.money_inventory_quality import router as money_inventory_quality_router
 from backend.app.api.routes.parser_alerts import router as parser_alerts_router
+from backend.app.api.routes.pdf_uploads import router as pdf_uploads_router
 from backend.app.api.routes.performance_credentials import router as performance_credentials_router
 from backend.app.api.routes.performance_oauth import router as performance_oauth_router
 from backend.app.api.routes.postings import router as postings_router
@@ -66,6 +77,8 @@ from backend.app.api.routes.profit_model import router as profit_model_router
 from backend.app.api.routes.public_sampling import router as public_sampling_router
 from backend.app.api.routes.public_snapshots import router as public_snapshots_router
 from backend.app.api.routes.quality_isolation import router as quality_isolation_router
+from backend.app.api.routes.rag_evaluation import router as rag_evaluation_router
+from backend.app.api.routes.rag_rollout import router as rag_rollout_router
 from backend.app.api.routes.readback_verification import router as readback_verification_router
 from backend.app.api.routes.readonly_tools import router as readonly_tools_router
 from backend.app.api.routes.relationship_quality import router as relationship_quality_router
@@ -151,6 +164,18 @@ def create_app(
     app.include_router(data_quality_schema_router)
     app.include_router(data_quality_summary_router)
     app.include_router(keyword_imports_router)
+    app.include_router(knowledge_answers_router)
+    app.include_router(knowledge_sources_router)
+    app.include_router(knowledge_chunk_previews_router)
+    app.include_router(knowledge_ingestion_router)
+    app.include_router(knowledge_strategies_router)
+    app.include_router(knowledge_indexes_router)
+    app.include_router(knowledge_tasks_router)
+    app.include_router(pdf_uploads_router)
+    app.include_router(rag_evaluation_router)
+    app.include_router(rag_rollout_router)
+    app.include_router(model_providers_router)
+    app.include_router(model_budgets_router)
     app.include_router(inventory_analysis_router)
     app.include_router(postings_router)
     app.include_router(seller_operations_router)
