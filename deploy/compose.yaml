@@ -17,6 +17,8 @@ x-app-common: &app-common
     POSTGRES_POOL_MIN_SIZE: "1"
     POSTGRES_POOL_MAX_SIZE: "4"
     REDIS_URL: redis://redis:6379/0
+    # Chroma 与 API/Worker 通过受控内部网络通信，不暴露公网；知识检索不可用时由应用降级并明确返回。
+    CHROMA_URL: http://chroma:8000
     # 当前仅 HTTP 开发节点必须为 false；启用 HTTPS 后发布前改为 true。
     SESSION_COOKIE_SECURE: "false"
     LOGIN_MAX_ATTEMPTS: "5"

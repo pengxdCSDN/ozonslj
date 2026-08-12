@@ -24,6 +24,14 @@ services:
           memory: 384M
         reservations:
           memory: 128M
+    networks:
+      - backend
 
 volumes:
   chroma_data:
+
+networks:
+  # 主 compose 创建的内部网络；只允许 API/Worker 与 Chroma 互通。
+  backend:
+    external: true
+    name: ozonslj_backend
