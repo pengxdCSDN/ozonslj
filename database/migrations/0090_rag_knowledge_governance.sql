@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS rag_knowledge_sources (
     UNIQUE (organization_id, id)
 );
 
+-- 迁移可能在历史版本中已创建来源表后才失败；IF NOT EXISTS 不会更新既有表结构。
+-- 用幂等唯一索引补齐复合外键所需的父键，确保重试迁移可安全恢复。
+CREATE UNIQUE INDEX IF NOT EXISTS uq_rag_sources_org_id
+    ON rag_knowledge_sources (organization_id, id);
+
 CREATE TABLE IF NOT EXISTS rag_document_versions (
     id TEXT PRIMARY KEY,
     organization_id TEXT NOT NULL,

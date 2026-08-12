@@ -62,6 +62,7 @@ def test_rag_governance_migration_has_relational_lifecycle_and_rls_guards() -> N
     assert "CREATE TABLE IF NOT EXISTS rag_ingestion_jobs" in sql
     assert "uq_rag_published_version_per_source" in sql
     assert "UNIQUE (organization_id, id)" in sql
+    assert "uq_rag_sources_org_id" in sql
     assert "UNIQUE (document_version_id, ordinal)" in sql
     assert "ALTER TABLE rag_knowledge_chunks FORCE ROW LEVEL SECURITY" in sql
     assert "COMMENT ON TABLE rag_knowledge_chunks" in sql
