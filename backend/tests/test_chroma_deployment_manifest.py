@@ -8,3 +8,9 @@ def test_chroma_manifest_is_private_and_resource_bounded() -> None:
     assert "chroma_data" in manifest
     assert "healthcheck:" in manifest
     assert "ozonslj_backend" in manifest
+    assert "CHROMA_IMAGE_TAG" in manifest
+
+
+def test_chroma_acr_build_entrypoint_is_pinned() -> None:
+    dockerfile = Path("deploy/base-images/chroma/Dockerfile").read_text(encoding="utf-8")
+    assert "FROM chromadb/chroma:0.5.23" in dockerfile

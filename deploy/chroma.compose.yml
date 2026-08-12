@@ -2,7 +2,8 @@ name: ozonslj-rag
 
 services:
   chroma:
-    image: chromadb/chroma:0.5.23
+    # 与 PostgreSQL/Redis/Nginx 一样，固定版本先由 ACR 构建到 pxd 仓库，服务器只拉取。
+    image: ${REGISTRY_PREFIX}/pxd:${CHROMA_IMAGE_TAG:-chroma-0.5.23}
     restart: unless-stopped
     environment:
       IS_PERSISTENT: "TRUE"
