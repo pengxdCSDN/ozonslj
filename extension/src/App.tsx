@@ -350,7 +350,8 @@ export function App() {
     {view === "quality" && active ? <DataQualityDashboardView workspaceId={selectedWorkspaceId} /> : null}
     {view === "knowledge-query" && active ? <KnowledgeQueryView /> : null}
     {view === "knowledge-sources" && active ? <KnowledgeSourcesView /> : null}
-    {view === "model-providers" && active ? <RagModelProvidersView /> : null}
+    {/* RAG 供应商配置是账号级能力，不依赖当前 Ozon 店铺是否已验证。 */}
+    {view === "model-providers" ? <RagModelProvidersView /> : null}
     {view === "model-budget" && active ? <ModelBudgetView /> : null}
     {view === "imports" && active && selectedWorkspaceId ? <KeywordImportView workspaceId={selectedWorkspaceId} /> : null}
     {view === "competitors" && active && selectedWorkspaceId ? <CompetitorSeedsView workspaceId={selectedWorkspaceId} /> : null}
@@ -403,7 +404,8 @@ export function App() {
     {view === "data-quality-schema" && active ? <DataQualitySchemaView workspaceId={selectedWorkspaceId} /> : null}
     {view === "erp-import" && active ? <ErpImportView /> : null}
     {workspaceError ? <StatePanel icon={<WarningCircle size={27} />} title="本地服务未连接" body={workspaceError} action="重新连接" onAction={() => void refreshWorkspaces()} /> : null}
-    {!workspaceError && view !== "accounts" && !active ? <StatePanel icon={<Key size={27} />} title={selectedWorkspace ? `${currentViewLabel}暂不可用` : "还没有店铺"} body={selectedWorkspace ? `当前店铺状态为“${STATUS_LABELS[selectedWorkspace.status]}”。请先完成 Ozon Seller 凭据验证，再使用${currentViewLabel}。` : "请先连接并验证 Ozon Seller 店铺，再使用运营功能。"} action="管理店铺连接" onAction={() => setView("accounts")} /> : null}
+    {/* 店铺状态兜底不得覆盖账号级 RAG 供应商配置页面。 */}
+    {!workspaceError && view !== "accounts" && view !== "model-providers" && !active ? <StatePanel icon={<Key size={27} />} title={selectedWorkspace ? `${currentViewLabel}暂不可用` : "还没有店铺"} body={selectedWorkspace ? `当前店铺状态为“${STATUS_LABELS[selectedWorkspace.status]}”。请先完成 Ozon Seller 凭据验证，再使用${currentViewLabel}。` : "请先连接并验证 Ozon Seller 店铺，再使用运营功能。"} action="管理店铺连接" onAction={() => setView("accounts")} /> : null}
     {view !== "accounts" && active && state.status === "loading" ? <div className="loading-grid"><div /><div /><div /></div> : null}
     {view !== "accounts" && active && state.status === "error" ? <StatePanel icon={<WarningCircle size={27} />} title="商品读取失败" body={state.message} action="重新加载" onAction={() => void loadOffers()} /> : null}
     {state.status === "ready" && view === "overview" ? <div className="view-content"><PageHeading label="运营总览" title="晚上好，运营人" note={`${selectedWorkspace?.display_name} · ${lastSyncedAt?.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })} 更新`} /><section className="hero-metric"><div><span>在库商品总量</span><strong>{metrics.stock.toLocaleString()}</strong><small><b>↑ 已同步</b> Ozon 实时库存</small></div><Cube size={34} weight="duotone" /></section><section className="metric-grid"><article><span>库存货值</span><strong>{Math.round(metrics.value / 1000).toLocaleString()}k</strong><small>按当前售价估算</small></article><article className="risk"><span>风险 SKU</span><strong>{metrics.risk + metrics.empty}</strong><small>{metrics.empty} 项已缺货</small></article></section><section className="panel"><div className="section-heading"><div><p className="eyebrow">库存信号</p><h2>优先处理</h2></div><button className="text-button" onClick={() => setView("products")}>查看全部 <ArrowRight size={14} /></button></div>{offers.filter((o) => o.available_stock <= LOW_STOCK_THRESHOLD).slice(0, 4).map((o) => <ProductRow offer={o} key={o.offer_id} />)}{!metrics.risk && !metrics.empty ? <div className="healthy-state"><CheckCircle size={22} />当前库存状态健康</div> : null}</section></div> : null}
