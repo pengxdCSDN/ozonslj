@@ -81,6 +81,24 @@ async def test_http_chroma_adapter_uses_collection_endpoints() -> None:
 
 
 @pytest.mark.asyncio
+async def test_http_chroma_collection_ensure_uses_stable_collection_name() -> None:
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        calls.append((request.url.path, json.loads(request.read().decode("utf-8"))))
+        return httpx.Response(200, json={"id": "stable-collection"})
+
+    collection = await HttpChromaCollection.ensure(
+        "http://chroma:8000",
+        "ozonslj_knowledge",
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert collection._collection_id == "stable-collection"  # noqa: SLF001
+    assert calls == [("/api/v1/collections", {"name": "ozonslj_knowledge", "get_or_create": True})]
+
+
+@pytest.mark.asyncio
 async def test_http_chroma_adapter_rejects_invalid_json() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, content=b"not-json")

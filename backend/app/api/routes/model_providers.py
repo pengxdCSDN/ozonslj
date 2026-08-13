@@ -1,4 +1,8 @@
-"""模型供应商配置和用途主备绑定 API。"""
+"""兼容旧版模型供应商配置 API。
+
+真实 RAG 配置使用 ``managed_model_providers`` 路由；本模块保留旧版 Stub
+接口以兼容既有开发测试，不用于生产凭据存储。
+"""
 
 from __future__ import annotations
 
@@ -15,9 +19,10 @@ _bindings: dict[str, dict[str, object]] = {}
 
 class ProviderCreatePayload(BaseModel):
     name: str = Field(min_length=1, max_length=80)
-    adapter_type: str = Field(pattern="^(deepseek|minimax|openai|openai_compatible)$")
+    adapter_type: str = Field(pattern="^(dashscope|deepseek|minimax|openai|openai_compatible)$")
     model: str = Field(min_length=1, max_length=100)
-    api_key: str = Field(min_length=1, max_length=500)
+    api_key: str = Field(min_length=1, max_length=500, repr=False)
+    base_url: str | None = Field(default=None, max_length=500)
     priority: int = Field(default=100, ge=1, le=1000)
 
 
@@ -26,6 +31,7 @@ class ProviderResponse(BaseModel):
     name: str
     adapter_type: str
     model: str
+    base_url: str | None
     priority: int
     enabled: bool
     credential_configured: bool
@@ -40,9 +46,13 @@ class BindingPayload(BaseModel):
 def _response(provider_id: str, item: dict[str, object]) -> ProviderResponse:
     api_key = str(item["api_key"])
     return ProviderResponse(
-        provider_id=provider_id, name=str(item["name"]), adapter_type=str(item["adapter_type"]),
+        provider_id=provider_id,
+        name=str(item["name"]),
+        adapter_type=str(item["adapter_type"]),
         model=str(item["model"]),
-        priority=cast(int, item["priority"]), enabled=bool(item["enabled"]),
+        base_url=str(item["base_url"]) if item.get("base_url") else None,
+        priority=cast(int, item["priority"]),
+        enabled=bool(item["enabled"]),
         credential_configured=bool(api_key),
         credential_mask=f"***{api_key[-4:]}" if api_key else "",
     )
@@ -77,6 +87,7 @@ async def bind_model_purpose(purpose: str, payload: BindingPayload) -> dict[str,
     if any(provider_id not in _providers for provider_id in provider_ids):
         raise HTTPException(status_code=404, detail="绑定的模型供应商不存在")
     _bindings[purpose] = {
-        "primary_provider_id": provider_ids[0], "fallback_provider_ids": provider_ids[1:]
+        "primary_provider_id": provider_ids[0],
+        "fallback_provider_ids": provider_ids[1:],
     }
     return {"purpose": purpose, **_bindings[purpose]}

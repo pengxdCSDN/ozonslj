@@ -43,6 +43,21 @@ CREATE TABLE IF NOT EXISTS product_offers (
     offer_id TEXT NOT NULL,
     ozon_product_id TEXT,
     name TEXT NOT NULL,
+    -- `name` 始终保存 Ozon 俄文原文；中文展示使用独立派生字段，禁止覆盖事实。
+    name_zh TEXT,
+    description_ru TEXT,
+    description_zh TEXT,
+    attributes_ru JSONB,
+    attributes_zh JSONB,
+    translation_status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (translation_status IN ('pending', 'succeeded', 'failed', 'not_required')),
+    translation_model TEXT,
+    translation_source_hash CHAR(64)
+        CHECK (translation_source_hash IS NULL OR translation_source_hash ~ '^[0-9a-f]{64}$'),
+    translated_at TIMESTAMPTZ,
+    translation_error TEXT,
+    embedding_text TEXT,
+    embedding_profile_id TEXT,
     price_minor BIGINT NOT NULL CHECK (price_minor >= 0),
     currency CHAR(3) NOT NULL CHECK (currency = UPPER(currency)),
     available_stock INTEGER NOT NULL CHECK (available_stock >= 0),
@@ -169,6 +184,19 @@ COMMENT ON COLUMN store_workspaces.last_synced_at IS '最近一次完整同步�
 -- 商品报价表：保存工作区内可查询的商品报价快照。价格使用最小货币单位整数，
 -- 例如 1290.00 RUB 保存为 129000，避免浮点误差；Redis 只可作为该表的可重建缓存。
 COMMENT ON TABLE product_offers IS '工作区范围内的商品报价快照；PostgreSQL 是事实来源，Redis 只能缓存查询结果。';
+COMMENT ON COLUMN product_offers.name IS 'Ozon 返回的商品名称原文；通常为俄文，禁止被中文译文覆盖。';
+COMMENT ON COLUMN product_offers.name_zh IS '云端生成的中文商品名称副本；缺失时界面回退显示俄文原文。';
+COMMENT ON COLUMN product_offers.description_ru IS 'Ozon 商品俄文描述原文，用于证据追溯和中俄双语检索。';
+COMMENT ON COLUMN product_offers.description_zh IS '云端生成的中文描述副本，不作为 Ozon 原始事实来源。';
+COMMENT ON COLUMN product_offers.attributes_ru IS 'Ozon 属性的俄文原始键值；品牌、型号、SKU、数字和单位保持原值。';
+COMMENT ON COLUMN product_offers.attributes_zh IS '属性键值的中文展示副本；翻译失败时可以为空。';
+COMMENT ON COLUMN product_offers.translation_status IS '翻译任务状态：pending、succeeded、failed 或 not_required。';
+COMMENT ON COLUMN product_offers.translation_model IS '生成译文的云端模型标识，不保存 API Key。';
+COMMENT ON COLUMN product_offers.translation_source_hash IS '俄文原文规范化后的 SHA-256 指纹，源内容变化时触发重译。';
+COMMENT ON COLUMN product_offers.translated_at IS '最近一次成功生成中文译文的 UTC 时间。';
+COMMENT ON COLUMN product_offers.translation_error IS '脱敏后的翻译失败摘要，不得写入请求头或完整供应商响应。';
+COMMENT ON COLUMN product_offers.embedding_text IS '由中文译文和俄文原文拼接生成的中俄双语向量化文本。';
+COMMENT ON COLUMN product_offers.embedding_profile_id IS '向量模型、维度和预处理配置版本；变更时必须重建索引。';
 COMMENT ON COLUMN product_offers.price_minor IS '以最小货币单位保存的整数价格；禁止使用 REAL、DOUBLE PRECISION 或浮点金额。';
 COMMENT ON COLUMN product_offers.currency IS 'ISO 4217 三位大写币种代码，例如 RUB、CNY。';
 COMMENT ON COLUMN product_offers.position IS '工作区内稳定展示顺序；复合唯一约束防止同一位置重复占用。';

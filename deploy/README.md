@@ -14,3 +14,10 @@
 1. 在外部构建节点固定 `chromadb/chroma:0.5.23`，完成漏洞扫描和镜像签名。
 2. 云端仅执行 `docker compose -f deploy/chroma.compose.yml pull` 和受控重启。
 3. 验证 `/api/v1/heartbeat`、卷挂载和 API/Worker 连接；失败则回滚到上一镜像标签。
+
+## 应用切换检查
+
+- `deploy/compose.yaml` 为 API/Worker 注入 `APP_ENV=production`、`CHROMA_URL=http://chroma:8000` 和固定组织 ID。
+- 首次使用知识 RAG 前确认数据库已应用 `0090_rag_knowledge_governance.sql` 与 `0091_rag_keyword_search.sql`；RLS 连接上下文由 API/Worker 每个事务设置。
+- 通过来源创建 → 版本创建 → 摄取切片 → 发布版本的顺序写入。未发布切片只在 PostgreSQL 草稿区，不会出现在 Chroma。
+- Chroma 故障时不得使用演示数据或内存索引伪造生产回答；查询只能返回无证据/不可用提示，并保留 PostgreSQL 事实与撤回能力。

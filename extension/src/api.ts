@@ -900,3 +900,21 @@ export function submitKnowledgeFeedback(answerId: string, reason: string, note?:
 export function listModelBudgets(): Promise<ModelBudget[]> {
   return requestJson("/v1/model-budgets", { method: "GET" });
 }
+
+export type RagModelAdapter = "dashscope" | "siliconflow" | "zhipu" | "deepseek" | "minimax" | "openai";
+export type RagModelPurpose = "embedding" | "translation" | "intent_rewrite" | "rerank" | "answer_generation";
+export interface RagModelProvider {
+  provider_id: string; name: string; adapter_type: RagModelAdapter; model: string; base_url: string;
+  priority: number; enabled: boolean; credential_configured: boolean; credential_mask: string;
+}
+export interface RagModelBinding { purpose: RagModelPurpose; primary_provider_id: string; fallback_provider_ids: string[]; revision: number; }
+export interface RagModelCatalog { embedding: Array<Record<string, string>>; translation: Array<Record<string, string>>; }
+export function getRagModelCatalog(): Promise<RagModelCatalog> { return requestJson("/v1/model-providers/managed/catalog", { method: "GET" }); }
+export function listRagModelProviders(): Promise<RagModelProvider[]> { return requestJson("/v1/model-providers/managed", { method: "GET" }); }
+export function createRagModelProvider(payload: Record<string, unknown>): Promise<RagModelProvider> { return requestJson("/v1/model-providers/managed", { method: "POST", body: JSON.stringify(payload) }); }
+export interface RagModelConnectivityResult { ok: boolean; status: "reachable" | "quota_exceeded" | "failed"; message: string; model: string; }
+export function testRagModelConnectivity(payload: Record<string, unknown>): Promise<RagModelConnectivityResult> { return requestJson("/v1/model-providers/managed/test", { method: "POST", body: JSON.stringify(payload) }); }
+export function updateRagModelProvider(providerId: string, payload: Record<string, unknown>): Promise<RagModelProvider> { return requestJson(`/v1/model-providers/managed/${encodeURIComponent(providerId)}`, { method: "PUT", body: JSON.stringify(payload) }); }
+export function disableRagModelProvider(providerId: string): Promise<RagModelProvider> { return requestJson(`/v1/model-providers/managed/${encodeURIComponent(providerId)}/disable`, { method: "POST" }); }
+export function listRagModelBindings(): Promise<RagModelBinding[]> { return requestJson("/v1/model-providers/managed/bindings", { method: "GET" }); }
+export function bindRagModelPurpose(purpose: RagModelPurpose, payload: { primary_provider_id: string; fallback_provider_ids: string[] }): Promise<RagModelBinding> { return requestJson(`/v1/model-providers/managed/bindings/${encodeURIComponent(purpose)}`, { method: "PUT", body: JSON.stringify(payload) }); }

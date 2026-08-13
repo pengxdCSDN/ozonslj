@@ -216,7 +216,7 @@ V5.1～V5.3 容器上限合计 1280MB，V5.4 起 1408MB。Swap 只用于故障�
 
 目标拓扑在现有 API 与基础设施旁增加 `rag-worker`、Chroma 和厂商无关模型端口。`rag-worker` 与业务同步 Worker 使用独立 Redis Stream、Consumer Group、死信队列、任务类型、凭据和资源限制；PostgreSQL 继续保存任务、租约、发布和治理事实。RAG 任一组件异常不得影响登录、工作区和现有运营 API，也不得以重建 PostgreSQL、Redis 或 Nginx 作为恢复手段。
 
-该扩展已具备 RAG-1 至 RAG-7 的领域模型、治理 migration、API、Chroma 本地/HTTP 适配器、前端页面和测试闭环；RAG-8 的开发云 Chroma/Worker 健康、备份恢复和真实供应商连通性仍待部署验收。实现边界以 [RAG 技术架构](./RAG_ARCHITECTURE.md) 为准，实施状态以 [RAG 实施计划](./RAG_IMPLEMENTATION_PLAN.md) 为准。
+该扩展已具备 RAG-1 至 RAG-7 的领域模型、治理 migration、PostgreSQL + Chroma 持久化运行时、API、前端页面和测试闭环；RAG-8 的开发云 Chroma/Worker 健康、备份恢复和真实供应商连通性仍待部署验收。实现边界以 [RAG 技术架构](./RAG_ARCHITECTURE.md) 为准，实施状态以 [RAG 实施计划](./RAG_IMPLEMENTATION_PLAN.md) 为准。
 # 当前部署模式：单组织、内部隔离
 
 当前部署是单一运营组织模式。`DEFAULT_ORGANIZATION_ID` 由服务端配置，登录接口和客户端不得提交、选择或切换组织。认证成功后，服务端使用该固定组织建立 PostgreSQL 事务上下文。

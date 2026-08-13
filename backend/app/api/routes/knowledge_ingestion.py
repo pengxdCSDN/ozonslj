@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.app.domain.knowledge_pipeline import ingest_and_chunk
-from backend.app.domain.knowledge_runtime import runtime_index
+from backend.app.domain.knowledge_runtime import get_knowledge_runtime, stage_knowledge_chunks
 
 router = APIRouter(prefix="/v1/knowledge-ingestion", tags=["knowledge-ingestion"])
 
@@ -56,7 +56,9 @@ async def run_knowledge_ingestion(payload: IngestionPayload) -> IngestionRespons
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     if result.quality_passed:
-        runtime_index.stage(result.document_version_id, result.chunks)
+        await stage_knowledge_chunks(
+            get_knowledge_runtime(), result.document_version_id, result.chunks
+        )
     return IngestionResponse(
         document_id=result.document_id, document_version_id=result.document_version_id,
         parser_name=result.parser_name, cleaner_version=result.cleaner_version,

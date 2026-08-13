@@ -10,6 +10,7 @@
 - Chrome
 - PostgreSQL 16
 - Redis 7.4
+- Chroma 0.5.23（知识 RAG 本地/集成模式必需；通过独立容器运行）
 - 推荐使用 VS Code
 
 开发者必须提供隔离的 PostgreSQL/Redis，可使用仓库后续提供的 Compose 开发栈或明确配置的独立实例。仓库尚未提供完整 Compose 开发栈和 PostgreSQL 适配器前，本地数据库闭环处于未完成状态，不得增加替代数据库规避该缺口。
@@ -92,6 +93,8 @@ APP_HOST=127.0.0.1
 APP_PORT=8000
 DATABASE_URL=postgresql://ozonslj:replace-me@postgres:5432/ozonslj
 REDIS_URL=redis://redis:6379/0
+# APP_ENV=production 时必填；local/test 可省略
+CHROMA_URL=http://chroma:8000
 OZON_MODE=stub
 OZON_BASE_URL=https://api-seller.ozon.ru
 LOG_LEVEL=DEBUG

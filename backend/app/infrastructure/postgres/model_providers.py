@@ -15,15 +15,19 @@ class PostgresModelProviderGateway:
     async def create_provider(
         self, *, provider_id: str, organization_id: str, name: str,
         adapter_type: str, model: str, api_key: str, priority: int,
+        base_url: str | None = None,
     ) -> None:
         async with self._pool.connection() as connection, connection.transaction():
             await connection.execute(
                 """
                 INSERT INTO rag_model_providers
-                    (id, organization_id, name, adapter_type, model, api_key, priority)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    (id, organization_id, name, adapter_type, model, api_key, priority, base_url)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
-                (provider_id, organization_id, name, adapter_type, model, api_key, priority),
+                (
+                    provider_id, organization_id, name, adapter_type, model, api_key,
+                    priority, base_url,
+                ),
             )
 
     async def list_provider_metadata(self, *, organization_id: str) -> list[dict[str, object]]:
@@ -32,7 +36,7 @@ class PostgresModelProviderGateway:
         ) as cursor:
                 await cursor.execute(
                     """
-                    SELECT id, name, adapter_type, model, priority, enabled,
+                    SELECT id, name, adapter_type, model, base_url, priority, enabled,
                            (api_key <> '') AS credential_configured,
                            right(api_key, 4) AS credential_suffix
                     FROM rag_model_providers

@@ -22,6 +22,23 @@ class Settings(BaseSettings):
     # 正式运行只允许 PostgreSQL 保存业务事实；该连接串必须由部署环境注入，
     # 禁止把用户名、密码或云数据库地址写入仓库、镜像或前端构建产物。
     database_url: PostgresDsn | None = None
+    # Chroma 仅保存已发布知识切片的可重建向量；本地/测试环境可以不配置。
+    chroma_url: HttpUrl | None = None
+    # 商品翻译和 Embedding 仅调用云端 HTTPS 服务；API Key 由部署 Secret 注入，
+    # 不写入代码、浏览器存储、日志或 Chroma 元数据。空值表示尚未启用真实云端模型。
+    rag_embedding_provider: str | None = None
+    rag_embedding_base_url: HttpUrl | None = None
+    rag_embedding_model: str = "text-embedding-v4"
+    rag_embedding_dimension: int = Field(default=1024, ge=64, le=2048)
+    rag_embedding_api_key: str | None = Field(default=None, repr=False)
+    rag_embedding_api_key_file: Path | None = Field(default=None, repr=False)
+    rag_translation_provider: str | None = None
+    rag_translation_base_url: HttpUrl | None = None
+    rag_translation_model: str | None = None
+    rag_translation_api_key: str | None = Field(default=None, repr=False)
+    rag_translation_api_key_file: Path | None = Field(default=None, repr=False)
+    # 供应商配置页面写入的 API Key 放在应用容器的受限可写目录；数据库只保存引用和末尾掩码。
+    rag_provider_credentials_dir: Path = Path("/var/lib/ozonslj/rag-providers")
     postgres_host: str | None = None
     postgres_port: int = 5432
     postgres_database: str = "ozonslj"
@@ -51,6 +68,20 @@ class Settings(BaseSettings):
     def require_postgresql_and_cloud_runtime_dependencies(self) -> "Settings":
         """所有环境必须配置 PostgreSQL；生产环境还必须配置 Redis。"""
         missing: list[str] = []
+        for env_name, key_name, file_name in (
+            ("RAG_EMBEDDING_API_KEY", "rag_embedding_api_key", "rag_embedding_api_key_file"),
+            ("RAG_TRANSLATION_API_KEY", "rag_translation_api_key", "rag_translation_api_key_file"),
+        ):
+            if getattr(self, key_name) is None and getattr(self, file_name) is not None:
+                path = getattr(self, file_name)
+                try:
+                    secret = path.read_text(encoding="utf-8").strip()
+                except OSError:
+                    secret = ""
+                if secret:
+                    object.__setattr__(self, key_name, secret)
+                elif self.app_env == "production":
+                    missing.append(env_name)
         if self.database_url is None:
             # 云端 Compose 使用 POSTGRES_* 与 password file 注入，避免把数据库密码
             # 写入普通环境变量；本地和测试仍可直接传 DATABASE_URL。

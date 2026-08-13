@@ -61,6 +61,7 @@ from backend.app.api.routes.listing_publish import router as listing_publish_rou
 from backend.app.api.routes.listing_risks import router as listing_risks_router
 from backend.app.api.routes.listing_title_drafts import router as listing_title_drafts_router
 from backend.app.api.routes.listing_versions import router as listing_versions_router
+from backend.app.api.routes.managed_model_providers import router as managed_model_providers_router
 from backend.app.api.routes.manual_approvals import router as manual_approvals_router
 from backend.app.api.routes.model_adapters import router as model_adapters_router
 from backend.app.api.routes.model_budgets import router as model_budgets_router
@@ -104,6 +105,7 @@ from backend.app.api.routes.store_workspaces import router as store_workspaces_r
 from backend.app.api.routes.summary_reports import router as summary_reports_router
 from backend.app.api.routes.sync_jobs import router as sync_jobs_router
 from backend.app.api.routes.sync_processor import router as sync_processor_router
+from backend.app.domain.knowledge_runtime import close_knowledge_runtime
 from backend.app.domain.store_workspace import CredentialProtector, SellerAccountVerifier
 
 
@@ -111,6 +113,7 @@ from backend.app.domain.store_workspace import CredentialProtector, SellerAccoun
 async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
     """应用退出时释放已打开的 PostgreSQL 连接池。"""
     yield
+    await close_knowledge_runtime()
     close_postgres_sessions()
     await close_redis_client()
 
@@ -175,6 +178,7 @@ def create_app(
     app.include_router(rag_evaluation_router)
     app.include_router(rag_rollout_router)
     app.include_router(model_providers_router)
+    app.include_router(managed_model_providers_router)
     app.include_router(model_budgets_router)
     app.include_router(inventory_analysis_router)
     app.include_router(postings_router)

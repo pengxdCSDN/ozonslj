@@ -27,29 +27,34 @@ class PostgresKnowledgeKeywordSearch(KeywordSearchPort):
         async with self._pool.connection() as connection, connection.cursor(
             row_factory=dict_row
         ) as cursor:
-                await cursor.execute(
-                    """
-                    SELECT c.id, c.content, c.content_hash, c.ordinal,
-                           c.document_version_id, v.source_id, c.language,
-                           c.source_locator, c.title_path, c.chunk_strategy,
-                           c.chunk_strategy_version, c.page_from, c.page_to,
-                           c.status, s.business_domain, s.source_type,
-                           s.authority_level, s.sensitivity
-                    FROM rag_knowledge_chunks AS c
-                    JOIN rag_document_versions AS v ON v.id = c.document_version_id
-                    JOIN rag_knowledge_sources AS s ON s.id = v.source_id
-                    WHERE c.organization_id = %s
-                      AND c.status = 'published'
-                      AND v.status = 'published'
-                      AND s.status = 'active'
-                      AND c.search_document @@ plainto_tsquery('simple', %s)
-                    ORDER BY ts_rank_cd(c.search_document, plainto_tsquery('simple', %s)) DESC,
-                             c.id ASC
-                    LIMIT %s
-                    """,
-                    (self._organization_id, query, query, bounded_limit),
-                )
-                rows = await cursor.fetchall()
+            # 连接池会复用物理连接，必须在每次查询前设置 RLS 组织上下文。
+            await connection.execute(
+                "SELECT set_config('app.organization_id', %s, true)",
+                (self._organization_id,),
+            )
+            await cursor.execute(
+                """
+                SELECT c.id, c.content, c.content_hash, c.ordinal,
+                       c.document_version_id, v.source_id, c.language,
+                       c.source_locator, c.title_path, c.chunk_strategy,
+                       c.chunk_strategy_version, c.page_from, c.page_to,
+                       c.status, s.business_domain, s.source_type,
+                       s.authority_level, s.sensitivity
+                FROM rag_knowledge_chunks AS c
+                JOIN rag_document_versions AS v ON v.id = c.document_version_id
+                JOIN rag_knowledge_sources AS s ON s.id = v.source_id
+                WHERE c.organization_id = %s
+                  AND c.status = 'published'
+                  AND v.status = 'published'
+                  AND s.status = 'active'
+                  AND c.search_document @@ plainto_tsquery('simple', %s)
+                ORDER BY ts_rank_cd(c.search_document, plainto_tsquery('simple', %s)) DESC,
+                         c.id ASC
+                LIMIT %s
+                """,
+                (self._organization_id, query, query, bounded_limit),
+            )
+            rows = await cursor.fetchall()
         return [_hit_from_row(row) for row in rows]
 
 

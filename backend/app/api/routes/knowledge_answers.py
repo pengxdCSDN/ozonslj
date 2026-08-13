@@ -15,7 +15,10 @@ from backend.app.domain.knowledge_retrieval import (
     InMemoryKeywordIndex,
     InMemoryVectorIndex,
 )
-from backend.app.domain.knowledge_runtime import runtime_index
+from backend.app.domain.knowledge_runtime import (
+    get_knowledge_runtime,
+    resolve_knowledge_engine,
+)
 
 router = APIRouter(prefix="/v1/knowledge-answers", tags=["knowledge-rag"])
 
@@ -161,7 +164,13 @@ async def build_knowledge_query_plan(
 async def answer_knowledge_question(payload: KnowledgeQuestionPayload) -> KnowledgeAnswerResponse:
     """执行可审计的混合检索；无证据时返回不知道，不调用生成模型兜底编造。"""
 
-    engine = runtime_index.engine() if runtime_index.has_published() else await _demo_engine()
+    runtime = get_knowledge_runtime()
+    # 本地测试保留演示知识，生产环境绝不使用演示内容作为回答兜底。
+    engine = (
+        await _demo_engine()
+        if not runtime.persistent and not await runtime.has_published()
+        else await resolve_knowledge_engine(runtime)
+    )
     results = await engine.answer(payload.question)
     response_segments = [
         KnowledgeAnswerSegmentResponse(

@@ -71,6 +71,7 @@ from backend.app.infrastructure.credential_protection import (
     FernetCredentialProtector,
 )
 from backend.app.infrastructure.login_rate_limit import RedisLoginRateLimiter
+from backend.app.infrastructure.model_credentials import ModelCredentialStore
 from backend.app.infrastructure.ozon.account_verifier import (
     HttpOzonSellerAccountVerifier,
     StubSellerAccountVerifier,
@@ -150,6 +151,9 @@ from backend.app.infrastructure.postgresql.product_offers import (
 )
 from backend.app.infrastructure.postgresql.profit_models import PostgresProfitModelGateway
 from backend.app.infrastructure.postgresql.public_snapshots import PostgresPublicSnapshotGateway
+from backend.app.infrastructure.postgresql.rag_model_providers import (
+    PostgresRagModelProviderGateway,
+)
 from backend.app.infrastructure.postgresql.readback_verifications import (
     PostgresReadbackVerificationGateway,
 )
@@ -439,6 +443,20 @@ def get_model_adapter_gateway(
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ModelAdapterGateway:
     return PostgresModelAdapterGateway(sessions, context)
+
+
+def get_rag_model_provider_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> PostgresRagModelProviderGateway:
+    """返回带组织 RLS 上下文的 RAG 模型供应商配置网关。"""
+    return PostgresRagModelProviderGateway(sessions, context)
+
+
+@lru_cache
+def get_model_credential_store() -> ModelCredentialStore:
+    """模型凭据只写入部署专用 Secret 卷，目录由环境配置决定。"""
+    return ModelCredentialStore(get_settings().rag_provider_credentials_dir)
 
 
 def get_readonly_tool_gateway(
