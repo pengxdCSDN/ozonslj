@@ -248,3 +248,5 @@ input:focus-visible { outline: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* 模型供应商页是完整工作区，不应被宽屏 12 列工作台布局拆成窄列。 */

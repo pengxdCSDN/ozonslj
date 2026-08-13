@@ -41,7 +41,11 @@
   .advanced-navigation details button:hover { color: #d5ccec; background: rgba(71, 60, 108, .42); }
   .advanced-navigation details button.active { border-color: transparent; color: #eee9ff; background: rgba(92, 70, 151, .48); box-shadow: inset 2px 0 #9877ff; }
   .view-content, .state-panel, .loading-grid { grid-column: 2; grid-row: 1 / span 3; width: min(100%, 1440px); margin: 0 auto; }
-  .view-content { grid-template-columns: repeat(12, minmax(0, 1fr)); align-content: start; gap: 18px; padding: 38px 42px 48px; }
+  /* 主工作区独立滚动，避免模型池和降级链在 100dvh 容器中被底部裁切。 */
+  .view-content { min-height: 0; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: max-content; align-content: start; gap: 18px; padding: 38px 42px 48px; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #4b3b76 transparent; }
+  .view-content::-webkit-scrollbar { width: 8px; }
+  .view-content::-webkit-scrollbar-track { background: transparent; }
+  .view-content::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 99px; background: #4b3b76; background-clip: padding-box; }
   .page-heading { grid-column: 1 / -1; align-items: center; padding: 0 0 8px; }
   .page-heading h1 { font-size: 30px; }
   .page-heading p:last-child { font-size: 11px; }
@@ -89,3 +93,26 @@
   .hero-metric { grid-column: span 5; }
   .metric-grid { grid-column: span 7; }
 }
+
+/* 模型供应商页是完整工作区，不应被宽屏 12 列工作台布局拆成窄列。 */
+.model-pool-view > *,
+.model-pool-heading,
+.model-pool-callout,
+.model-form-panel,
+.provider-pool-panel,
+.route-panel { grid-column: 1 / -1; width: 100%; min-width: 0; }
+.model-pool-callout { align-self: stretch; }
+.model-form-panel { overflow: visible; }
+.model-form-actions { position: relative; z-index: 2; }
+.model-form-actions button,
+.provider-actions button,
+.route-card button { position: relative; z-index: 3; pointer-events: auto; }
+
+/* 空模型池也必须保留内容高度；不能被工作台网格或面板裁剪成只有标题栏。 */
+.model-pool-view .provider-pool-panel,
+.model-pool-view .route-panel { align-self: start; height: max-content !important; min-height: 224px; max-height: none !important; overflow: visible !important; isolation: isolate; }
+.model-pool-view .provider-pool-panel > .empty-search { display: grid !important; min-height: 154px !important; height: auto !important; max-height: none !important; margin: 14px 22px 22px !important; overflow: visible !important; }
+.model-pool-view .provider-pool-panel { contain: none; }
+.model-pool-view .route-panel { min-height: 264px; }
+.model-pool-view .route-list { display: grid; min-height: 184px; height: auto; overflow: visible; }
+.model-pool-view .route-card { min-height: 72px; height: auto; overflow: visible; }

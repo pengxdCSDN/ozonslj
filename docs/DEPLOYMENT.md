@@ -59,6 +59,23 @@ chmod 640 secrets/ozon_credential_key
 
 ## 启动与验证
 
+### 模型供应商凭据目录
+
+模型供应商页面提交的 API Key 不进入 PostgreSQL，而是写入部署主机的
+`secrets/rag-providers` 目录。首次启用模型供应商功能前，需要创建目录并授权给容器内
+的 `appuser`（UID 10001）；API 与 Worker 必须同时挂载该目录。
+
+```bash
+cd /opt/ozonslj/app/deploy
+install -d -m 700 secrets/rag-providers
+chown 10001:10001 secrets/rag-providers
+docker compose --env-file .env config --quiet
+docker compose --env-file .env up -d --no-deps api worker
+```
+
+不要把该目录、其中的 `.key` 文件或 API Key 提交到 Git、写入镜像或输出到日志。
+
+
 ```bash
 cd /opt/ozonslj/app/deploy
 docker compose --env-file .env config

@@ -80,7 +80,10 @@ class ConnectivityTestPayload(BaseModel):
     adapter_type: ManagedAdapter
     model: str = Field(min_length=1, max_length=160)
     base_url: str = Field(min_length=12, max_length=500)
-    api_key: str = Field(min_length=1, max_length=500, repr=False)
+    # 新增配置直接提交临时密钥；编辑配置可只提交供应商 ID，由后端读取已保存密钥。
+    # 密钥字段允许为空但不允许被写入响应，避免为了测试而回显 Secret。
+    api_key: str | None = Field(default=None, min_length=1, max_length=500, repr=False)
+    provider_id: str | None = Field(default=None, min_length=16, max_length=80)
 
 
 class ConnectivityTestResponse(BaseModel):
@@ -115,12 +118,31 @@ async def model_provider_catalog(
 async def test_model_provider_connectivity(
     payload: ConnectivityTestPayload,
     _account_manager: Annotated[object, Depends(require_account_manager)],
+    gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
+    credentials: Annotated[ModelCredentialStore, Depends(get_model_credential_store)],
 ) -> ConnectivityTestResponse:
     """用最小请求探测地址、鉴权和模型能力，不落库、不写日志、不保存 API Key。"""
+    api_key = payload.api_key.strip() if payload.api_key else None
+    if payload.provider_id:
+        # 先从当前组织的元数据中确认供应商归属，再读取 Secret，防止跨租户猜测文件名。
+        provider = next(
+            (item for item in await gateway.list_provider_metadata()
+             if str(item["id"]) == payload.provider_id),
+            None,
+        )
+        if provider is None:
+            raise HTTPException(status_code=404, detail="模型供应商不存在或不属于当前工作区")
+        if not api_key:
+            api_key = await credentials.get(payload.provider_id)
+    if not api_key:
+        raise HTTPException(
+            status_code=422, detail="测试连接需要填写 API Key，或选择已有供应商配置"
+        )
+
     try:
         if payload.purpose == "embedding":
             embedding_client = DashScopeEmbeddingClient(
-                api_key=payload.api_key,
+                api_key=api_key,
                 base_url=payload.base_url,
                 model=payload.model,
                 dimension=1024,
@@ -128,7 +150,7 @@ async def test_model_provider_connectivity(
             await embedding_client.embed(["连接测试"])
         else:
             translation_client = OpenAICompatibleTranslationClient(
-                api_key=payload.api_key,
+                api_key=api_key,
                 base_url=payload.base_url,
                 model=payload.model,
             )
