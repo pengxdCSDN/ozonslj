@@ -204,12 +204,28 @@ export function RagModelProvidersView() {
   };
 
   const testConnectivity = async () => {
-    if (!form.model.trim() || !form.base_url.trim()) {
-      setMessage("测试连接需要填写 Model 和 Base URL。");
+    const missingFields = [
+      !form.adapter_type.trim() ? "调用协议" : "",
+      !form.model.trim() ? "Model" : "",
+      !form.base_url.trim() ? "Base URL" : "",
+      !editingId && !form.api_key.trim() ? "API Key" : "",
+    ].filter(Boolean);
+    if (missingFields.length) {
+      setConnectivityState("error");
+      setMessage(`测试连接未执行：请填写${missingFields.join("、")}。`);
       return;
     }
-    if (!editingId && !form.api_key.trim()) {
-      setMessage("新增配置测试连接需要填写 API Key。");
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(form.base_url.trim());
+    } catch {
+      setConnectivityState("error");
+      setMessage("测试连接未执行：Base URL 不是合法地址，请填写 https:// 开头的接口根地址。");
+      return;
+    }
+    if (!['https:', 'http:'].includes(parsedUrl.protocol) || (parsedUrl.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(parsedUrl.hostname))) {
+      setConnectivityState("error");
+      setMessage("测试连接未执行：Base URL 必须使用 HTTPS 地址。");
       return;
     }
     setBusy(true);

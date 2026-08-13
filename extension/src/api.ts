@@ -235,10 +235,10 @@ export interface QualityCheckResult {
 }
 
 interface ApiErrorPayload {
-  detail?: {
+  detail?: string | {
     code?: string;
     message?: string;
-  };
+  } | Array<{ loc?: Array<string | number>; msg?: string }>;
 }
 
 export class ApiError extends Error {
@@ -288,10 +288,17 @@ async function requestJson<T>(
     } catch {
       // 非 JSON 错误由统一消息处理，避免把后端原始内容带入界面。
     }
+    const detail = payload.detail;
+    const detailMessage = typeof detail === "string"
+      ? detail
+      : Array.isArray(detail)
+        ? detail.map((item) => item.msg ?? "字段校验失败").join("；")
+        : detail?.message;
+    const detailCode = typeof detail === "object" && !Array.isArray(detail) ? detail?.code : undefined;
     throw new ApiError(
-      payload.detail?.message ?? `本地服务请求失败，状态码 ${response.status}`,
+      detailMessage ?? `本地服务请求失败，状态码 ${response.status}`,
       response.status,
-      payload.detail?.code ?? "request_failed"
+      detailCode ?? "request_failed"
     );
   }
   if (response.status === 204) {
