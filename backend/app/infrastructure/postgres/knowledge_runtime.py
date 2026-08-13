@@ -13,12 +13,13 @@ from backend.app.domain.knowledge_chunking import ChunkMetadata, KnowledgeChunk
 from backend.app.domain.knowledge_governance import KnowledgeSource, KnowledgeVersion
 from backend.app.domain.knowledge_query import KnowledgeQueryEngine
 from backend.app.domain.knowledge_retrieval import DeterministicEmbedding, EmbeddingPort
-from backend.app.infrastructure.cloud_models import DashScopeEmbeddingClient
+from backend.app.infrastructure.cloud_models import CloudModelError, DashScopeEmbeddingClient
 from backend.app.infrastructure.local.chroma_vector_index import (
     HttpChromaCollection,
     HttpChromaVectorIndex,
     _metadata_for_chunk,
 )
+from backend.app.infrastructure.model_credentials import ModelCredentialStore
 from backend.app.infrastructure.postgres.knowledge_keyword_search import (
     PostgresKnowledgeKeywordSearch,
 )
@@ -26,6 +27,75 @@ from backend.app.infrastructure.postgres.knowledge_keyword_search import (
 
 class _ExecutableConnection(Protocol):
     async def execute(self, query: str, params: tuple[object, ...]) -> object: ...
+
+
+class _ManagedEmbeddingRouter(EmbeddingPort):
+    """从数据库读取启用的向量模型并按优先级执行自动降级。
+
+    页面保存的是供应商元数据，API Key 通过凭据存储读取。每次批量向量化前重新读取启用状态和优先级，
+    使停用、调序和配额切换无需重启 API；供应商异常不会被当作有效向量返回。
+    """
+
+    def __init__(
+        self,
+        *,
+        pool: AsyncConnectionPool,
+        organization_id: str,
+        credentials: ModelCredentialStore,
+        fallback: EmbeddingPort,
+    ) -> None:
+        self._pool = pool
+        self._organization_id = organization_id
+        self._credentials = credentials
+        self._fallback = fallback
+
+    @property
+    def dimension(self) -> int:
+        return self._fallback.dimension
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        candidates = await self._candidates()
+        errors: list[str] = []
+        for provider_id, model, base_url, _credential_ref in candidates:
+            api_key = await self._credentials.get(provider_id)
+            if not api_key:
+                errors.append(f"{provider_id}:credential_missing")
+                continue
+            try:
+                # 当前云端 Embedding 客户端采用 OpenAI-compatible embeddings 协议，
+                # 因此供应商名称保持可扩展；后续可按 adapter_type 注入专用客户端。
+                client = DashScopeEmbeddingClient(
+                    api_key=api_key,
+                    base_url=base_url,
+                    model=model,
+                    dimension=self.dimension,
+                )
+                return await client.embed(texts)
+            except (CloudModelError, TimeoutError, RuntimeError) as error:
+                errors.append(f"{provider_id}:{type(error).__name__}")
+        if candidates:
+            raise RuntimeError("所有已配置向量供应商均不可用，已安全降级：" + ",".join(errors))
+        return await self._fallback.embed(texts)
+
+    async def _candidates(self) -> list[tuple[str, str, str, str | None]]:
+        async with self._pool.connection() as connection, connection.cursor(
+            row_factory=dict_row
+        ) as cursor:
+            await _set_scope(connection, self._organization_id)
+            await cursor.execute(
+                """
+                SELECT id, model, base_url, credential_ref
+                FROM rag_model_providers
+                WHERE organization_id=%s AND model_kind='embedding' AND enabled=TRUE
+                ORDER BY priority, id
+                """,
+                (self._organization_id,),
+            )
+            rows = await cursor.fetchall()
+        return [
+            (str(row["id"]), str(row["model"]), str(row["base_url"]), row["credential_ref"])
+            for row in rows
+        ]
 
 
 class PostgresChromaKnowledgeRuntime:
@@ -49,13 +119,14 @@ class PostgresChromaKnowledgeRuntime:
         )
         self._chroma_url = str(settings.chroma_url)
         self._collection: HttpChromaCollection | None = None
+        self._credentials = ModelCredentialStore(settings.rag_provider_credentials_dir)
         # 未配置云端 Key 时保留确定性实现，便于本地迁移和健康检查；生产启用真实
         # Embedding 前必须显式注入 RAG_EMBEDDING_API_KEY，并为新维度重建 Chroma 索引。
         self._embedding: EmbeddingPort
         if settings.rag_embedding_api_key:
             if settings.rag_embedding_provider not in {None, "dashscope"}:
                 raise ValueError("当前生产运行时只允许使用已实现的 DashScope Embedding 适配器")
-            self._embedding = DashScopeEmbeddingClient(
+            configured_embedding = DashScopeEmbeddingClient(
                 api_key=settings.rag_embedding_api_key,
                 model=settings.rag_embedding_model,
                 dimension=settings.rag_embedding_dimension,
@@ -66,7 +137,13 @@ class PostgresChromaKnowledgeRuntime:
                 ),
             )
         else:
-            self._embedding = DeterministicEmbedding()
+            configured_embedding = DeterministicEmbedding()
+        self._embedding = _ManagedEmbeddingRouter(
+            pool=self._pool,
+            organization_id=self.organization_id,
+            credentials=self._credentials,
+            fallback=configured_embedding,
+        )
         self._pool_open = False
 
     async def _ensure(self) -> None:

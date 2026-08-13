@@ -29,7 +29,10 @@ from backend.app.infrastructure.postgresql.rag_model_providers import (
 )
 
 router = APIRouter(prefix="/v1/model-providers/managed", tags=["rag-model-providers"])
-ManagedAdapter = Literal["dashscope", "siliconflow", "zhipu", "deepseek", "minimax", "openai"]
+# 适配器名称不限定为内置供应商清单，便于接入任意 OpenAI-compatible 服务。
+# 具体协议能力由连接测试和运行时客户端决定，数据库只校验名称非空。
+ManagedAdapter = str
+ManagedModelKind = Literal["embedding", "text"]
 ManagedPurpose = Literal[
     "embedding", "translation", "intent_rewrite", "rerank", "answer_generation"
 ]
@@ -37,11 +40,13 @@ ManagedPurpose = Literal[
 
 class ManagedProviderPayload(BaseModel):
     name: str = Field(min_length=1, max_length=80)
-    adapter_type: ManagedAdapter
+    adapter_type: ManagedAdapter = Field(min_length=1, max_length=80)
     model: str = Field(min_length=1, max_length=160)
     base_url: str = Field(min_length=12, max_length=500)
+    model_kind: ManagedModelKind = "text"
     api_key: str | None = Field(default=None, min_length=1, max_length=500, repr=False)
     priority: int = Field(default=100, ge=1, le=1000)
+    enabled: bool | None = None
 
 
 class ManagedProviderResponse(BaseModel):
@@ -50,6 +55,7 @@ class ManagedProviderResponse(BaseModel):
     adapter_type: ManagedAdapter
     model: str
     base_url: str
+    model_kind: ManagedModelKind
     priority: int
     enabled: bool
     credential_configured: bool
@@ -58,7 +64,8 @@ class ManagedProviderResponse(BaseModel):
 
 class ManagedBindingPayload(BaseModel):
     primary_provider_id: str
-    fallback_provider_ids: list[str] = Field(default_factory=list, max_length=1)
+    # 备用链按优先级排列，允许配置多个候选；运行时遇到限额、超时或不可用会逐个尝试。
+    fallback_provider_ids: list[str] = Field(default_factory=list, max_length=20)
 
 
 class ManagedBindingResponse(BaseModel):
@@ -146,8 +153,9 @@ def _response(item: dict[str, object]) -> ManagedProviderResponse:
     suffix = str(item.get("credential_suffix") or "")
     return ManagedProviderResponse(
         provider_id=str(item["id"]), name=str(item["name"]),
-        adapter_type=cast(ManagedAdapter, str(item["adapter_type"])),
+        adapter_type=str(item["adapter_type"]),
         model=str(item["model"]), base_url=str(item["base_url"]),
+        model_kind=cast(ManagedModelKind, str(item.get("model_kind") or "text")),
         priority=int(cast(str | int, item["priority"])), enabled=bool(item["enabled"]),
         credential_configured=bool(item.get("credential_ref")),
         credential_mask=f"***{suffix}" if suffix else "",
@@ -176,12 +184,14 @@ async def create_managed_model_provider(
     await gateway.create_provider(
         provider_id=provider_id, name=payload.name, adapter_type=payload.adapter_type,
         model=payload.model, base_url=payload.base_url.rstrip("/"),
+        model_kind=payload.model_kind,
         credential_ref=credential_ref, credential_suffix=payload.api_key.strip()[-4:],
         priority=payload.priority,
     )
     return _response({
         "id": provider_id, "name": payload.name, "adapter_type": payload.adapter_type,
         "model": payload.model, "base_url": payload.base_url.rstrip("/"),
+        "model_kind": payload.model_kind,
         "priority": payload.priority, "enabled": True,
         "credential_ref": credential_ref, "credential_suffix": payload.api_key.strip()[-4:],
     })
@@ -200,11 +210,20 @@ async def update_managed_model_provider(
     if payload.api_key:
         credential_ref = await credentials.put(provider_id, payload.api_key)
         suffix = payload.api_key.strip()[-4:]
-    await gateway.update_provider(
-        provider_id=provider_id, name=payload.name, adapter_type=payload.adapter_type,
-        model=payload.model, base_url=payload.base_url.rstrip("/"), priority=payload.priority,
-        credential_ref=credential_ref, credential_suffix=suffix,
-    )
+    try:
+        await gateway.update_provider(
+            provider_id=provider_id, name=payload.name, adapter_type=payload.adapter_type,
+            model=payload.model, base_url=payload.base_url.rstrip("/"),
+            model_kind=payload.model_kind,
+            priority=payload.priority, enabled=payload.enabled,
+            credential_ref=credential_ref, credential_suffix=suffix,
+        )
+    except ValueError as error:
+        if str(error) == "provider_bound_kind":
+            raise HTTPException(
+                status_code=409, detail="已绑定用途的模型不能直接切换模型类型，请先重新生成用途路由"
+            ) from error
+        raise
     item = next(
         (entry for entry in await gateway.list_provider_metadata()
          if str(entry["id"]) == provider_id), None
@@ -214,6 +233,25 @@ async def update_managed_model_provider(
     return _response(item)
 
 
+@router.delete("/{provider_id}", status_code=204)
+async def delete_managed_model_provider(
+    provider_id: str,
+    _account_manager: Annotated[object, Depends(require_account_manager)],
+    gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
+) -> None:
+    """删除未被用途绑定的配置，避免自动降级链出现悬挂引用。"""
+    try:
+        deleted = await gateway.delete_provider(provider_id)
+    except ValueError as error:
+        if str(error) == "provider_bound":
+            raise HTTPException(
+                status_code=409, detail="模型仍被用途绑定，请先停用或解绑"
+            ) from error
+        raise
+    if not deleted:
+        raise HTTPException(status_code=404, detail="模型供应商不存在")
+
+
 @router.put("/bindings/{purpose}", response_model=ManagedBindingResponse)
 async def bind_managed_model_purpose(
     purpose: ManagedPurpose,
@@ -221,11 +259,23 @@ async def bind_managed_model_purpose(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
 ) -> ManagedBindingResponse:
-    await gateway.bind_purpose(
-        purpose=purpose,
-        primary_provider_id=payload.primary_provider_id,
-        fallback_provider_ids=payload.fallback_provider_ids,
-    )
+    try:
+        await gateway.bind_purpose(
+            purpose=purpose,
+            primary_provider_id=payload.primary_provider_id,
+            fallback_provider_ids=payload.fallback_provider_ids,
+        )
+    except ValueError as error:
+        error_messages = {
+            "provider_duplicate": "主模型和备用模型不能重复",
+            "provider_not_found": "模型供应商不存在或不属于当前工作区",
+            "provider_disabled": "已停用的模型不能加入自动降级链",
+            "provider_kind_mismatch": "向量用途只能绑定向量模型，文本用途只能绑定文本模型",
+        }
+        raise HTTPException(
+            status_code=400,
+            detail=error_messages.get(str(error), "模型用途绑定参数无效"),
+        ) from error
     item = next(
         entry for entry in await gateway.list_bindings() if str(entry["purpose"]) == purpose
     )

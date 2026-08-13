@@ -11,27 +11,40 @@ from backend.app.domain.model_fallback import (
     RolloutFlag,
     rollout_allows_execution,
 )
+from backend.app.infrastructure.cloud_models import CloudModelQuotaError
 
 
 class FakeClient(ModelClient):
-    def __init__(self, value: str, fail: bool = False) -> None:
-        self.value, self.fail = value, fail
+    def __init__(self, value: str, failure: Exception | None = None) -> None:
+        self.value, self.failure = value, failure
 
     async def invoke(self, prompt: str) -> str:
-        if self.fail:
-            raise RuntimeError("quota")
+        if self.failure is not None:
+            raise self.failure
         return self.value
 
 
 @pytest.mark.asyncio
 async def test_router_falls_back_after_provider_failure() -> None:
     router = ProviderFallbackRouter(
-        {"deepseek": FakeClient("fail", True), "minimax": FakeClient("ok")},
+        {"deepseek": FakeClient("fail", RuntimeError("quota")), "minimax": FakeClient("ok")},
         (ProviderCandidate("deepseek", "v3", 1), ProviderCandidate("minimax", "m1", 2)),
     )
     answer, provider = await router.invoke("hello")
     assert answer == "ok"
     assert provider.provider == "minimax"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", [CloudModelQuotaError("quota"), TimeoutError("timeout")])
+async def test_router_skips_quota_or_timeout_and_uses_next_priority(failure: Exception) -> None:
+    router = ProviderFallbackRouter(
+        {"primary": FakeClient("fail", failure), "backup": FakeClient("ok")},
+        (ProviderCandidate("primary", "p", 1), ProviderCandidate("backup", "b", 2)),
+    )
+    answer, provider = await router.invoke("hello")
+    assert answer == "ok"
+    assert provider.provider == "backup"
 
 
 def test_pilot_can_be_decided_by_admin_config() -> None:

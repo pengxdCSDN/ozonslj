@@ -97,3 +97,16 @@ RAG_TRANSLATION_MODEL=qwen-plus
 - [智谱 API 文档](https://docs.bigmodel.cn/api-reference/)
 
 SiliconFlow 默认 OpenAI-compatible Base URL 为 `https://api.siliconflow.cn/v1`；智谱默认 Base URL 为 `https://open.bigmodel.cn/api/paas/v4`。若控制台显示不同地址，以控制台和官方 API 文档为准。百炼工作空间地址仍使用 `https://<WorkspaceId>.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`。
+
+## 模型池、优先级与自动降级
+
+模型供应商配置分为两个互斥模型池：
+
+- `embedding`：只用于向量化、Chroma 写入和语义检索。
+- `text`：用于翻译、查询重写、意图识别、重排序和答案生成。
+
+每个模型配置都可以在前端新增、编辑、启用、停用和删除，并记录供应商名称、适配器、模型 ID、Base URL、服务端凭据引用和优先级。优先级使用正整数，数值越小表示优先级越高；同一模型池按 `priority, provider_id` 稳定排序，不依赖页面中的固定示例。
+
+用途路由保存一个主模型和任意数量的备用模型。页面的“按优先级保存”会把当前模型池中所有启用配置写入降级链。运行时按链路逐个尝试：预算门禁会先跳过已超额配置；请求遇到供应商限额、429、超时、网络不可用或其他云模型错误时记录安全错误码并尝试下一项。所有候选均不可用时才返回“模型供应商暂不可用”，不得生成无依据的答案。
+
+API Key 只在新增或更换时从页面提交到服务端 Secret 存储；列表、日志、审计和错误响应只返回配置状态及末四位掩码。删除绑定中的供应商会返回冲突，必须先重新生成用途路由，避免运行时出现悬挂引用。
