@@ -140,15 +140,17 @@ async def test_model_provider_connectivity(
             api_key = await credentials.get(payload.provider_id)
     if not api_key:
         raise HTTPException(
-            status_code=422, detail="测试连接需要填写 API Key，或选择已有供应商配置"
+            status_code=422,
+            detail="服务端未读取到该供应商的已保存 API Key，请重新录入后再测试",
         )
-    _validate_connectivity_target(payload.adapter_type, payload.base_url, api_key)
+    normalized_base_url = _normalize_model_base_url(payload.base_url)
+    _validate_connectivity_target(payload.adapter_type, normalized_base_url, api_key)
 
     try:
         if payload.purpose == "embedding":
             embedding_client = DashScopeEmbeddingClient(
                 api_key=api_key,
-                base_url=payload.base_url,
+                base_url=normalized_base_url,
                 model=payload.model,
                 dimension=1024,
             )
@@ -156,7 +158,7 @@ async def test_model_provider_connectivity(
         else:
             translation_client = OpenAICompatibleTranslationClient(
                 api_key=api_key,
-                base_url=payload.base_url,
+                base_url=normalized_base_url,
                 model=payload.model,
             )
             await translation_client.translate(["Привет"])
@@ -167,7 +169,7 @@ async def test_model_provider_connectivity(
             message="已收到外部模型接口响应，但额度或限流已触发。",
             model=payload.model,
             external_request_sent=True,
-            endpoint_host=urlparse(payload.base_url).hostname or "未知",
+            endpoint_host=urlparse(normalized_base_url).hostname or "未知",
             http_status=429,
         )
     except (CloudModelError, ValueError) as error:
@@ -177,7 +179,7 @@ async def test_model_provider_connectivity(
             message=_connectivity_error_message(error),
             model=payload.model,
             external_request_sent=isinstance(error, CloudModelError),
-            endpoint_host=urlparse(payload.base_url).hostname or "未知",
+            endpoint_host=urlparse(normalized_base_url).hostname or "未知",
             http_status=error.status_code if isinstance(error, CloudModelError) else None,
         )
     return ConnectivityTestResponse(
@@ -186,7 +188,7 @@ async def test_model_provider_connectivity(
         message="已收到外部模型接口的合法响应，鉴权和模型调用均通过。",
         model=payload.model,
         external_request_sent=True,
-        endpoint_host=urlparse(payload.base_url).hostname or "未知",
+        endpoint_host=urlparse(normalized_base_url).hostname or "未知",
         http_status=200,
     )
 
@@ -198,6 +200,19 @@ def _connectivity_error_message(error: CloudModelError | ValueError) -> str:
     if error.status_code is not None:
         return f"已调用外部模型接口，但接口返回 HTTP {error.status_code}：{error}"
     return f"已尝试调用外部模型接口，但未收到有效 HTTP 响应：{error}"
+
+
+def _normalize_model_base_url(base_url: str) -> str:
+    """兼容误保存为完整 endpoint 的历史配置，避免重复拼接路径。
+
+    页面字段语义是供应商 API 根地址；历史数据若保存了 ``/embeddings`` 或
+    ``/chat/completions``，测试时剥离该后缀后交给客户端统一拼接，避免产生错误 URL。
+    """
+    value = base_url.strip().rstrip("/")
+    for suffix in ("/chat/completions", "/embeddings"):
+        if value.lower().endswith(suffix):
+            return value[: -len(suffix)].rstrip("/")
+    return value
 
 
 def _validate_connectivity_target(adapter_type: str, base_url: str, api_key: str | None) -> None:
