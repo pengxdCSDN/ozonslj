@@ -19,6 +19,11 @@ from backend.app.domain.knowledge_retrieval import EmbeddingPort
 class CloudModelError(RuntimeError):
     """云端模型调用失败，已去除凭据和完整响应正文。"""
 
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        # 仅保留 HTTP 状态码，禁止保存或传播供应商原始响应和请求头。
+        self.status_code = status_code
+
 
 class CloudModelQuotaError(CloudModelError):
     """云端供应商额度、限流或余额不足，调用方应切换备用供应商。"""
@@ -93,9 +98,9 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         except httpx.HTTPError as error:
             raise CloudModelError("Embedding 云端网络请求失败") from error
         if response.status_code == 429:
-            raise CloudModelQuotaError("Embedding 供应商额度或限流已触发")
+            raise CloudModelQuotaError("Embedding 供应商额度或限流已触发", status_code=429)
         if response.is_error:
-            raise CloudModelError(f"Embedding 云端请求失败（HTTP {response.status_code}）")
+            raise CloudModelError("Embedding 云端请求失败", status_code=response.status_code)
         try:
             result = response.json()
         except json.JSONDecodeError as error:
@@ -161,9 +166,9 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
         except httpx.HTTPError as error:
             raise CloudModelError("翻译云端网络请求失败") from error
         if response.status_code == 429:
-            raise CloudModelQuotaError("翻译供应商额度或限流已触发")
+            raise CloudModelQuotaError("翻译供应商额度或限流已触发", status_code=429)
         if response.is_error:
-            raise CloudModelError(f"翻译云端请求失败（HTTP {response.status_code}）")
+            raise CloudModelError("翻译云端请求失败", status_code=response.status_code)
         try:
             result = response.json()
             translated = result["choices"][0]["message"]["content"]

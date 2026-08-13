@@ -69,13 +69,16 @@ export function RagModelProvidersView() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [testingConnectivity, setTestingConnectivity] = useState(false);
   const [message, setMessage] = useState("先新增模型配置，再按优先级生成自动降级链。");
+  const [connectivityState, setConnectivityState] = useState<"idle" | "success" | "error">("idle");
   const [customAdapter, setCustomAdapter] = useState(false);
   const [adapterMenuOpen, setAdapterMenuOpen] = useState(false);
   const adapterMenuRef = useRef<HTMLDivElement>(null);
 
   const refresh = async () => {
     setBusy(true);
+    setConnectivityState("idle");
     try {
       const [nextProviders, nextBindings] = await Promise.all([
         listRagModelProviders(),
@@ -124,6 +127,7 @@ export function RagModelProvidersView() {
       return;
     }
     setBusy(true);
+    setConnectivityState("idle");
     try {
       const payload: Record<string, unknown> = {
         name: form.name.trim(),
@@ -167,6 +171,7 @@ export function RagModelProvidersView() {
 
   const toggleProvider = async (provider: RagModelProvider) => {
     setBusy(true);
+    setConnectivityState("idle");
     try {
       await updateRagModelProvider(provider.provider_id, {
         name: provider.name,
@@ -187,6 +192,7 @@ export function RagModelProvidersView() {
   const removeProvider = async (provider: RagModelProvider) => {
     if (!window.confirm(`确定删除“${provider.name} / ${provider.model}”吗？`)) return;
     setBusy(true);
+    setConnectivityState("idle");
     try {
       await deleteRagModelProvider(provider.provider_id);
       await refresh();
@@ -207,6 +213,8 @@ export function RagModelProvidersView() {
       return;
     }
     setBusy(true);
+    setConnectivityState("idle");
+    setTestingConnectivity(true);
     try {
       const result = await testRagModelConnectivity({
         purpose: form.model_kind === "embedding" ? "embedding" : "translation",
@@ -216,10 +224,13 @@ export function RagModelProvidersView() {
         ...(form.api_key.trim() ? { api_key: form.api_key.trim() } : {}),
         ...(editingId ? { provider_id: editingId } : {}),
       });
-      setMessage(result.ok ? `连接成功：${result.message}` : `连接失败：${result.message}`);
+      setConnectivityState(result.ok ? "success" : "error");
+      setMessage(`${result.ok ? "连接成功" : "连接失败"}：${result.message} · 外部请求${result.external_request_sent ? "已发出" : "未发出"} · ${result.endpoint_host}${result.http_status ? ` · HTTP ${result.http_status}` : ""}`);
     } catch (error) {
+      setConnectivityState("error");
       setMessage(error instanceof Error ? error.message : "模型连接测试失败");
     } finally {
+      setTestingConnectivity(false);
       setBusy(false);
     }
   };
@@ -233,6 +244,7 @@ export function RagModelProvidersView() {
       return;
     }
     setBusy(true);
+    setConnectivityState("idle");
     try {
       await bindRagModelPurpose(purpose, {
         primary_provider_id: candidates[0].provider_id,
@@ -262,7 +274,14 @@ export function RagModelProvidersView() {
         </button>
       </section>
 
-      <div className="model-pool-callout"><ShieldCheck size={17} /> <span>{message}</span></div>
+      <div
+        className={`model-pool-callout${connectivityState === "success" ? " is-success" : connectivityState === "error" ? " is-error" : ""}`}
+        role={connectivityState === "error" ? "alert" : "status"}
+        aria-live="polite"
+      >
+        {connectivityState === "success" ? <CheckCircle size={17} /> : connectivityState === "error" ? <WarningCircle size={17} /> : <ShieldCheck size={17} />}
+        <span>{message}</span>
+      </div>
 
       <section className="panel model-form-panel">
         <div className="section-heading model-form-heading">
@@ -278,7 +297,7 @@ export function RagModelProvidersView() {
           <label className="priority-field"><span>优先级 <em>数字越小越优先</em></span><input type="number" min="1" max="1000" value={form.priority} onChange={(event) => updateForm("priority", event.target.value)} /></label>
         </div>
         <div className="model-form-actions">
-          <button className="secondary-button model-action-button" type="button" disabled={busy} onClick={() => void testConnectivity()}><ArrowsClockwise size={16} /> 测试连接</button>
+          <button className="secondary-button model-action-button" type="button" disabled={busy} onClick={() => void testConnectivity()}><ArrowsClockwise size={16} /> {testingConnectivity ? "测试中…" : "测试连接"}</button>
           {editingId && <button className="secondary-button model-action-button" type="button" disabled={busy} onClick={resetForm}>取消编辑</button>}
           <button className="primary-button model-action-button model-add-button" type="button" disabled={busy} onClick={() => void submit()}>{editingId ? <FloppyDisk size={17} /> : <Plus size={17} />}{editingId ? "保存修改" : "新增模型配置"}</button>
         </div>

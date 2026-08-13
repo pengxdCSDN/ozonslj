@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from typing import Annotated, Literal, cast
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -91,6 +92,9 @@ class ConnectivityTestResponse(BaseModel):
     status: Literal["reachable", "quota_exceeded", "failed"]
     message: str
     model: str
+    external_request_sent: bool
+    endpoint_host: str
+    http_status: int | None = None
 
 
 @router.get("/catalog")
@@ -138,6 +142,7 @@ async def test_model_provider_connectivity(
         raise HTTPException(
             status_code=422, detail="测试连接需要填写 API Key，或选择已有供应商配置"
         )
+    _validate_connectivity_target(payload.adapter_type, payload.base_url, api_key)
 
     try:
         if payload.purpose == "embedding":
@@ -159,16 +164,65 @@ async def test_model_provider_connectivity(
         return ConnectivityTestResponse(
             ok=False,
             status="quota_exceeded",
-            message="模型地址可达，但额度或限流已触发。",
+            message="已收到外部模型接口响应，但额度或限流已触发。",
             model=payload.model,
+            external_request_sent=True,
+            endpoint_host=urlparse(payload.base_url).hostname or "未知",
+            http_status=429,
         )
     except (CloudModelError, ValueError) as error:
         return ConnectivityTestResponse(
-            ok=False, status="failed", message=str(error), model=payload.model
+            ok=False,
+            status="failed",
+            message=_connectivity_error_message(error),
+            model=payload.model,
+            external_request_sent=isinstance(error, CloudModelError),
+            endpoint_host=urlparse(payload.base_url).hostname or "未知",
+            http_status=error.status_code if isinstance(error, CloudModelError) else None,
         )
     return ConnectivityTestResponse(
-        ok=True, status="reachable", message="模型连接成功，最小请求已完成。", model=payload.model
+        ok=True,
+        status="reachable",
+        message="已收到外部模型接口的合法响应，鉴权和模型调用均通过。",
+        model=payload.model,
+        external_request_sent=True,
+        endpoint_host=urlparse(payload.base_url).hostname or "未知",
+        http_status=200,
     )
+
+
+def _connectivity_error_message(error: CloudModelError | ValueError) -> str:
+    """把失败阶段和安全的 HTTP 状态提供给页面，不传播供应商响应正文。"""
+    if isinstance(error, ValueError):
+        return f"本地校验未通过，尚未调用外部模型：{error}"
+    if error.status_code is not None:
+        return f"已调用外部模型接口，但接口返回 HTTP {error.status_code}：{error}"
+    return f"已尝试调用外部模型接口，但未收到有效 HTTP 响应：{error}"
+
+
+def _validate_connectivity_target(adapter_type: str, base_url: str, api_key: str | None) -> None:
+    """拒绝开发占位目标，避免未认证的示例接口被误报为真实连接成功。
+
+    连接测试必须验证真实供应商的鉴权和模型响应；因此不能把 ``example.com``、
+    本地地址或 ``test`` 一类占位值当作生产供应商。内置适配器还必须使用其官方域名，
+    防止把密钥发送到名称伪装的第三方地址。
+    """
+    parsed = urlparse(base_url.strip())
+    hostname = (parsed.hostname or "").lower().rstrip(".")
+    if hostname in {"example.com", "example.test", "localhost", "127.0.0.1", "::1"}:
+        raise ValueError("连接测试必须填写真实模型供应商地址，不能使用示例或本地地址")
+    if not api_key or api_key.strip().lower() in {
+        "test", "test-key", "test_key", "test-api-key", "your-api-key", "changeme"
+    }:
+        raise ValueError("连接测试必须填写真实 API Key，不能使用占位值")
+    required_domains = {
+        "dashscope": ("aliyuncs.com",),
+        "siliconflow": ("siliconflow.cn",),
+        "zhipu": ("bigmodel.cn",),
+    }
+    for domain in required_domains.get(adapter_type.strip().lower(), ()):
+        if not (hostname == domain or hostname.endswith(f".{domain}")):
+            raise ValueError(f"{adapter_type} 连接测试必须使用官方模型接口地址")
 
 
 def _response(item: dict[str, object]) -> ManagedProviderResponse:
