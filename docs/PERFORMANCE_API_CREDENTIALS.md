@@ -16,9 +16,10 @@ Performance API 使用独立的服务账号 Client Credentials，不复用 Selle
 | GET | `/v1/advertising/performance-oauth/store-workspaces/{workspace_id}/credentials` | 查询是否已配置密钥、是否已获取令牌和过期时间 |
 | POST | `/v1/advertising/performance-oauth/store-workspaces/{workspace_id}/client-credentials` | 加密保存 Client ID 与 Client Secret |
 | POST | `/v1/advertising/performance-oauth/store-workspaces/{workspace_id}/token` | 获取并加密保存 access token |
+| GET | `/v1/advertising/performance-oauth/store-workspaces/{workspace_id}/campaigns` | 自动刷新令牌后读取广告活动（只读） |
 
 ## 状态和排错
 
 “密钥已配置、令牌未获取”是正常中间状态，点击获取 Token 即可继续。401/403 通常表示服务账号、组织权限或密钥不匹配；不要填 Seller API API Key。任何 token、secret、完整 Client ID 和外部响应都不得写入日志、浏览器存储或 Git。
 
-当前闭环先覆盖认证与连接验证；广告活动、报表等真实只读同步必须在 Performance API 账号具备相应权限后，通过独立适配器接入，不能猜测接口路径或把认证接口当作业务数据接口。
+当前已覆盖认证、自动刷新和广告活动真实只读调用；广告报表等其他业务数据必须在 Performance API 账号具备相应权限后，通过独立适配器接入，不能猜测接口路径或把认证接口当作业务数据接口。
