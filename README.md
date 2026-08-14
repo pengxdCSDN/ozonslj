@@ -53,7 +53,36 @@ API/Worker 服务。Web 静态资源使用服务器 `deploy/web` 挂载目录发
 - [开发计划](./docs/PROJECT_PLAN.md)
 - [Linux 部署](./docs/DEPLOYMENT.md)
 - [前后端可复用修复基线](./docs/FRONTEND_REUSABLE_FIXES.md)
-- [当前项目文档基线（Obsidian 00–24）](./docs/project-baseline/00-ozonslj项目文档索引.md)
+
+### 最新项目文档基线（Obsidian 00–24）
+
+- [00 项目文档索引](./docs/project-baseline/00-ozonslj项目文档索引.md)
+- [01 需求文档](./docs/project-baseline/01-ozonslj需求文档.md)
+- [02 架构设计文档](./docs/project-baseline/02-ozonslj架构设计文档.md)
+- [03 需求文档 V2（待确认）](./docs/project-baseline/03-ozonslj需求文档-V2-待确认.md)
+- [04 需求文档 V4（已确认）](./docs/project-baseline/04-ozonslj需求文档-V4-已确认.md)
+- [05 架构设计 V4（待评审）](./docs/project-baseline/05-ozonslj架构设计文档-V4-待评审.md)
+- [06 架构设计 V5（已定档）](./docs/project-baseline/06-ozonslj架构设计文档-V5-已定档.md)
+- [07 需求文档 V5（待确认）](./docs/project-baseline/07-ozonslj需求文档-V5-待确认.md)
+- [07 需求文档 V5（已确认）](./docs/project-baseline/07-ozonslj需求文档-V5-已确认.md)
+- [08 架构设计 V6（待确认）](./docs/project-baseline/08-ozonslj架构设计文档-V6-待确认.md)
+- [08 架构设计 V6（已定档）](./docs/project-baseline/08-ozonslj架构设计文档-V6-已定档.md)
+- [09 全功能点与开发状态清单](./docs/project-baseline/09-ozonslj全功能点与开发状态清单.md)
+- [10 当前需求开发基线](./docs/project-baseline/10-ozonslj当前需求开发基线.md)
+- [11 当前架构开发基线](./docs/project-baseline/11-ozonslj当前架构开发基线.md)
+- [12 API 接口文档](./docs/project-baseline/12-ozonslj-API接口文档.md)
+- [13 PostgreSQL 数据库文档](./docs/project-baseline/13-ozonslj-PostgreSQL数据库文档.md)
+- [14 项目开发计划](./docs/project-baseline/14-ozonslj项目开发计划.md)
+- [15 Seller 同步接口文档](./docs/project-baseline/15-ozonslj-Seller同步接口文档.md)
+- [16 云服务器上下文](./docs/project-baseline/16-ozonslj云服务器上下文.md)
+- [17 故障排查与发布恢复](./docs/project-baseline/17-ozonslj故障排查与发布恢复.md)
+- [18 RAG 需求文档](./docs/project-baseline/18-ozonslj-RAG需求文档.md)
+- [19 RAG 技术架构](./docs/project-baseline/19-ozonslj-RAG技术架构.md)
+- [20 RAG 知识治理与数据模型](./docs/project-baseline/20-ozonslj-RAG知识治理与数据模型.md)
+- [21 RAG 检索质量设计](./docs/project-baseline/21-ozonslj-RAG检索质量设计.md)
+- [22 RAG 目标 API](./docs/project-baseline/22-ozonslj-RAG目标API.md)
+- [23 RAG 实施计划](./docs/project-baseline/23-ozonslj-RAG实施计划.md)
+- [24 ADR-0010 Chroma 向量索引决策](./docs/project-baseline/24-ozonslj-ADR-0010-Chroma向量索引决策.md)
 
 ## 完整检查
 
