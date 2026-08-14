@@ -395,7 +395,8 @@ export function App() {
     {view === "agent-permissions" && active ? <AgentPermissionsView workspaceId={selectedWorkspaceId} /> : null}
     {view === "external-notifications" && active ? <ExternalNotificationsView workspaceId={selectedWorkspaceId} /> : null}
     {/* Performance 凭据属于独立凭据域，不与 Seller 店铺绑定。 */}
-    {view === "performance-credentials" && active ? <PerformanceOAuthView workspaceId={selectedWorkspaceId} /> : null}
+    {/* Performance 凭据是账号级配置，不应被当前店铺 active 状态阻断。 */}
+    {view === "performance-credentials" ? <PerformanceOAuthView workspaceId={selectedWorkspaceId} /> : null}
     {view === "seller-product-sync" && active ? <SellerProductSyncView workspaceId={selectedWorkspaceId} /> : null}
     {view === "seller-stock-sync" && active ? <SellerStockSyncView workspaceId={selectedWorkspaceId} /> : null}
     {view === "seller-order-sync" && active ? <SellerOrderSyncView workspaceId={selectedWorkspaceId} /> : null}
