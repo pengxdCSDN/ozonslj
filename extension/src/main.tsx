@@ -3,7 +3,9 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
 import "./styles.css";
-import "./target-theme.css";
+import "./operations.css";
+import "./desktop.css";
+import "./frontend-design.css";
 
 const root = document.getElementById("root");
 

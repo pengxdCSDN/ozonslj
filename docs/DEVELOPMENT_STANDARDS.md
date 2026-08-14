@@ -1,6 +1,11 @@
 # 前后端代码开发规范
 
+> 所有环境唯一业务数据库为 PostgreSQL；Redis 只承载可恢复协调状态。历史持久化实现的退出规则见 [ADR-0001](./decisions/0001-postgresql-only.md)。
+
 ## 1. 通用规范
+
+- 所有新增或修改的代码、SQL、schema 和迁移脚本必须使用详细中文注释，说明用途、字段/参数语义、约束原因、数据归属、生命周期和异常边界，便于后续 RAG 检索。
+- 注释必须与实现同步更新，不得写空泛注释，不得在注释中记录 API Key、Client ID 原值、客户隐私或其他敏感数据。
 
 - 业务命名遵循根目录 `CONTEXT.md`，中文文档与英文代码术语保持一一对应。
 - 小步提交，每个提交只解决一个完整问题；推荐 Conventional Commits。
@@ -40,8 +45,8 @@ API → 应用 → 领域
 
 - `api`：HTTP 协议、参数校验、依赖注入、响应转换。
 - `application`：用例、权限、事务和操作编排。
-- `domain`：业务模型、规则和端口，不依赖 FastAPI/PostgreSQL。
-- `infrastructure`：PostgreSQL、Redis、Ozon HTTP、加密和日志实现。
+- `domain`：业务模型、规则和端口，不依赖 FastAPI、PostgreSQL 驱动、Redis 或 Ozon 传输模型。
+- `infrastructure`：PostgreSQL、Redis、Ozon HTTP、加密、文件和日志适配器。
 - API 路由不得直接执行 SQL；领域层不得导入基础设施模块。
 
 ### 2.3 FastAPI
@@ -52,13 +57,13 @@ API → 应用 → 领域
 - 错误转换集中处理，不把 Ozon 原始错误或凭据返回前端。
 - 长任务通过同步任务模型执行，不阻塞 HTTP 请求。
 
-### 2.4 PostgreSQL
+### 2.4 PostgreSQL 与 Redis
 
 - 使用参数化语句，禁止字符串拼接 SQL。
 - 每个操作明确连接和事务边界。
-- 开启外键；写操作尽量短，避免长期持有数据库锁。
+- PostgreSQL 外键必须显式定义；写操作尽量短，避免长期持有事务和行锁。
 - 金额不使用浮点数；标识符不强制转换为整数。
-- 表结构变化必须新增 `database/postgres/migrations` 版本化迁移，并同步修改中文注释、数据库文档和测试。
+- 表结构变化同步修改 `database/postgresql_schema.sql`、数据库文档和测试；SQL 变更必须补充中文注释。
 
 ### 2.5 Ozon 集成
 
@@ -67,6 +72,13 @@ API → 应用 → 领域
 - Ozon 传输模型与领域模型分离，并进行运行时校验。
 - 读取默认可按错误分类重试；重要写入必须预览、确认、幂等和审计。
 - 不猜测上游路径、字段、枚举、配额或弃用时间。
+
+### 2.6 可替换外部服务
+
+- 模型、邮件、导入文件和备份存储必须通过 `ModelGateway`、`MailGateway`、`ImportObjectStore` 和 `BackupObjectStore` 等端口隔离，领域层不导入厂商 SDK。
+- 供应商、地址、模型/发件身份、超时和配额由后端配置选择；业务代码不得写死厂商名称或密钥。
+- 开发和自动化测试使用 Mail Sink、Fake 或本地适配器，不调用真实模型、邮件或对象存储服务。
+- 外部调用失败必须分类为可重试、不可重试或需要人工处理；重试有上限，不得回滚已经提交且独立成立的业务事实。
 
 ## 3. React/TypeScript 前端规范
 
@@ -107,7 +119,7 @@ API → 应用 → 领域
 | 层级 | 测试内容 | 依赖 |
 |---|---|---|
 | 单元测试 | 领域规则、映射、错误分类 | 无网络、无数据库 |
-| 集成测试 | PostgreSQL 迁移、持久化、约束和事务 | 临时 PostgreSQL 16 |
+| 集成测试 | PostgreSQL 持久化、约束、RLS、事务与迁移 | 每次测试隔离的 PostgreSQL database/schema |
 | 契约测试 | Ozon 成功、认证失败、限流、超时、畸形响应 | Mock |
 | API 测试 | 路由、权限、校验、分页和错误格式 | FastAPI TestClient |
 | 前端测试 | 组件状态和用户交互 | Stub API |

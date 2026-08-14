@@ -7,11 +7,15 @@ dependencies = [
   "cryptography>=44,<46",
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",
-  "pydantic-settings>=2.7,<3",
   "psycopg[binary,pool]>=3.2,<4",
-  "redis>=5.2,<6",
+  "pydantic-settings>=2.7,<3",
+  "redis>=5,<7",
   "uvicorn[standard]>=0.34,<1",
 ]
+
+[project.scripts]
+ozonslj-sync-scheduler = "backend.app.sync_runtime:scheduler_main"
+ozonslj-sync-worker = "backend.app.sync_runtime:worker_main"
 
 [dependency-groups]
 dev = [
@@ -43,4 +47,3 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.12"
 strict = true
 packages = ["backend.app"]
-

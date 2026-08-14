@@ -1,0 +1,43 @@
+name: ozonslj-rag
+
+services:
+  chroma:
+    # 与 PostgreSQL/Redis/Nginx 一样，固定版本先由 ACR 构建到 pxd 仓库，服务器只拉取。
+    image: ${REGISTRY_PREFIX}/pxd:${CHROMA_IMAGE_TAG:-chroma-0.5.23}
+    restart: unless-stopped
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+    volumes:
+      - chroma_data:/chroma/chroma
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      # Chroma 运行时镜像不保证包含 wget；使用内置 Python 标准库探测心跳，避免误报不健康。
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/heartbeat', timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 384M
+        reservations:
+          memory: 128M
+    networks:
+      - backend
+
+volumes:
+  chroma_data:
+
+networks:
+  # 主 compose 创建的内部网络；只允许 API/Worker 与 Chroma 互通。
+  backend:
+    external: true
+    name: ozonslj_backend

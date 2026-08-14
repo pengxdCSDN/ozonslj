@@ -1,0 +1,11 @@
+import { useState } from "react";
+import { analyzeAndSaveCompetition, listCompetitionAnalyses, type CompetitionAnalysis } from "./api";
+
+export function CompetitionAnalysisView({ workspaceId }: { workspaceId: string }) {
+  const [analyses, setAnalyses] = useState<CompetitionAnalysis[]>([]);
+  const [message, setMessage] = useState("所有结果均基于公开样本估算");
+  const [busy, setBusy] = useState(false);
+  const run = async () => { setBusy(true); try { const result = await analyzeAndSaveCompetition(workspaceId, [{ seller: "seller-a", brand: "brand-a", price_minor: 1000, rating: 4.8, review_count: 2000 }, { seller: "seller-a", brand: "brand-a", price_minor: 1200, rating: 4.5, review_count: 1000 }, { seller: "seller-b", brand: "brand-b", price_minor: 900, rating: 4, review_count: 100 }]); setAnalyses((current) => [result, ...current]); setMessage("竞争度分析已保存"); } catch (error) { setMessage(error instanceof Error ? error.message : "分析失败"); } finally { setBusy(false); } };
+  const load = async () => { setBusy(true); try { setAnalyses(await listCompetitionAnalyses(workspaceId)); setMessage("已加载竞争度分析历史"); } catch (error) { setMessage(error instanceof Error ? error.message : "加载失败"); } finally { setBusy(false); } };
+  return <div className="view-content"><section className="page-heading compact"><div><p className="eyebrow">选品 Skill / SEL-004</p><h1>竞争度分析</h1><p>分析评分、评价、卖家/品牌集中度和价格带，结果不代表全市场精确排名。</p></div></section><section className="panel import-panel"><div className="button-row"><button className="secondary-button" disabled={busy} onClick={() => void run()}>分析并保存竞争度</button><button className="secondary-button" disabled={busy} onClick={() => void load()}>加载历史</button></div><p className="form-message">{message}</p>{analyses.map((result, index) => <div className="quality-result" key={`${result.competition_score}-${index}`}><strong>竞争度 {result.competition_score} 分 · 样本 {result.sample_count}</strong><span>价格带 {result.price_band_low_minor ?? "无"} - {result.price_band_high_minor ?? "无"} · 中位数 {result.median_price_minor ?? "无"}</span><small>卖家集中度 {result.seller_concentration_percent}% · 品牌集中度 {result.brand_concentration_percent}% · {result.caveat}</small><em>{result.estimated ? "采样估算" : "官方事实"}</em></div>)}{!analyses.length ? <div className="empty-search"><strong>尚未运行竞争度分析</strong><span>公开样本估算不代表全市场精确销量或排名。</span></div> : null}</section></div>;
+}

@@ -59,6 +59,23 @@ chmod 640 secrets/ozon_credential_key
 
 ## 启动与验证
 
+### 模型供应商凭据目录
+
+模型供应商页面提交的 API Key 不进入 PostgreSQL，而是写入部署主机的
+`secrets/rag-providers` 目录。首次启用模型供应商功能前，需要创建目录并授权给容器内
+的 `appuser`（UID 10001）；API 与 Worker 必须同时挂载该目录。
+
+```bash
+cd /opt/ozonslj/app/deploy
+install -d -m 700 secrets/rag-providers
+chown 10001:10001 secrets/rag-providers
+docker compose --env-file .env config --quiet
+docker compose --env-file .env up -d --no-deps api worker
+```
+
+不要把该目录、其中的 `.key` 文件或 API Key 提交到 Git、写入镜像或输出到日志。
+
+
 ```bash
 cd /opt/ozonslj/app/deploy
 docker compose --env-file .env config
@@ -161,3 +178,16 @@ docker compose --env-file .env logs --tail=100 api worker
 ```
 
 其中 `$APP_IMAGE` 使用 `.env` 中的应用镜像完整地址；`release-marker.py` 替换为本次版本必然包含的关键文件。发布结束后还应请求公网首页，核对 HTML 引用的新 JS/CSS 哈希文件均返回 `200`。
+## Web 静态资源发布防复发规则
+
+2026-08-14 黑屏故障的直接原因是首页引用了新的哈希 JS 文件，但 Nginx 实际目录没有该文件；Nginx 的 `try_files` 将缺失的 JS 回退成 `index.html`，浏览器收到 `text/html` 后拒绝执行模块脚本。另一个易错点是 Docker Web 容器绑定了宿主机目录，普通 `restart` 不会修复错误的目录切换。
+
+发布 Web 时必须遵守以下顺序：
+
+1. 使用 `vite build --mode web` 生成完整目录，不能只上传 `index.html` 或单个 assets 文件。
+2. 将整个构建目录上传到 `web.next`，先检查 `index.html` 引用的每一个 `/assets/*` 文件都存在。
+3. 保留当前目录作为带时间戳的回滚目录，再将 `web.next` 原子改名为 `web`；不要依赖“目录已存在”的条件判断，否则失败后会留下未切换的暂存目录。
+4. 执行 `docker compose --env-file .env up -d --force-recreate --no-deps web`，让绑定目录在容器内明确刷新。
+5. 发布后必须同时验证首页引用的 JS/CSS：状态码为 `200`，JS 为 `application/javascript`，CSS 为 `text/css`；任一资源返回 `text/html` 都视为发布失败并立即回滚。
+
+本次线上已恢复为当前构建版本，并保留上一版目录用于回滚。浏览器端如仍显示旧错误，使用 `Ctrl+F5` 清除旧的首页缓存后重新打开。

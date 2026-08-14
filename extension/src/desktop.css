@@ -1,0 +1,118 @@
+@media (min-width: 900px) {
+  body { min-width: 900px; }
+  .app-shell { display: grid; grid-template-columns: 260px minmax(0, 1fr); grid-template-rows: 74px 64px minmax(0, 1fr); height: 100dvh; overflow: hidden; background: radial-gradient(circle at 94% 92%, rgba(10, 93, 128, .18), transparent 32%), linear-gradient(180deg, #0b091b, #090818 42%); }
+  .masthead { position: static; grid-column: 1; grid-row: 1; padding: 17px 22px; border-right: 1px solid var(--line); background: #19172b; }
+  .masthead .icon-button { display: none; }
+  .brand-mark { width: 40px; height: 40px; }
+  .brand strong { font-size: 16px; }
+  .workspace-switcher { position: relative; grid-column: 1; grid-row: 2; align-self: stretch; margin: 0; padding: 0 18px; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; background: #19172b; }
+  .workspace-label { color: #77738a; white-space: nowrap; }
+  .workspace-trigger { display: flex; min-width: 0; align-items: center; justify-content: flex-end; gap: 8px; padding: 8px 0; border: 0; color: #eeeaf8; background: transparent; cursor: pointer; }
+  .workspace-trigger strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+  .workspace-trigger svg { flex: none; color: #77738a; transition: transform .18s ease; }
+  .workspace-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .workspace-menu { position: absolute; z-index: 12; top: calc(100% - 7px); right: 14px; left: 14px; display: grid; gap: 3px; padding: 7px; border: 1px solid #36324f; border-radius: 12px; background: #1b192e; box-shadow: 0 18px 40px rgba(0, 0, 0, .38); }
+  .workspace-menu button { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 46px; padding: 8px 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; text-align: left; cursor: pointer; }
+  .workspace-menu button:hover, .workspace-menu button[aria-selected="true"] { border-color: rgba(139, 105, 246, .22); background: #2a2347; }
+  .workspace-menu button > span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
+  .workspace-menu strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+  .workspace-menu small { color: #7e7a90; font-size: 8px; }
+  .workspace-menu button > svg { color: #9b7cf9; }
+  .view-tabs { position: static; grid-column: 1; grid-row: 3; display: flex; min-height: 0; flex-direction: column; gap: 4px; overflow-y: auto; padding: 20px 14px 32px; border-right: 1px solid var(--line); border-bottom: 0; background: linear-gradient(180deg, #141323, #11101f); scrollbar-width: thin; scrollbar-color: #40365f transparent; }
+  .view-tabs::before { display: none; }
+  .nav-section-label { display: block; margin: 0 12px 8px; color: #625f75; font-size: 9px; font-weight: 800; letter-spacing: .16em; }
+  .view-tabs button { justify-content: flex-start; gap: 11px; min-height: 42px; padding: 10px 13px; border-radius: 10px; font-size: 12px; }
+  .view-tabs button.active { border-color: rgba(139, 105, 246, .22); box-shadow: inset 3px 0 #9877ff; }
+  .view-tabs button span { margin-left: auto; }
+  .advanced-navigation { display: grid; gap: 4px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(76, 71, 103, .48); }
+  .advanced-navigation details { position: relative; border-radius: 10px; }
+  .advanced-navigation details[open] { padding-bottom: 4px; }
+  .advanced-navigation details[open]::before { position: absolute; top: 46px; bottom: 10px; left: 20px; width: 1px; background: linear-gradient(#8b69f6, rgba(139, 105, 246, .08)); content: ""; }
+  .advanced-navigation summary { display: grid; grid-template-columns: 17px minmax(0, 1fr) 13px; gap: 11px; min-height: 42px; align-items: center; padding: 10px 13px; border: 1px solid transparent; border-radius: 10px; color: #858198; font-size: 12px; font-weight: 700; letter-spacing: 0; cursor: pointer; list-style: none; }
+  .advanced-navigation summary:hover { color: #d8d1eb; background: rgba(53, 47, 81, .52); }
+  .advanced-navigation summary::-webkit-details-marker { display: none; }
+  .advanced-navigation summary > svg:first-child { color: #77748a; }
+  .advanced-navigation summary > svg:last-child { justify-self: end; transition: transform .18s ease; }
+  .advanced-navigation details[open] summary { border-color: rgba(139, 105, 246, .12); color: #d8d0ef; background: rgba(42, 35, 72, .38); }
+  .advanced-navigation details[open] summary > svg:first-child { color: #aa91fb; }
+  .advanced-navigation details[open] summary > svg:last-child { transform: rotate(180deg); }
+  .advanced-navigation details > div { display: grid; gap: 2px; padding: 4px 0 2px 28px; }
+  .advanced-navigation details button { min-height: 36px; padding: 8px 12px; border-radius: 8px; color: #77738b; font-size: 11px; font-weight: 650; }
+  .advanced-navigation details button:hover { color: #d5ccec; background: rgba(71, 60, 108, .42); }
+  .advanced-navigation details button.active { border-color: transparent; color: #eee9ff; background: rgba(92, 70, 151, .48); box-shadow: inset 2px 0 #9877ff; }
+  .view-content, .state-panel, .loading-grid { grid-column: 2; grid-row: 1 / span 3; width: min(100%, 1440px); margin: 0 auto; }
+  /* 主工作区独立滚动，避免模型池和降级链在 100dvh 容器中被底部裁切。 */
+  .view-content { min-height: 0; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: max-content; align-content: start; gap: 18px; padding: 38px 42px 48px; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #4b3b76 transparent; }
+  .view-content::-webkit-scrollbar { width: 8px; }
+  .view-content::-webkit-scrollbar-track { background: transparent; }
+  .view-content::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 99px; background: #4b3b76; background-clip: padding-box; }
+  .page-heading { grid-column: 1 / -1; align-items: center; padding: 0 0 8px; }
+  .page-heading h1 { font-size: 30px; }
+  .page-heading p:last-child { font-size: 11px; }
+  .live-badge { padding: 7px 11px; font-size: 9px; }
+  .hero-metric { grid-column: span 6; min-height: 168px; padding: 28px; border-radius: 16px; }
+  .hero-metric strong { font-size: 44px; }
+  .hero-metric > svg { width: 44px; height: 44px; }
+  .metric-grid { grid-column: span 6; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .metric-grid article { display: flex; flex-direction: column; justify-content: center; padding: 25px; border-radius: 16px; }
+  .metric-grid strong { font-size: 31px; }
+  .panel { grid-column: 1 / -1; border-radius: 16px; }
+  .section-heading { padding: 20px 22px 14px; }
+  .section-heading h2 { font-size: 17px; }
+  .text-button { font-size: 10px; }
+  .product-row { grid-template-columns: 44px minmax(0, 1fr) 150px 28px; gap: 14px; padding: 15px 20px; }
+  .product-visual { width: 44px; height: 44px; border-radius: 11px; }
+  .product-identity h3 { font-size: 12px; }
+  .product-identity p, .status-pill { font-size: 9px; }
+  .product-meta strong { font-size: 12px; }
+  .toolbar { grid-column: 1 / -1; grid-template-columns: minmax(280px, 1fr) 130px; }
+  .toolbar label, .toolbar select { min-height: 44px; }
+  .toolbar input, .toolbar select { font-size: 11px; }
+  .list-summary { padding: 16px 20px; font-size: 10px; }
+  .workspace-list { grid-column: 1 / span 5; align-content: start; gap: 10px; }
+  .workspace-card { padding: 11px; }
+  .workspace-main strong { font-size: 11px; }
+  .credential-form { grid-column: 6 / -1; padding: 22px; gap: 13px; border-radius: 16px; }
+  .credential-form + .credential-form { grid-column: 6 / -1; }
+  .credential-form label { font-size: 9px; }
+  .credential-form input { padding: 11px; font-size: 10px; }
+  .form-message { grid-column: 6 / -1; }
+  .state-panel { position: relative; align-self: center; width: min(calc(100% - 96px), 720px); margin: 0 auto; padding: 64px 42px; overflow: hidden; border-color: rgba(85, 76, 124, .58); border-radius: 22px; background: radial-gradient(circle at 50% 0, rgba(139, 105, 246, .10), transparent 46%), linear-gradient(145deg, #18172b, #111727); box-shadow: 0 28px 70px rgba(0, 0, 0, .22); }
+  .state-panel::before { position: absolute; top: 0; left: 50%; width: 120px; height: 2px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, #8b69f6, transparent); content: ""; }
+  .state-panel > svg { width: 32px; height: 32px; filter: drop-shadow(0 0 14px rgba(255, 138, 55, .22)); }
+  .state-panel h2 { margin-top: 18px; font-size: 22px; letter-spacing: -.02em; }
+  .state-panel p { max-width: 40ch; font-size: 11px; line-height: 1.75; }
+  .state-panel .primary-button { margin-top: 22px; padding: 11px 18px; font-size: 10px; }
+  .loading-grid { grid-template-columns: repeat(3, 1fr); padding: 42px; }
+  .loading-grid div:first-child { grid-column: span 3; height: 190px; }
+}
+
+@media (min-width: 1280px) {
+  .app-shell { grid-template-columns: 276px minmax(0, 1fr); }
+  .view-content { padding-inline: 54px; }
+  .hero-metric { grid-column: span 5; }
+  .metric-grid { grid-column: span 7; }
+}
+
+/* 模型供应商页是完整工作区，不应被宽屏 12 列工作台布局拆成窄列。 */
+.model-pool-view > *,
+.model-pool-heading,
+.model-pool-callout,
+.model-form-panel,
+.provider-pool-panel,
+.route-panel { grid-column: 1 / -1; width: 100%; min-width: 0; }
+.model-pool-callout { align-self: stretch; }
+.model-form-panel { overflow: visible; }
+.model-form-actions { position: relative; z-index: 2; }
+.model-form-actions button,
+.provider-actions button,
+.route-card button { position: relative; z-index: 3; pointer-events: auto; }
+
+/* 空模型池也必须保留内容高度；不能被工作台网格或面板裁剪成只有标题栏。 */
+.model-pool-view .provider-pool-panel,
+.model-pool-view .route-panel { align-self: start; height: max-content !important; min-height: 224px; max-height: none !important; overflow: visible !important; isolation: isolate; }
+.model-pool-view .provider-pool-panel > .empty-search { display: grid !important; min-height: 154px !important; height: auto !important; max-height: none !important; margin: 14px 22px 22px !important; overflow: visible !important; }
+.model-pool-view .provider-pool-panel { contain: none; }
+.model-pool-view .route-panel { min-height: 264px; }
+.model-pool-view .route-list { display: grid; min-height: 184px; height: auto; overflow: visible; }
+.model-pool-view .route-card { min-height: 72px; height: auto; overflow: visible; }

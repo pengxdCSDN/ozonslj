@@ -5,11 +5,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
+# ACR 每次发布传入不同版本值，便于从镜像元数据确认部署版本；不包含凭据或业务数据。
+ARG RELEASE_REVISION=development
+ENV OZONSLJ_RELEASE_REVISION=${RELEASE_REVISION}
+
 WORKDIR /app
 
 COPY pyproject.toml ./
 COPY backend ./backend
-COPY database/postgres ./database/postgres
+COPY database/postgresql_schema.sql ./database/postgresql_schema.sql
+COPY database/migrations ./database/migrations
 COPY scripts/create_operator.py ./scripts/create_operator.py
 
 RUN python -m pip install --upgrade pip \

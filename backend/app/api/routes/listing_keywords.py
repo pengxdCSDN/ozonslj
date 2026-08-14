@@ -1,0 +1,70 @@
+from datetime import datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+
+from backend.app.api.dependencies import get_listing_keyword_gateway, get_store_workspace_gateway
+from backend.app.domain.listing_keyword import (
+    KeywordLayer,
+    ListingKeyword,
+    ListingKeywordError,
+    ListingKeywordGateway,
+    normalize_listing_keyword,
+)
+from backend.app.domain.store_workspace import StoreWorkspaceGateway
+
+router = APIRouter(prefix="/v1/listing/keywords", tags=["listing"])
+
+
+class ListingKeywordPayload(BaseModel):
+    keyword: str
+    source: str
+    observed_at: datetime
+    language: str
+    layer: KeywordLayer
+    product_scope: str
+
+
+@router.post("/normalize", response_model=ListingKeyword)
+async def normalize_keyword(payload: ListingKeywordPayload) -> ListingKeyword:
+    try:
+        return normalize_listing_keyword(ListingKeyword(**payload.model_dump()))
+    except ListingKeywordError as error:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "listing_keyword_invalid", "message": str(error)},
+        ) from error
+
+
+@router.post("/store-workspaces/{workspace_id}/normalize-and-save", response_model=ListingKeyword)
+async def normalize_and_save_keyword(
+    workspace_id: str,
+    payload: ListingKeywordPayload,
+    gateway: Annotated[ListingKeywordGateway, Depends(get_listing_keyword_gateway)],
+    workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
+) -> ListingKeyword:
+    if await workspace_gateway.get_workspace(workspace_id) is None:
+        raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
+    try:
+        keyword = normalize_listing_keyword(ListingKeyword(**payload.model_dump()))
+    except ListingKeywordError as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "listing_keyword_invalid", "message": str(error)},
+        ) from error
+    return await gateway.save_keyword(workspace_id=workspace_id, keyword=keyword)
+
+
+@router.get("/store-workspaces/{workspace_id}/history", response_model=list[ListingKeyword])
+async def list_keyword_history(
+    workspace_id: str,
+    gateway: Annotated[ListingKeywordGateway, Depends(get_listing_keyword_gateway)],
+    workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
+    limit: int = 50,
+) -> list[ListingKeyword]:
+    """返回关键词库最近记录，供运营核对来源、分层和适用商品范围。"""
+    if await workspace_gateway.get_workspace(workspace_id) is None:
+        raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
+    return await gateway.list_keywords(workspace_id=workspace_id, limit=limit)

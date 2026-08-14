@@ -4,7 +4,7 @@ from redis.asyncio import Redis
 
 
 class RedisLoginRateLimiter:
-    """使用 Redis 短期计数限制登录猜测，不在键中保存邮箱明文。"""
+    """使用 Redis 短期计数限制登录猜测，键名不保存邮箱或客户端地址明文。"""
 
     def __init__(self, redis: Redis, *, max_attempts: int, window_seconds: int) -> None:
         self._redis = redis

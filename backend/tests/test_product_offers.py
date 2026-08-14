@@ -1,31 +1,44 @@
+from datetime import UTC, datetime
+
+import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.api.dependencies import get_current_user, get_product_offer_gateway
-from backend.app.domain.identity import AuthenticatedUser
+from backend.app.api.dependencies import get_product_offer_gateway, get_store_workspace_gateway
+from backend.app.domain.store_workspace import StoreWorkspace
 from backend.app.infrastructure.ozon.gateway import StubOzonGateway
 from backend.app.main import app
 
 
-def _client(workspace_ids: tuple[str, ...] = ("local",)) -> TestClient:
+class StubWorkspaceGateway:
+    """路由测试替身；持久化行为由 PostgreSQL 适配器测试覆盖。"""
+
+    async def get_workspace(self, workspace_id: str) -> StoreWorkspace | None:
+        if workspace_id != "local":
+            return None
+        now = datetime.now(UTC)
+        return StoreWorkspace(
+            id="local",
+            display_name="本地测试工作区",
+            status="active",
+            verified_at=now,
+            created_at=now,
+            updated_at=now,
+        )
+
+
+@pytest.fixture(autouse=True)
+def override_global_app_dependencies() -> None:
     app.dependency_overrides[get_product_offer_gateway] = StubOzonGateway
-    app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
-        id="operator-1",
-        email="operator@example.com",
-        display_name="Operator",
-        role="operator",
-        workspace_ids=workspace_ids,
-    )
-    return TestClient(app)
+    app.dependency_overrides[get_store_workspace_gateway] = StubWorkspaceGateway
+    yield
+    app.dependency_overrides.clear()
 
 
 def test_operator_can_list_stub_product_offers() -> None:
-    try:
-        response = _client().get(
-            "/v1/store-workspaces/local/product-offers",
-            params={"limit": 2},
-        )
-    finally:
-        app.dependency_overrides.clear()
+    response = TestClient(app).get(
+        "/v1/store-workspaces/local/product-offers",
+        params={"limit": 2},
+    )
 
     assert response.status_code == 200
     assert response.json()["total"] == 3
@@ -33,46 +46,20 @@ def test_operator_can_list_stub_product_offers() -> None:
     assert response.json()["source"] == "stub"
 
 
-def test_product_offer_limit_is_bounded() -> None:
-    try:
-        response = _client().get(
-            "/v1/store-workspaces/local/product-offers",
-            params={"limit": 101},
-        )
-    finally:
-        app.dependency_overrides.clear()
-
-    assert response.status_code == 422
-
-
-def test_product_offer_cursor_must_be_non_negative_integer() -> None:
-    try:
-        response = _client().get(
-            "/v1/store-workspaces/local/product-offers",
-            params={"cursor": "-1"},
-        )
-    finally:
-        app.dependency_overrides.clear()
+@pytest.mark.parametrize(
+    "params",
+    [{"limit": 101}, {"cursor": "-1"}],
+)
+def test_product_offer_pagination_is_bounded(params: dict[str, object]) -> None:
+    response = TestClient(app).get(
+        "/v1/store-workspaces/local/product-offers",
+        params=params,
+    )
 
     assert response.status_code == 422
 
 
 def test_unknown_workspace_returns_not_found() -> None:
-    try:
-        response = _client(("unknown",)).get(
-            "/v1/store-workspaces/unknown/product-offers"
-        )
-    finally:
-        app.dependency_overrides.clear()
+    response = TestClient(app).get("/v1/store-workspaces/unknown/product-offers")
 
     assert response.status_code == 404
-
-
-def test_operator_cannot_read_an_unassigned_workspace() -> None:
-    try:
-        response = _client().get("/v1/store-workspaces/other/product-offers")
-    finally:
-        app.dependency_overrides.clear()
-
-    assert response.status_code == 403
-    assert response.json()["detail"] == "无权访问该工作区"

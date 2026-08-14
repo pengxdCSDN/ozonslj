@@ -1,0 +1,734 @@
+"""生产知识 RAG 运行时：PostgreSQL 保存事实，Chroma 保存可重建向量。"""
+
+from __future__ import annotations
+
+from dataclasses import replace
+from datetime import date
+from typing import Literal, Protocol, cast
+
+from psycopg.rows import dict_row
+from psycopg_pool import AsyncConnectionPool
+
+from backend.app.config import Settings
+from backend.app.domain.knowledge_chunking import ChunkMetadata, KnowledgeChunk
+from backend.app.domain.knowledge_governance import KnowledgeSource, KnowledgeVersion
+from backend.app.domain.knowledge_query import KnowledgeQueryEngine
+from backend.app.domain.knowledge_retrieval import DeterministicEmbedding, EmbeddingPort
+from backend.app.domain.model_budget import ModelBudgetPolicy, ModelBudgetUsage, decide_budget
+from backend.app.infrastructure.cloud_models import CloudModelError, DashScopeEmbeddingClient
+from backend.app.infrastructure.local.chroma_vector_index import (
+    HttpChromaCollection,
+    HttpChromaVectorIndex,
+    _metadata_for_chunk,
+)
+from backend.app.infrastructure.model_credentials import ModelCredentialStore
+from backend.app.infrastructure.postgres.knowledge_keyword_search import (
+    PostgresKnowledgeKeywordSearch,
+)
+
+
+class _ExecutableConnection(Protocol):
+    async def execute(self, query: str, params: tuple[object, ...]) -> object: ...
+
+
+class _ManagedEmbeddingRouter(EmbeddingPort):
+    """从数据库读取启用的向量模型并按优先级执行自动降级。
+
+    页面保存的是供应商元数据，API Key 通过凭据存储读取。每次批量向量化前重新读取启用状态和优先级，
+    使停用、调序和配额切换无需重启 API；供应商异常不会被当作有效向量返回。
+    """
+
+    def __init__(
+        self,
+        *,
+        pool: AsyncConnectionPool,
+        organization_id: str,
+        credentials: ModelCredentialStore,
+        fallback: EmbeddingPort,
+    ) -> None:
+        self._pool = pool
+        self._organization_id = organization_id
+        self._credentials = credentials
+        self._fallback = fallback
+        self.model_id = fallback.model_id
+        self.dimension = fallback.dimension
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        candidates = await self._candidates()
+        errors: list[str] = []
+        for provider_id, model, base_url, _credential_ref in candidates:
+            if not await self._budget_allows(provider_id):
+                errors.append(f"{provider_id}:budget_exceeded")
+                continue
+            api_key = await self._credentials.get(provider_id)
+            if not api_key:
+                errors.append(f"{provider_id}:credential_missing")
+                continue
+            try:
+                # 当前云端 Embedding 客户端采用 OpenAI-compatible embeddings 协议，
+                # 因此供应商名称保持可扩展；后续可按 adapter_type 注入专用客户端。
+                client = DashScopeEmbeddingClient(
+                    api_key=api_key,
+                    base_url=base_url,
+                    model=model,
+                    dimension=self.dimension,
+                )
+                vectors = await client.embed(texts)
+                await self._record_usage(provider_id, client.last_usage.total_tokens)
+                return vectors
+            except (CloudModelError, TimeoutError, RuntimeError) as error:
+                errors.append(f"{provider_id}:{type(error).__name__}")
+        if candidates:
+            raise RuntimeError("所有已配置向量供应商均不可用，已安全降级：" + ",".join(errors))
+        return await self._fallback.embed(texts)
+
+    async def _budget_allows(self, provider_id: str) -> bool:
+        """调用前读取同一组织、同一用途的预算门禁，超限不再消耗供应商额度。"""
+        period_start = _period_start()
+        async with self._pool.connection() as connection, connection.cursor(
+            row_factory=dict_row
+        ) as cursor:
+            await _set_scope(connection, self._organization_id)
+            await cursor.execute(
+                """
+                SELECT p.daily_token_limit, p.monthly_token_limit, p.daily_request_limit,
+                       p.monthly_budget, u.daily_tokens, u.monthly_tokens,
+                       u.daily_requests, u.monthly_cost
+                FROM rag_model_budget_policies p
+                LEFT JOIN rag_model_budget_usage u
+                  ON u.organization_id=p.organization_id AND u.provider_id=p.provider_id
+                 AND u.purpose=p.purpose AND u.period_start=%s
+                WHERE p.organization_id=%s AND p.provider_id=%s AND p.purpose='embedding'
+                """,
+                (period_start, self._organization_id, provider_id),
+            )
+            row = await cursor.fetchone()
+        if row is None:
+            return True
+        policy = ModelBudgetPolicy(
+            provider_id=provider_id,
+            daily_token_limit=int(row["daily_token_limit"]),
+            monthly_token_limit=int(row["monthly_token_limit"]),
+            daily_request_limit=int(row["daily_request_limit"]),
+            monthly_budget=float(row["monthly_budget"]),
+            purpose="embedding",
+        )
+        usage = ModelBudgetUsage(
+            daily_tokens=int(row["daily_tokens"] or 0),
+            monthly_tokens=int(row["monthly_tokens"] or 0),
+            daily_requests=int(row["daily_requests"] or 0),
+            monthly_cost=float(row["monthly_cost"] or 0),
+        )
+        return decide_budget(policy, usage).allowed
+
+    async def _record_usage(self, provider_id: str, total_tokens: int) -> None:
+        """将真实响应 token 和一次请求原子累加到应用台账。"""
+        period_start = _period_start()
+        async with self._pool.connection() as connection, connection.transaction():
+            await _set_scope(connection, self._organization_id)
+            await connection.execute(
+                """
+                INSERT INTO rag_model_budget_usage
+                    (organization_id, provider_id, purpose, period_start,
+                     daily_tokens, monthly_tokens, daily_requests, monthly_cost)
+                VALUES (%s, %s, 'embedding', %s, %s, %s, 1, 0)
+                ON CONFLICT (organization_id, provider_id, purpose, period_start)
+                DO UPDATE SET
+                    daily_tokens=rag_model_budget_usage.daily_tokens+EXCLUDED.daily_tokens,
+                    monthly_tokens=rag_model_budget_usage.monthly_tokens+EXCLUDED.monthly_tokens,
+                    daily_requests=rag_model_budget_usage.daily_requests+1,
+                    updated_at=CURRENT_TIMESTAMP
+                """,
+                (self._organization_id, provider_id, period_start, total_tokens, total_tokens),
+            )
+
+    async def _candidates(self) -> list[tuple[str, str, str, str | None]]:
+        async with self._pool.connection() as connection, connection.cursor(
+            row_factory=dict_row
+        ) as cursor:
+            await _set_scope(connection, self._organization_id)
+            await cursor.execute(
+                """
+                SELECT id, model, base_url, credential_ref
+                FROM rag_model_providers
+                WHERE organization_id=%s AND model_kind='embedding' AND enabled=TRUE
+                ORDER BY priority, id
+                """,
+                (self._organization_id,),
+            )
+            rows = await cursor.fetchall()
+        return [
+            (str(row["id"]), str(row["model"]), str(row["base_url"]), row["credential_ref"])
+            for row in rows
+        ]
+
+
+def _period_start() -> date:
+    today = date.today()
+    return today.replace(day=1)
+
+
+class PostgresChromaKnowledgeRuntime:
+    """知识治理和检索的持久化实现。
+
+    PostgreSQL 是唯一事实来源，Chroma 只保存已发布切片的向量和引用元数据。
+    撤回、删除和版本替换先提交数据库状态，再删除 Chroma 向量，避免草稿或
+    已撤回内容重新进入召回结果。
+    """
+
+    persistent = True
+
+    def __init__(self, settings: Settings) -> None:
+        if settings.database_url is None:
+            raise ValueError("生产 RAG 运行时需要 PostgreSQL 连接")
+        if settings.chroma_url is None:
+            raise ValueError("生产 RAG 运行时需要 CHROMA_URL")
+        self.organization_id = settings.default_organization_id
+        self._pool = AsyncConnectionPool(
+            conninfo=str(settings.database_url), min_size=1, max_size=2, open=False
+        )
+        self._chroma_url = str(settings.chroma_url)
+        self._collection: HttpChromaCollection | None = None
+        self._credentials = ModelCredentialStore(settings.rag_provider_credentials_dir)
+        # 未配置云端 Key 时保留确定性实现，便于本地迁移和健康检查；生产启用真实
+        # Embedding 前必须显式注入 RAG_EMBEDDING_API_KEY，并为新维度重建 Chroma 索引。
+        self._embedding: EmbeddingPort
+        configured_embedding: EmbeddingPort
+        if settings.rag_embedding_api_key:
+            if settings.rag_embedding_provider not in {None, "dashscope"}:
+                raise ValueError("当前生产运行时只允许使用已实现的 DashScope Embedding 适配器")
+            configured_embedding = DashScopeEmbeddingClient(
+                api_key=settings.rag_embedding_api_key,
+                model=settings.rag_embedding_model,
+                dimension=settings.rag_embedding_dimension,
+                base_url=(
+                    str(settings.rag_embedding_base_url)
+                    if settings.rag_embedding_base_url
+                    else "https://dashscope.aliyuncs.com/compatible-mode/v1"
+                ),
+            )
+        else:
+            configured_embedding = DeterministicEmbedding()
+        self._embedding = _ManagedEmbeddingRouter(
+            pool=self._pool,
+            organization_id=self.organization_id,
+            credentials=self._credentials,
+            fallback=configured_embedding,
+        )
+        self._pool_open = False
+
+    async def _ensure(self) -> None:
+        if not self._pool_open:
+            await self._pool.open(wait=True)
+            self._pool_open = True
+        if self._collection is None:
+            self._collection = await HttpChromaCollection.ensure(
+                self._chroma_url, "ozonslj_knowledge"
+            )
+
+    async def close(self) -> None:
+        """释放 API 进程持有的 PostgreSQL 连接池。"""
+        if self._pool_open:
+            await self._pool.close()
+            self._pool_open = False
+
+    async def create_source(self, source: KnowledgeSource) -> KnowledgeSource:
+        await self._ensure()
+        async with self._pool.connection() as connection, connection.transaction():
+            await _set_scope(connection, self.organization_id)
+            await connection.execute(
+                """
+                INSERT INTO rag_knowledge_sources
+                    (id, organization_id, source_type, business_domain, title,
+                     authority_level, sensitivity, status, source_locator)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    source.id,
+                    self.organization_id,
+                    source.source_type,
+                    source.business_domain,
+                    source.title,
+                    source.authority_level,
+                    source.sensitivity,
+                    source.status,
+                    source.source_locator,
+                ),
+            )
+        return replace(source, organization_id=self.organization_id)
+
+    async def list_sources(self) -> list[KnowledgeSource]:
+        await self._ensure()
+        async with self._pool.connection() as connection:
+            await _set_scope(connection, self.organization_id)
+            async with connection.cursor(row_factory=dict_row) as cursor:
+                await cursor.execute(
+                    """
+                    SELECT id, organization_id, source_type, business_domain,
+                           title, authority_level, sensitivity, status, source_locator
+                    FROM rag_knowledge_sources
+                    WHERE organization_id = %s
+                    ORDER BY created_at, id
+                    """,
+                    (self.organization_id,),
+                )
+                rows = await cursor.fetchall()
+        return [_source(row) for row in rows]
+
+    async def source(self, source_id: str) -> KnowledgeSource | None:
+        return next(
+            (source for source in await self.list_sources() if source.id == source_id),
+            None,
+        )
+
+    async def set_source_status(self, source_id: str, status: str) -> KnowledgeSource:
+        await self._ensure()
+        async with self._pool.connection() as connection, connection.transaction():
+            await _set_scope(connection, self.organization_id)
+            async with connection.cursor(row_factory=dict_row) as cursor:
+                await cursor.execute(
+                    """
+                    UPDATE rag_knowledge_sources
+                    SET status = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s AND organization_id = %s
+                    RETURNING id, organization_id, source_type, business_domain,
+                              title, authority_level, sensitivity, status, source_locator
+                    """,
+                    (status, source_id, self.organization_id),
+                )
+                row = await cursor.fetchone()
+        if row is None:
+            raise KeyError(source_id)
+        updated = _source(row)
+        if status in {"active", "paused"}:
+            # 暂停不删除版本事实；通过 Chroma 元数据让向量通道立即失效，
+            # 恢复时重新 upsert，避免暂停来源仍被语义召回。
+            chunks: list[KnowledgeChunk] = []
+            for version in await self.list_versions(source_id):
+                if version.status == "published":
+                    chunks.extend(await self._chunks(version.id, status="published"))
+            if chunks:
+                adjusted = [
+                    replace(
+                        chunk,
+                        metadata=replace(
+                            chunk.metadata,
+                            extra=(*chunk.metadata.extra, ("source_status", status)),
+                        ),
+                    )
+                    for chunk in chunks
+                ]
+                assert self._collection is not None
+                await self._collection.upsert(
+                    ids=[chunk.chunk_id for chunk in adjusted],
+                    documents=[chunk.content for chunk in adjusted],
+                    embeddings=await self._embedding.embed(
+                        [chunk.content for chunk in adjusted]
+                    ),
+                    metadatas=[_metadata_for_chunk(chunk) for chunk in adjusted],
+                )
+        return updated
+
+    async def create_version(self, version: KnowledgeVersion) -> KnowledgeVersion:
+        await self._ensure()
+        async with self._pool.connection() as connection, connection.transaction():
+            await _set_scope(connection, self.organization_id)
+            await connection.execute(
+                """
+                INSERT INTO rag_document_versions
+                    (id, organization_id, source_id, version_number, content_hash,
+                     parser_name, parser_version, cleaner_version, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    version.id,
+                    self.organization_id,
+                    version.source_id,
+                    version.version_number,
+                    version.content_hash,
+                    version.parser_name,
+                    version.parser_version,
+                    version.cleaner_version,
+                    version.status,
+                ),
+            )
+        return replace(version, organization_id=self.organization_id)
+
+    async def next_version_number(self, source_id: str) -> int:
+        await self._ensure()
+        async with self._pool.connection() as connection:
+            await _set_scope(connection, self.organization_id)
+            async with connection.cursor() as cursor:
+                await cursor.execute(
+                    """
+                    SELECT COALESCE(MAX(version_number), 0) + 1
+                    FROM rag_document_versions
+                    WHERE organization_id = %s AND source_id = %s
+                    """,
+                    (self.organization_id, source_id),
+                )
+                row = await cursor.fetchone()
+        return int(row[0]) if row is not None else 1
+
+    async def list_versions(self, source_id: str) -> list[KnowledgeVersion]:
+        await self._ensure()
+        async with self._pool.connection() as connection:
+            await _set_scope(connection, self.organization_id)
+            async with connection.cursor(row_factory=dict_row) as cursor:
+                await cursor.execute(
+                    """
+                    SELECT id, organization_id, source_id, version_number,
+                           content_hash, parser_name, parser_version, cleaner_version, status
+                    FROM rag_document_versions
+                    WHERE organization_id = %s AND source_id = %s
+                    ORDER BY version_number
+                    """,
+                    (self.organization_id, source_id),
+                )
+                rows = await cursor.fetchall()
+        return [_version(row) for row in rows]
+
+    async def version(self, version_id: str) -> KnowledgeVersion | None:
+        await self._ensure()
+        async with self._pool.connection() as connection:
+            await _set_scope(connection, self.organization_id)
+            async with connection.cursor(row_factory=dict_row) as cursor:
+                await cursor.execute(
+                    """
+                    SELECT id, organization_id, source_id, version_number,
+                           content_hash, parser_name, parser_version, cleaner_version, status
+                    FROM rag_document_versions
+                    WHERE organization_id = %s AND id = %s
+                    """,
+                    (self.organization_id, version_id),
+                )
+                row = await cursor.fetchone()
+        return _version(row) if row is not None else None
+
+    async def set_version_status(self, version_id: str, status: str) -> KnowledgeVersion:
+        """更新无切片目录版本的状态，供治理接口保持数据库为唯一事实源。"""
+        await self._ensure()
+        async with self._pool.connection() as connection, connection.transaction():
+            await _set_scope(connection, self.organization_id)
+            async with connection.cursor(row_factory=dict_row) as cursor:
+                await cursor.execute(
+                    """
+                    UPDATE rag_document_versions
+                    SET status = %s
+                    WHERE id = %s AND organization_id = %s
+                    RETURNING id, organization_id, source_id, version_number,
+                              content_hash, parser_name, parser_version,
+                              cleaner_version, status
+                    """,
+                    (status, version_id, self.organization_id),
+                )
+                row = await cursor.fetchone()
+        if row is None:
+            raise KeyError(version_id)
+        return _version(row)
+
+    async def stage(self, version_id: str, chunks: tuple[KnowledgeChunk, ...]) -> None:
+        """幂等写入草稿切片；发布前不更新 Chroma。"""
+        await self._ensure()
+        async with self._pool.connection() as connection, connection.transaction():
+            await _set_scope(connection, self.organization_id)
+            for chunk in chunks:
+                metadata = chunk.metadata
+                await connection.execute(
+                    """
+                    INSERT INTO rag_knowledge_chunks
+                        (id, organization_id, document_version_id, ordinal, parent_chunk_id,
+                         content, content_hash, source_locator, title_path, language,
+                         chunk_strategy, chunk_strategy_version, page_from, page_to, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'draft')
+                    ON CONFLICT (id) DO UPDATE SET
+                        content = EXCLUDED.content,
+                        content_hash = EXCLUDED.content_hash,
+                        source_locator = EXCLUDED.source_locator,
+                        title_path = EXCLUDED.title_path,
+                        language = EXCLUDED.language,
+                        chunk_strategy = EXCLUDED.chunk_strategy,
+                        chunk_strategy_version = EXCLUDED.chunk_strategy_version,
+                        page_from = EXCLUDED.page_from,
+                        page_to = EXCLUDED.page_to,
+                        status = 'draft',
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE rag_knowledge_chunks.organization_id = EXCLUDED.organization_id
+                    """,
+                    (
+                        chunk.chunk_id,
+                        self.organization_id,
+                        version_id,
+                        chunk.ordinal,
+                        metadata.parent_chunk_id,
+                        chunk.content,
+                        chunk.content_hash,
+                        metadata.source_locator,
+                        list(metadata.title_path),
+                        metadata.language,
+                        metadata.chunk_strategy,
+                        metadata.chunk_strategy_version,
+                        metadata.page_from,
+                        metadata.page_to,
+                    ),
+                )
+
+    async def has_staged(self, version_id: str) -> bool:
+        return bool(await self._chunks(version_id, status="draft"))
+
+    async def has_published_version(self, version_id: str) -> bool:
+        version = await self.version(version_id)
+        return version is not None and version.status == "published"
+
+    async def has_published(self) -> bool:
+        await self._ensure()
+        async with self._pool.connection() as connection:
+            await _set_scope(connection, self.organization_id)
+            async with connection.cursor() as cursor:
+                await cursor.execute(
+                    """
+                    SELECT EXISTS(
+                        SELECT 1 FROM rag_document_versions
+                        WHERE organization_id = %s AND status = 'published'
+                    )
+                    """,
+                    (self.organization_id,),
+                )
+                row = await cursor.fetchone()
+        return bool(row and row[0])
+
+    async def _chunks(
+        self, version_id: str, *, status: str | None = None
+    ) -> list[KnowledgeChunk]:
+        await self._ensure()
+        query = """
+            SELECT c.id, c.content, c.content_hash, c.ordinal, c.document_version_id,
+                   c.source_locator, c.title_path, c.language, c.chunk_strategy,
+                   c.chunk_strategy_version, c.page_from, c.page_to, c.status,
+                   s.id AS source_id, s.business_domain, s.source_type,
+                   s.authority_level, s.sensitivity, s.status AS source_status
+            FROM rag_knowledge_chunks AS c
+            JOIN rag_document_versions AS v ON v.id = c.document_version_id
+            JOIN rag_knowledge_sources AS s ON s.id = v.source_id
+            WHERE c.organization_id = %s AND c.document_version_id = %s
+        """
+        params: list[object] = [self.organization_id, version_id]
+        if status is not None:
+            query += " AND c.status = %s"
+            params.append(status)
+        query += " ORDER BY c.ordinal, c.id"
+        async with self._pool.connection() as connection:
+            await _set_scope(connection, self.organization_id)
+            async with connection.cursor(row_factory=dict_row) as cursor:
+                await cursor.execute(query, params)
+                rows = await cursor.fetchall()
+        return [_chunk(row) for row in rows]
+
+    async def publish(self, version_id: str) -> int:
+        await self._ensure()
+        version = await self.version(version_id)
+        chunks = await self._chunks(version_id)
+        if version is None:
+            raise KeyError(version_id)
+        if not chunks:
+            raise ValueError("版本没有可发布切片")
+        async with self._pool.connection() as connection, connection.transaction():
+            await _set_scope(connection, self.organization_id)
+            await connection.execute(
+                """
+                UPDATE rag_document_versions
+                SET status = 'withdrawn', effective_to = CURRENT_TIMESTAMP
+                WHERE source_id = %s AND organization_id = %s
+                  AND status = 'published' AND id <> %s
+                """,
+                (version.source_id, self.organization_id, version_id),
+            )
+            await connection.execute(
+                """
+                UPDATE rag_knowledge_chunks
+                SET status = 'withdrawn', updated_at = CURRENT_TIMESTAMP
+                WHERE document_version_id IN (
+                    SELECT id FROM rag_document_versions
+                    WHERE source_id = %s AND organization_id = %s
+                      AND id <> %s AND status = 'withdrawn'
+                ) AND organization_id = %s
+                """,
+                (version.source_id, self.organization_id, version_id, self.organization_id),
+            )
+            await connection.execute(
+                """
+                UPDATE rag_knowledge_chunks
+                SET status = 'published', updated_at = CURRENT_TIMESTAMP
+                WHERE document_version_id = %s AND organization_id = %s
+                """,
+                (version_id, self.organization_id),
+            )
+            await connection.execute(
+                """
+                UPDATE rag_document_versions
+                SET status = 'published', published_at = CURRENT_TIMESTAMP,
+                    effective_from = CURRENT_TIMESTAMP, effective_to = NULL
+                WHERE id = %s AND organization_id = %s
+                """,
+                (version_id, self.organization_id),
+            )
+        published = [
+            replace(item, metadata=replace(item.metadata, status="published"))
+            for item in chunks
+        ]
+        assert self._collection is not None
+        await self._collection.upsert(
+            ids=[item.chunk_id for item in published],
+            documents=[item.content for item in published],
+            embeddings=await self._embedding.embed([item.content for item in published]),
+            metadatas=[_metadata_for_chunk(item) for item in published],
+        )
+        return len(published)
+
+    async def withdraw(self, version_id: str) -> int:
+        await self._ensure()
+        chunks = await self._chunks(version_id)
+        async with self._pool.connection() as connection, connection.transaction():
+            await _set_scope(connection, self.organization_id)
+            await connection.execute(
+                """
+                UPDATE rag_document_versions
+                SET status = 'withdrawn', effective_to = CURRENT_TIMESTAMP
+                WHERE id = %s AND organization_id = %s
+                """,
+                (version_id, self.organization_id),
+            )
+            await connection.execute(
+                """
+                UPDATE rag_knowledge_chunks
+                SET status = 'withdrawn', updated_at = CURRENT_TIMESTAMP
+                WHERE document_version_id = %s AND organization_id = %s
+                """,
+                (version_id, self.organization_id),
+            )
+        assert self._collection is not None
+        await self._collection.delete(ids=[chunk.chunk_id for chunk in chunks])
+        return len(chunks)
+
+    async def delete(self, version_id: str) -> int:
+        await self._ensure()
+        chunks = await self._chunks(version_id)
+        async with self._pool.connection() as connection, connection.transaction():
+            await _set_scope(connection, self.organization_id)
+            await connection.execute(
+                """
+                UPDATE rag_document_versions
+                SET status = 'deleted', effective_to = CURRENT_TIMESTAMP
+                WHERE id = %s AND organization_id = %s
+                """,
+                (version_id, self.organization_id),
+            )
+            await connection.execute(
+                """
+                UPDATE rag_knowledge_chunks
+                SET status = 'deleted', updated_at = CURRENT_TIMESTAMP
+                WHERE document_version_id = %s AND organization_id = %s
+                """,
+                (version_id, self.organization_id),
+            )
+        assert self._collection is not None
+        await self._collection.delete(ids=[chunk.chunk_id for chunk in chunks])
+        return len(chunks)
+
+    async def engine(self) -> KnowledgeQueryEngine:
+        await self._ensure()
+        assert self._collection is not None
+        return KnowledgeQueryEngine(
+            embedding=self._embedding,
+            keyword_index=PostgresKnowledgeKeywordSearch(
+                self._pool, self.organization_id
+            ),
+            vector_index=HttpChromaVectorIndex(self._collection, {}),
+        )
+
+
+async def _set_scope(connection: _ExecutableConnection, organization_id: str) -> None:
+    """在每个连接事务中设置 RLS 组织上下文，防止连接池串租户。"""
+    await connection.execute(
+        "SELECT set_config('app.organization_id', %s, true)", (organization_id,)
+    )
+
+
+def _source(row: dict[str, object]) -> KnowledgeSource:
+    return KnowledgeSource(
+        id=str(row["id"]),
+        organization_id=str(row["organization_id"]),
+        source_type=cast(Literal["markdown", "postgres_schema", "pdf"], str(row["source_type"])),
+        business_domain=cast(
+            Literal[
+                "domain_language", "requirements", "architecture", "api", "database", "sop",
+                "troubleshooting", "ozon_official", "general",
+            ],
+            str(row["business_domain"]),
+        ),
+        title=str(row["title"]),
+        authority_level=cast(Literal["a", "b", "c"], str(row["authority_level"])),
+        sensitivity=cast(Literal["public", "internal", "restricted"], str(row["sensitivity"])),
+        status=cast(Literal["active", "paused", "withdrawn", "deleted"], str(row["status"])),
+        source_locator=str(row["source_locator"]),
+    )
+
+
+def _version(row: dict[str, object]) -> KnowledgeVersion:
+    return KnowledgeVersion(
+        id=str(row["id"]),
+        organization_id=str(row["organization_id"]),
+        source_id=str(row["source_id"]),
+        version_number=int(str(row["version_number"])),
+        content_hash=str(row["content_hash"]),
+        parser_name=str(row["parser_name"]),
+        parser_version=str(row["parser_version"]),
+        cleaner_version=str(row["cleaner_version"]),
+        status=cast(
+            Literal["draft", "processing", "published", "withdrawn", "deleted"],
+            str(row["status"]),
+        ),
+    )
+
+
+def _chunk(row: dict[str, object]) -> KnowledgeChunk:
+    title_path_value = row["title_path"]
+    title_path = (
+        tuple(str(item) for item in title_path_value)
+        if isinstance(title_path_value, list)
+        else ()
+    )
+    metadata = ChunkMetadata(
+        document_id=str(row["source_id"]),
+        document_version_id=str(row["document_version_id"]),
+        business_domain=cast(
+            Literal[
+                "domain_language", "requirements", "architecture", "api", "database", "sop",
+                "troubleshooting", "ozon_official", "general",
+            ],
+            str(row["business_domain"]),
+        ),
+        source_type=cast(Literal["markdown", "postgres_schema", "pdf"], str(row["source_type"])),
+        source_level=cast(Literal["a", "b", "c"], str(row["authority_level"])),
+        language=str(row["language"]),
+        title_path=title_path,
+        source_locator=str(row["source_locator"]),
+        chunk_strategy=str(row["chunk_strategy"]),
+        chunk_strategy_version=str(row["chunk_strategy_version"]),
+        status=cast(Literal["draft", "published", "withdrawn", "deleted"], str(row["status"])),
+        sensitivity=cast(Literal["public", "internal", "restricted"], str(row["sensitivity"])),
+        extra=(("source_status", str(row["source_status"])),),
+        page_from=_optional_int(row["page_from"]),
+        page_to=_optional_int(row["page_to"]),
+    )
+    return KnowledgeChunk(
+        chunk_id=str(row["id"]),
+        content=str(row["content"]),
+        content_hash=str(row["content_hash"]),
+        ordinal=int(str(row["ordinal"])),
+        metadata=metadata,
+    )
+
+
+def _optional_int(value: object) -> int | None:
+    return int(str(value)) if value is not None else None

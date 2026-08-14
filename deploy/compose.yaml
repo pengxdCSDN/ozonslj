@@ -10,11 +10,25 @@ x-app-common: &app-common
     POSTGRES_DATABASE: ozonslj
     POSTGRES_USER: ozonslj
     POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    # 旧单工作区数据在受控迁移中归入该内部组织；客户端不得选择或覆盖此边界。
+    DEFAULT_ORGANIZATION_ID: legacy-bootstrap
     OZON_CREDENTIAL_KEY_FILE: /run/secrets/ozon_credential_key
     OZON_CREDENTIAL_KEY_VERSION: "${OZON_CREDENTIAL_KEY_VERSION:-1}"
     POSTGRES_POOL_MIN_SIZE: "1"
     POSTGRES_POOL_MAX_SIZE: "4"
     REDIS_URL: redis://redis:6379/0
+    # Chroma 与 API/Worker 通过受控内部网络通信，不暴露公网；知识检索不可用时由应用降级并明确返回。
+    CHROMA_URL: http://chroma:8000
+    RAG_EMBEDDING_PROVIDER: "${RAG_EMBEDDING_PROVIDER:-dashscope}"
+    RAG_EMBEDDING_BASE_URL: "${RAG_EMBEDDING_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}"
+    RAG_EMBEDDING_MODEL: "${RAG_EMBEDDING_MODEL:-text-embedding-v4}"
+    RAG_EMBEDDING_DIMENSION: "${RAG_EMBEDDING_DIMENSION:-1024}"
+    RAG_EMBEDDING_API_KEY_FILE: /run/secrets/rag_embedding_api_key
+    RAG_TRANSLATION_PROVIDER: "${RAG_TRANSLATION_PROVIDER:-dashscope}"
+    RAG_TRANSLATION_BASE_URL: "${RAG_TRANSLATION_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}"
+    RAG_TRANSLATION_MODEL: "${RAG_TRANSLATION_MODEL:-}"
+    RAG_TRANSLATION_API_KEY_FILE: /run/secrets/rag_translation_api_key
+    RAG_PROVIDER_CREDENTIALS_DIR: /var/lib/ozonslj/rag-providers
     # 当前仅 HTTP 开发节点必须为 false；启用 HTTPS 后发布前改为 true。
     SESSION_COOKIE_SECURE: "false"
     LOGIN_MAX_ATTEMPTS: "5"
@@ -27,6 +41,8 @@ x-app-common: &app-common
   secrets:
     - postgres_password
     - ozon_credential_key
+    - rag_embedding_api_key
+    - rag_translation_api_key
   depends_on:
     postgres:
       condition: service_healthy
@@ -103,6 +119,8 @@ services:
 
   api:
     <<: *app-common
+    volumes:
+      - ./secrets/rag-providers:/var/lib/ozonslj/rag-providers:rw
     command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
     healthcheck:
       test:
@@ -120,6 +138,8 @@ services:
 
   worker:
     <<: *app-common
+    volumes:
+      - ./secrets/rag-providers:/var/lib/ozonslj/rag-providers:rw
     command: ["python", "-m", "backend.app.worker"]
     deploy:
       resources:
@@ -150,6 +170,10 @@ secrets:
     file: ./secrets/postgres_password
   ozon_credential_key:
     file: ./secrets/ozon_credential_key
+  rag_embedding_api_key:
+    file: ./secrets/rag_embedding_api_key
+  rag_translation_api_key:
+    file: ./secrets/rag_translation_api_key
 
 volumes:
   postgres_data:

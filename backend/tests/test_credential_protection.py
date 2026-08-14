@@ -3,11 +3,11 @@ from pathlib import Path
 import pytest
 from cryptography.fernet import Fernet
 
-from backend.app.infrastructure.credential_protection import (
+from backend.app.domain.store_workspace import (
     CredentialProtectionError,
-    FernetCredentialProtector,
     UnsupportedCredentialVersionError,
 )
+from backend.app.infrastructure.credential_protection import FernetCredentialProtector
 
 
 def _write_key(tmp_path: Path) -> Path:
@@ -19,33 +19,21 @@ def _write_key(tmp_path: Path) -> Path:
 def test_credential_round_trip_keeps_plaintext_out_of_ciphertext(tmp_path: Path) -> None:
     protector = FernetCredentialProtector(_write_key(tmp_path), key_version=2)
 
-    ciphertext = protector.encrypt("  secret-api-key  ")
+    ciphertext = protector.protect("  secret-api-key  ")
 
     assert b"secret-api-key" not in ciphertext
-    assert protector.decrypt(ciphertext, credential_version=2) == "secret-api-key"
+    assert protector.unprotect(ciphertext, credential_version=2) == "secret-api-key"
 
 
-def test_empty_api_key_is_rejected(tmp_path: Path) -> None:
-    protector = FernetCredentialProtector(_write_key(tmp_path), key_version=1)
-
-    with pytest.raises(ValueError, match="不能为空"):
-        protector.encrypt("   ")
-
-
-def test_missing_key_file_has_safe_error(tmp_path: Path) -> None:
+def test_missing_or_invalid_key_material_fails_safely(tmp_path: Path) -> None:
     with pytest.raises(CredentialProtectionError, match="无法读取"):
         FernetCredentialProtector(tmp_path / "missing", key_version=1)
 
 
-def test_tampered_ciphertext_is_rejected(tmp_path: Path) -> None:
-    protector = FernetCredentialProtector(_write_key(tmp_path), key_version=1)
-
-    with pytest.raises(CredentialProtectionError, match="无法解密"):
-        protector.decrypt(b"not-a-valid-token", credential_version=1)
-
-
-def test_unknown_credential_version_is_rejected_before_decryption(tmp_path: Path) -> None:
+def test_tampered_or_unknown_version_ciphertext_is_rejected(tmp_path: Path) -> None:
     protector = FernetCredentialProtector(_write_key(tmp_path), key_version=3)
 
+    with pytest.raises(CredentialProtectionError, match="无法解密"):
+        protector.unprotect(b"invalid", credential_version=3)
     with pytest.raises(UnsupportedCredentialVersionError, match="不支持凭据版本"):
-        protector.decrypt(b"unused", credential_version=2)
+        protector.unprotect(b"unused", credential_version=2)

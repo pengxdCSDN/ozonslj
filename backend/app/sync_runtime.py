@@ -1,0 +1,125 @@
+import asyncio
+import logging
+import os
+import signal
+import socket
+
+from redis.asyncio import Redis
+
+from backend.app.application.sync_dispatch import SyncJobDispatcher
+from backend.app.application.sync_processes import run_scheduler_loop, run_worker_loop
+from backend.app.application.sync_worker import SyncWorker
+from backend.app.config import Settings, get_settings
+from backend.app.domain.sync_job import SyncHandler, SyncResourceType
+from backend.app.infrastructure.postgresql.session import PostgresSessionFactory, TenantContext
+from backend.app.infrastructure.postgresql.sync_jobs import PostgresSyncJobGateway
+from backend.app.infrastructure.redis_sync_consumer import RedisSyncJobConsumer
+from backend.app.infrastructure.redis_sync_queue import RedisSyncJobQueue
+from backend.app.infrastructure.stub_sync_handlers import StubSyncHandler
+
+logger = logging.getLogger(__name__)
+
+
+def _require_runtime_urls(settings: Settings) -> tuple[str, str]:
+    """同步进程同时依赖 PostgreSQL 和 Redis，缺失时必须启动失败。"""
+    if settings.database_url is None:
+        raise RuntimeError("DATABASE_URL 未配置")
+    if settings.redis_url is None:
+        raise RuntimeError("REDIS_URL 未配置")
+    return str(settings.database_url), str(settings.redis_url)
+
+
+def _service_context(settings: Settings) -> TenantContext:
+    """后台进程只使用部署绑定的固定数据边界，不接受客户端传入组织标识。"""
+    return TenantContext(settings.default_organization_id, "sync-service")
+
+
+def _build_handlers(settings: Settings) -> dict[SyncResourceType, SyncHandler]:
+    """Stub 环境提供确定性处理器；live 模式不得用空处理器伪装真实同步成功。"""
+    if settings.ozon_mode != "stub":
+        raise RuntimeError("live 模式的 Ozon 同步处理器尚未配置，拒绝启动 Worker")
+    handler = StubSyncHandler()
+    return {
+        "products": handler,
+        "stock": handler,
+        "orders": handler,
+        "postings": handler,
+    }
+
+
+def _install_shutdown_handlers(stop: asyncio.Event) -> None:
+    """把容器 SIGTERM 和终端中断转换为协作式停止信号。"""
+    def request_stop(_signum: int, _frame: object) -> None:
+        stop.set()
+
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(signum, request_stop)
+
+
+async def run_scheduler(settings: Settings) -> None:
+    """组装并运行单组织运营部署的同步调度进程。"""
+    database_url, redis_url = _require_runtime_urls(settings)
+    sessions = PostgresSessionFactory(database_url, max_size=2)
+    redis = Redis.from_url(redis_url, decode_responses=True)
+    stop = asyncio.Event()
+    _install_shutdown_handlers(stop)
+    try:
+        sessions.open()
+        jobs = PostgresSyncJobGateway(sessions, _service_context(settings))
+        dispatcher = SyncJobDispatcher(jobs, RedisSyncJobQueue(redis))
+
+        async def dispatch_once() -> int:
+            count = await dispatcher.dispatch_due_jobs(limit=settings.sync_dispatch_batch_size)
+            if count:
+                logger.info("同步调度本轮投递 %d 个任务", count)
+            return count
+
+        await run_scheduler_loop(
+            dispatch_once,
+            stop,
+            interval_seconds=settings.sync_dispatch_interval_seconds,
+        )
+    finally:
+        await redis.aclose()
+        sessions.close()
+
+
+async def run_worker(settings: Settings) -> None:
+    """组装并运行单并发同步 Worker，最终状态始终先落 PostgreSQL。"""
+    database_url, redis_url = _require_runtime_urls(settings)
+    handlers = _build_handlers(settings)
+    sessions = PostgresSessionFactory(database_url, max_size=2)
+    redis = Redis.from_url(redis_url, decode_responses=True)
+    stop = asyncio.Event()
+    _install_shutdown_handlers(stop)
+    worker_id = f"{socket.gethostname()}-{os.getpid()}"
+    try:
+        sessions.open()
+        jobs = PostgresSyncJobGateway(sessions, _service_context(settings))
+        consumer = RedisSyncJobConsumer(redis, consumer_name=worker_id)
+        worker = SyncWorker(
+            jobs,
+            consumer,
+            handlers,
+            worker_id=worker_id,
+            lease_seconds=settings.sync_worker_lease_seconds,
+            retry_delay_seconds=settings.sync_worker_retry_delay_seconds,
+        )
+
+        async def process_one() -> bool:
+            return await worker.process_one(block_ms=settings.sync_worker_block_ms)
+
+        await run_worker_loop(process_one, stop)
+    finally:
+        await redis.aclose()
+        sessions.close()
+
+
+def scheduler_main() -> None:
+    logging.basicConfig(level=get_settings().log_level)
+    asyncio.run(run_scheduler(get_settings()))
+
+
+def worker_main() -> None:
+    logging.basicConfig(level=get_settings().log_level)
+    asyncio.run(run_worker(get_settings()))

@@ -2,16 +2,52 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal, Protocol
 
+OrganizationRole = Literal[
+    "owner",
+    "admin",
+    "operations_manager",
+    "operator",
+    "finance",
+    "readonly_analyst",
+]
 OperatorRole = Literal["admin", "supervisor", "operator", "finance", "readonly_analyst"]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class AuthenticatedUser:
+    """通过服务端会话验证且已选定活动组织的用户。"""
+
     id: str
     email: str
     display_name: str
-    role: OperatorRole
+    organization_id: str
+    organization_role: OrganizationRole
     workspace_ids: tuple[str, ...]
+
+    def __init__(
+        self,
+        *,
+        id: str,
+        email: str,
+        display_name: str,
+        organization_id: str = "org-default",
+        organization_role: OrganizationRole | None = None,
+        workspace_ids: tuple[str, ...] = (),
+        role: str | None = None,
+    ) -> None:
+        """兼容旧的 role/workspace_ids 构造方式，同时保留组织级权限字段。"""
+
+        resolved_role = organization_role or role or "readonly_analyst"
+        object.__setattr__(self, "id", id)
+        object.__setattr__(self, "email", email)
+        object.__setattr__(self, "display_name", display_name)
+        object.__setattr__(self, "organization_id", organization_id)
+        object.__setattr__(self, "organization_role", resolved_role)
+        object.__setattr__(self, "workspace_ids", workspace_ids)
+
+    @property
+    def role(self) -> str:
+        return self.organization_role
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,12 +58,25 @@ class LoginResult:
 
 
 class IdentityGateway(Protocol):
-    async def find_login_identity(self, email: str) -> tuple[AuthenticatedUser, str] | None: ...
+    """身份服务所需的最小 PostgreSQL 端口。"""
+
+    async def find_login_identity(
+        self,
+        email: str,
+        organization_id: str,
+    ) -> tuple[AuthenticatedUser, str] | None: ...
 
     async def create_session(
-        self, operator_id: str, token_hash: str, expires_at: datetime
+        self,
+        user_id: str,
+        organization_id: str,
+        token_hash: str,
+        expires_at: datetime,
     ) -> None: ...
 
-    async def find_user_by_session_hash(self, token_hash: str) -> AuthenticatedUser | None: ...
+    async def find_user_by_session_hash(
+        self,
+        token_hash: str,
+    ) -> AuthenticatedUser | None: ...
 
     async def revoke_session(self, token_hash: str) -> None: ...

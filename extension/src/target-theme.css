@@ -18,6 +18,7 @@ body {
 }
 button:focus-visible, select:focus-visible { outline: 2px solid #a88fff; outline-offset: 2px; }
 input:focus-visible { outline: 0; }
+.advanced-navigation, .nav-section-label { display: none; }
 .app-shell { color: #f5f4ff; background: linear-gradient(180deg, rgb(21 18 40 / 94%), rgb(9 8 24 / 96%) 38%); }
 .masthead { border-color: var(--target-line); color: #fff; background: rgb(24 22 42 / 96%); }
 .brand-mark, .login-mark { border: 0; color: #fff; background: linear-gradient(145deg, #a34fff, #6c63ff); box-shadow: 0 0 24px rgb(139 105 246 / 34%); font-family: inherit; }
@@ -200,13 +201,23 @@ input:focus-visible { outline: 0; }
   .app-shell > .workspace-control .select-menu-trigger { height: 41px; }
   .app-shell > .workspace-control .select-menu-popover { top: calc(100% + 5px); }
   .route-strip { display: none; }
-  .view-tabs { grid-column: 1; grid-row: 3; display: flex; flex-direction: column; gap: 7px; padding: 24px 14px 126px; border-right: 1px solid var(--target-line); border-bottom: 0; background: var(--target-sidebar); }
+  .view-tabs { grid-column: 1; grid-row: 3; display: flex; min-height: 0; flex-direction: column; gap: 7px; overflow-y: auto; padding: 20px 14px 32px; border-right: 1px solid var(--target-line); border-bottom: 0; background: var(--target-sidebar); scrollbar-width: thin; scrollbar-color: #40365f transparent; }
   .view-tabs::before { margin: 0 10px 5px; color: #5f5c70; font-size: 9px; font-weight: 700; letter-spacing: .12em; content: "运营中心"; }
   .view-tabs button { justify-content: flex-start; gap: 11px; padding: 12px 14px; border: 1px solid transparent; border-radius: 9px; font-size: 12px; }
   .view-tabs button + button { margin-left: 0; }
   .view-tabs button.active { border-color: rgb(139 105 246 / 24%); box-shadow: inset 3px 0 #9877ff; }
   .view-tabs button.active::after { display: none; }
   .view-tabs button span { margin-left: auto; }
+  .view-tabs::before { display: none; }
+  .nav-section-label { display: block; margin: 0 10px 5px; color: #77738c; font-size: 9px; font-weight: 800; letter-spacing: .14em; }
+  .advanced-navigation { display: grid; gap: 6px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--target-line); }
+  .advanced-navigation details { border-radius: 9px; }
+  .advanced-navigation summary { display: flex; align-items: center; justify-content: space-between; padding: 9px 11px; color: #8d899f; font-size: 10px; font-weight: 750; cursor: pointer; list-style: none; }
+  .advanced-navigation summary::-webkit-details-marker { display: none; }
+  .advanced-navigation details[open] summary { color: #cfc5ed; }
+  .advanced-navigation details[open] summary svg { transform: rotate(180deg); }
+  .advanced-navigation details > div { display: grid; gap: 2px; padding: 0 0 6px 8px; }
+  .advanced-navigation details button { min-height: 32px; padding: 7px 12px; color: #77738d; font-size: 10px; font-weight: 650; }
   .sidebar-footer { z-index: 3; grid-column: 1; grid-row: 3; align-self: end; display: grid; margin: 0 14px 14px; padding: 12px; border: 1px solid var(--target-line); border-radius: 12px; background: #1a182d; }
   .sidebar-footer .logout-button { width: 100%; padding: 9px 10px; }
   .view-content, .state-panel, .loading-grid { grid-column: 2; grid-row: 1 / span 3; width: min(100%, 1360px); margin: 0 auto; }
@@ -237,3 +248,5 @@ input:focus-visible { outline: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* 模型供应商页是完整工作区，不应被宽屏 12 列工作台布局拆成窄列。 */
