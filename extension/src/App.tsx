@@ -57,7 +57,6 @@ import { SummaryReportView } from "./SummaryReportView";
 import { AgentTriggersView } from "./AgentTriggersView";
 import { AgentPermissionsView } from "./AgentPermissionsView";
 import { ExternalNotificationsView } from "./ExternalNotificationsView";
-import { PerformanceCredentialsView } from "./PerformanceCredentialsView";
 import { SellerProductSyncView } from "./SellerProductSyncView";
 import { SellerStockSyncView } from "./SellerStockSyncView";
 import { SellerOrderSyncView } from "./SellerOrderSyncView";
@@ -396,7 +395,7 @@ export function App() {
     {view === "agent-permissions" && active ? <AgentPermissionsView workspaceId={selectedWorkspaceId} /> : null}
     {view === "external-notifications" && active ? <ExternalNotificationsView workspaceId={selectedWorkspaceId} /> : null}
     {/* Performance 凭据属于独立凭据域，不与 Seller 店铺绑定。 */}
-    {view === "performance-credentials" ? <PerformanceCredentialsView /> : null}
+    {view === "performance-credentials" && active ? <PerformanceOAuthView workspaceId={selectedWorkspaceId} /> : null}
     {view === "seller-product-sync" && active ? <SellerProductSyncView workspaceId={selectedWorkspaceId} /> : null}
     {view === "seller-stock-sync" && active ? <SellerStockSyncView workspaceId={selectedWorkspaceId} /> : null}
     {view === "seller-order-sync" && active ? <SellerOrderSyncView workspaceId={selectedWorkspaceId} /> : null}
