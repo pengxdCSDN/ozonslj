@@ -47,6 +47,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         dimension: int = 1024,
         base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1",
         timeout_seconds: float = 30.0,
+        retry_alternate_input: bool = False,
         send_dimensions: bool = True,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
@@ -60,6 +61,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         # 不同 OpenAI 兼容供应商对可选字段的支持并不一致；调用方可关闭该字段，避免把
         # DashScope/Qwen 的参数发送给不接受它的模型（例如 SiliconFlow 的 BAAI/bge-m3）。
         self.send_dimensions = send_dimensions
+        self.retry_alternate_input = retry_alternate_input
         self._api_key = api_key
         self._endpoint = f"{base_url.rstrip('/')}/embeddings"
         self._timeout = httpx.Timeout(timeout_seconds)
@@ -77,7 +79,15 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         }
         if self.send_dimensions:
             payload["dimensions"] = self.dimension
-        response = await self._post(payload)
+        try:
+            response = await self._post(payload)
+        except CloudModelError as error:
+            # 少数 OpenAI 兼容网关对单条 input 的字符串/数组形态实现不一致；
+            # 仅对明确开启兼容模式且返回 400 时切换一次，不做无界重试。
+            if not self.retry_alternate_input or error.status_code != 400:
+                raise
+            payload["input"] = texts
+            response = await self._post(payload)
         data = response.get("data")
         if not isinstance(data, list) or len(data) != len(texts):
             raise CloudModelError("Embedding 响应数量与输入不一致")

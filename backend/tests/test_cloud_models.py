@@ -91,6 +91,30 @@ async def test_embedding_error_exposes_safe_upstream_reason_without_secret() -> 
 
 
 @pytest.mark.asyncio
+async def test_embedding_retries_with_batch_input_after_provider_400() -> None:
+    attempts = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        body = json.loads(request.read().decode("utf-8"))
+        if attempts == 1:
+            assert body["input"] == "测试"
+            return httpx.Response(400, json={"code": 20012, "message": "invalid input"})
+        assert body["input"] == ["测试"]
+        return httpx.Response(200, json={"data": [{"index": 0, "embedding": [0.0, 1.0]}]})
+
+    client = DashScopeEmbeddingClient(
+        api_key="test-key",
+        dimension=2,
+        retry_alternate_input=True,
+        transport=httpx.MockTransport(handler),
+    )
+    assert await client.embed(["测试"]) == [[0.0, 1.0]]
+    assert attempts == 2
+
+
+@pytest.mark.asyncio
 async def test_translation_client_returns_cloud_text() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.read().decode("utf-8"))

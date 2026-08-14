@@ -152,7 +152,11 @@ async def test_model_provider_connectivity(
             # 系列的可选能力，不能因为客户端统一使用 1024 维就发送给所有模型。
             adapter_type = payload.adapter_type.strip().lower()
             model_id = payload.model.strip()
-            is_siliconflow_bge_m3 = adapter_type == "siliconflow" and model_id.lower() in {
+            endpoint_hostname = (urlparse(normalized_base_url).hostname or "").lower()
+            is_siliconflow = adapter_type == "siliconflow" or endpoint_hostname.endswith(
+                ".siliconflow.cn"
+            ) or endpoint_hostname == "siliconflow.cn"
+            is_siliconflow_bge_m3 = is_siliconflow and model_id.lower() in {
                 "bge-m3",
                 "baai/bge-m3",
             }
@@ -161,6 +165,7 @@ async def test_model_provider_connectivity(
                 base_url=normalized_base_url,
                 model=model_id,
                 dimension=1024,
+                retry_alternate_input=is_siliconflow_bge_m3,
                 send_dimensions=not is_siliconflow_bge_m3,
             )
             await embedding_client.embed(["连接测试"])
