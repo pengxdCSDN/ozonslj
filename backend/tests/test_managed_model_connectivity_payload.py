@@ -4,6 +4,7 @@ import pytest
 
 from backend.app.api.routes.managed_model_providers import (
     ConnectivityTestPayload,
+    _normalize_model_base_url,
     _validate_connectivity_target,
 )
 
@@ -19,6 +20,15 @@ def test_existing_provider_connectivity_can_omit_api_key() -> None:
     )
     assert payload.api_key is None
     assert payload.provider_id is not None
+
+
+def test_embedding_endpoint_suffixes_are_normalized() -> None:
+    assert _normalize_model_base_url("https://api.siliconflow.cn/v1/embedding") == (
+        "https://api.siliconflow.cn/v1"
+    )
+    assert _normalize_model_base_url("https://api.siliconflow.cn/v1/embeddings") == (
+        "https://api.siliconflow.cn/v1"
+    )
 
 
 def test_new_provider_connectivity_accepts_transient_api_key() -> None:
