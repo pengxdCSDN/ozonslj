@@ -197,3 +197,23 @@ pnpm build
 - 被占用的 `dist` 不作为验证输出目录；使用工作区内独立的 `verify-dist`。
 - Playwright 在一个浏览器会话内完成导航与多张截图，减少重复 npx 和浏览器启动。
 - 记录每条验证命令的退出码；超时或被终止的命令不得计为通过。
+## 2026-08-14：API 重建后登录返回 HTTP 502
+
+### 现象
+
+API 容器显示 `healthy`，但登录、`/api/v1/auth/*` 或健康检查经过 Nginx 返回 502。
+
+### 原因判断
+
+Compose 重建 API 后，API 容器的网络 IP 发生变化；Nginx 已启动进程仍缓存旧 upstream IP，因此连接被拒绝。该问题不是 API 代码或数据库故障。
+
+### 恢复办法与预防措施
+
+```bash
+docker compose --env-file .env restart web
+docker compose --env-file .env ps
+curl -fsS http://127.0.0.1/api/health/live
+curl -fsS http://127.0.0.1/api/health/ready
+```
+
+以后每次执行 `up -d --no-deps api worker` 后，必须同步重启 `web` 并验证登录/关键 API；发布脚本不得只更新 API/Worker 而跳过 Web upstream 刷新。若仍为 502，检查 `docker logs ozonslj-web-1` 中的 `connect() failed` 和 upstream 地址，再确认 API 容器监听 `8000` 且状态为 healthy。
