@@ -81,6 +81,12 @@ export function RagModelProvidersView() {
   const showError = (text: string) => { setMessageTone("error"); setMessage(text); };
   const showInfo = (text: string) => { setMessageTone("info"); setMessage(text); };
 
+  useEffect(() => {
+    if (!message) return;
+    const timer = window.setTimeout(() => setMessage(""), 3000);
+    return () => window.clearTimeout(timer);
+  }, [message]);
+
   const refresh = async () => {
     setBusy(true);
     setConnectivityState("idle");
