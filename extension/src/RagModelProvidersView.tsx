@@ -87,7 +87,9 @@ export function RagModelProvidersView() {
     return () => window.clearTimeout(timer);
   }, [message]);
 
-  const refresh = async () => {
+  // 首次进入页面和操作后的数据同步保持静默；只有用户主动点击“刷新配置”时才提示，
+  // 避免页面加载就弹出看似成功但没有对应用户操作的 Toast。
+  const refresh = async (notify = false) => {
     setBusy(true);
     setConnectivityState("idle");
     try {
@@ -97,7 +99,9 @@ export function RagModelProvidersView() {
       ]);
       setProviders(nextProviders);
       setBindings(nextBindings);
-      showSuccess(nextProviders.length ? "配置已刷新。优先级数字越小，越优先使用。" : "还没有模型配置，请从上方新增。");
+      if (notify) {
+        showSuccess(nextProviders.length ? "配置已刷新。优先级数字越小，越优先使用。" : "还没有模型配置，请从上方新增。");
+      }
     } catch (error) {
       showError(error instanceof Error ? error.message : "模型配置加载失败");
     } finally {
@@ -296,7 +300,7 @@ export function RagModelProvidersView() {
           <h1>模型供应商与自动降级</h1>
           <p>分别维护向量模型与文本模型。额度耗尽、超时或供应商不可用时，系统按优先级自动切换。</p>
         </div>
-        <button className="secondary-button" type="button" onClick={() => void refresh()} disabled={busy}>
+        <button className="secondary-button" type="button" onClick={() => void refresh(true)} disabled={busy}>
           <ArrowsClockwise size={16} /> 刷新配置
         </button>
       </section>
