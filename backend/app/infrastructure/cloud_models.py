@@ -47,6 +47,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         dimension: int = 1024,
         base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1",
         timeout_seconds: float = 30.0,
+        send_dimensions: bool = True,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         if not api_key.strip():
@@ -56,6 +57,9 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         _validate_cloud_base_url(base_url)
         self.model_id = model.strip()
         self.dimension = dimension
+        # 不同 OpenAI 兼容供应商对可选字段的支持并不一致；调用方可关闭该字段，避免把
+        # DashScope/Qwen 的参数发送给不接受它的模型（例如 SiliconFlow 的 BAAI/bge-m3）。
+        self.send_dimensions = send_dimensions
         self._api_key = api_key
         self._endpoint = f"{base_url.rstrip('/')}/embeddings"
         self._timeout = httpx.Timeout(timeout_seconds)
@@ -69,9 +73,10 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         payload = {
             "model": self.model_id,
             "input": texts,
-            "dimensions": self.dimension,
             "encoding_format": "float",
         }
+        if self.send_dimensions:
+            payload["dimensions"] = self.dimension
         response = await self._post(payload)
         data = response.get("data")
         if not isinstance(data, list) or len(data) != len(texts):

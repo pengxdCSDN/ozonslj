@@ -148,11 +148,20 @@ async def test_model_provider_connectivity(
 
     try:
         if payload.purpose == "embedding":
+            # SiliconFlow 的 BAAI/bge-m3 不支持 dimensions；该字段是 Qwen3 Embedding
+            # 系列的可选能力，不能因为客户端统一使用 1024 维就发送给所有模型。
+            adapter_type = payload.adapter_type.strip().lower()
+            model_id = payload.model.strip()
+            is_siliconflow_bge_m3 = adapter_type == "siliconflow" and model_id.lower() in {
+                "bge-m3",
+                "baai/bge-m3",
+            }
             embedding_client = DashScopeEmbeddingClient(
                 api_key=api_key,
                 base_url=normalized_base_url,
-                model=payload.model,
+                model=model_id,
                 dimension=1024,
+                send_dimensions=not is_siliconflow_bge_m3,
             )
             await embedding_client.embed(["连接测试"])
         else:

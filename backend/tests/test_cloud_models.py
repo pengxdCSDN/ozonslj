@@ -51,6 +51,26 @@ async def test_embedding_quota_error_is_classified_without_secret() -> None:
 
 
 @pytest.mark.asyncio
+async def test_embedding_can_omit_unsupported_dimensions() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.read().decode("utf-8"))
+        assert "dimensions" not in body
+        return httpx.Response(
+            200,
+            json={"data": [{"index": 0, "embedding": [0.0, 1.0]}]},
+        )
+
+    client = DashScopeEmbeddingClient(
+        api_key="test-key",
+        dimension=2,
+        send_dimensions=False,
+        transport=httpx.MockTransport(handler),
+    )
+    client.dimension = 2
+    assert await client.embed(["测试"]) == [[0.0, 1.0]]
+
+
+@pytest.mark.asyncio
 async def test_translation_client_returns_cloud_text() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.read().decode("utf-8"))
