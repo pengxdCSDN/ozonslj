@@ -74,10 +74,14 @@ class OpenAICompatibleRerankClient:
             body = response.json()
         except (json.JSONDecodeError, ValueError) as error:
             raise CloudModelError("重排序响应不是合法 JSON") from error
-        data = body.get("data") if isinstance(body, dict) else None
-        if not isinstance(data, list):
-            raise CloudModelError("重排序响应缺少 data 数组")
-        return [item for item in data if isinstance(item, dict)]
+        # SiliconFlow 及 OpenAI 兼容重排序接口使用 results 承载排序结果；
+        # 保留 data 回退以兼容少数旧网关，但错误提示必须指向官方字段。
+        results = body.get("results") if isinstance(body, dict) else None
+        if not isinstance(results, list) and isinstance(body, dict):
+            results = body.get("data")
+        if not isinstance(results, list):
+            raise CloudModelError("重排序响应缺少 results 数组")
+        return [item for item in results if isinstance(item, dict)]
 
 
 class DashScopeEmbeddingClient(EmbeddingPort):

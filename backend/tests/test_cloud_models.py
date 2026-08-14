@@ -157,7 +157,7 @@ async def test_rerank_client_sends_query_and_documents() -> None:
             "query": "颜色",
             "documents": ["红色", "蓝色"],
         }
-        return httpx.Response(200, json={"data": [{"index": 0, "relevance_score": 0.9}]})
+        return httpx.Response(200, json={"results": [{"index": 0, "relevance_score": 0.9}]})
 
     client = OpenAICompatibleRerankClient(
         api_key="test-key",
