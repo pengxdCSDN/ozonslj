@@ -111,8 +111,11 @@ class DashScopeEmbeddingClient(EmbeddingPort):
     ) -> None:
         if not api_key.strip():
             raise ValueError("Embedding API Key 不能为空")
-        if dimension not in {64, 128, 256, 512, 768, 1024, 1536, 2048}:
-            raise ValueError("Embedding 维度必须是供应商支持的固定值")
+        # 不在客户端硬编码供应商维度白名单；不同模型支持的维度集合不同。
+        # 这里只保证配置是正整数，真正的向量长度仍在响应解析时强校验，避免把
+        # 不兼容向量写入当前索引。
+        if dimension <= 0:
+            raise ValueError("Embedding 维度必须是正整数")
         _validate_cloud_base_url(base_url)
         self.model_id = model.strip()
         self.dimension = dimension
