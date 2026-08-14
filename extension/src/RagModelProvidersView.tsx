@@ -295,7 +295,7 @@ export function RagModelProvidersView() {
       .filter((provider) => provider.enabled && provider.model_kind === kind)
       .sort((left, right) => left.priority - right.priority || left.provider_id.localeCompare(right.provider_id));
     if (!candidates.length) {
-      showError(`${kind === "embedding" ? "向量" : "文本"}模型池没有启用的候选。`);
+      showError(`${kind === "embedding" ? "向量" : kind === "rerank" ? "重排序" : "文本"}模型池没有启用的候选。`);
       return;
     }
     setBusy(true);
@@ -418,5 +418,10 @@ function ProviderPool({ title, eyebrow, providers, busy, onEdit, onToggle, onDel
 }
 
 function RouteCard({ label, providers, binding, disabled, onSave }: { label: string; providers: RagModelProvider[]; binding?: RagModelBinding; disabled: boolean; onSave: () => void }) {
-  return <div className="route-card"><div className="route-icon"><ShieldCheck size={18} /></div><div className="route-copy"><strong>{label}</strong><small>{providers.length ? `候选链：${providers.map((provider) => `${provider.priority} · ${provider.name}`).join("  →  ")}` : "暂无启用的候选模型"}</small><small className={binding ? "route-ready" : "route-muted"}>{binding ? `已绑定 ${binding.fallback_provider_ids.length + 1} 个模型` : "尚未生成用途路由"}</small></div><button className="secondary-button" type="button" disabled={disabled || !providers.length} onClick={onSave}><ShieldCheck size={15} /> 生成降级链</button></div>;
+  const providerIds = new Set(providers.map((provider) => provider.provider_id));
+  const validBindingCount = binding
+    ? [binding.primary_provider_id, ...binding.fallback_provider_ids].filter((id) => providerIds.has(id)).length
+    : 0;
+  const hasValidBinding = validBindingCount > 0;
+  return <div className="route-card"><div className="route-icon"><ShieldCheck size={18} /></div><div className="route-copy"><strong>{label}</strong><small>{providers.length ? `候选链：${providers.map((provider) => `${provider.priority} · ${provider.name}`).join("  →  ")}` : "暂无启用的候选模型"}</small><small className={hasValidBinding ? "route-ready" : "route-muted"}>{hasValidBinding ? `已绑定 ${validBindingCount} 个模型` : providers.length ? "尚未生成有效用途路由" : "暂无可用模型，无法生成路由"}</small></div><button className="secondary-button" type="button" disabled={disabled || !providers.length} onClick={onSave}><ShieldCheck size={15} /> 生成降级链</button></div>;
 }
