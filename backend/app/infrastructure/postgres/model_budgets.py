@@ -1,34 +1,32 @@
 """模型额度策略与用量台账的 PostgreSQL 适配器。
 
-策略和用量属于组织级事实，必须通过事务和 ``ON CONFLICT`` 原子累加；这样
-多个 RAG Worker 并发结算时不会覆盖彼此的 token 或请求次数。API Key、提示词
-和模型原始响应不进入本表。
+额度是组织级治理事实，所有查询都通过带 RLS 上下文的短事务执行；用量结算使用
+数据库原子累加，避免多个 API/Worker 并发时覆盖彼此的 token 和请求次数。
 """
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 from typing import cast
 
-from psycopg.rows import dict_row
-from psycopg_pool import AsyncConnectionPool
-
-from backend.app.domain.model_budget import (
-    BudgetPurpose,
-    ModelBudgetPolicy,
-    ModelBudgetUsage,
-)
+from backend.app.domain.model_budget import BudgetPurpose, ModelBudgetPolicy, ModelBudgetUsage
+from backend.app.infrastructure.postgresql.session import PostgresSessionFactory, TenantContext
 
 
 class PostgresModelBudgetGateway:
-    """持久化用途级预算策略，并原子累计周期用量。"""
+    """按租户持久化用途级预算策略，并安全累计当前周期用量。"""
 
-    def __init__(self, pool: AsyncConnectionPool) -> None:
-        self._pool = pool
+    def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        self._sessions = sessions
+        self._context = context
 
-    async def upsert_policy(self, *, organization_id: str, policy: ModelBudgetPolicy) -> None:
-        async with self._pool.connection() as connection, connection.transaction():
-            await connection.execute(
+    async def upsert_policy(self, *, policy: ModelBudgetPolicy) -> None:
+        await asyncio.to_thread(self._upsert_policy, policy)
+
+    def _upsert_policy(self, policy: ModelBudgetPolicy) -> None:
+        with self._sessions.transaction(self._context) as connection:
+            connection.execute(
                 """
                 INSERT INTO rag_model_budget_policies
                     (organization_id, provider_id, purpose, daily_token_limit,
@@ -42,61 +40,61 @@ class PostgresModelBudgetGateway:
                     revision = rag_model_budget_policies.revision + 1,
                     updated_at = CURRENT_TIMESTAMP
                 """,
-                (
-                    organization_id,
-                    policy.provider_id,
-                    policy.purpose,
-                    policy.daily_token_limit,
-                    policy.monthly_token_limit,
-                    policy.daily_request_limit,
-                    policy.monthly_budget,
-                ),
+                (self._context.organization_id, policy.provider_id, policy.purpose,
+                 policy.daily_token_limit, policy.monthly_token_limit,
+                 policy.daily_request_limit, policy.monthly_budget),
             )
 
+    async def list_policies(self) -> list[ModelBudgetPolicy]:
+        return await asyncio.to_thread(self._list_policies)
+
+    def _list_policies(self) -> list[ModelBudgetPolicy]:
+        with self._sessions.transaction(self._context) as connection:
+            rows = connection.execute(
+                """
+                SELECT provider_id, purpose, daily_token_limit, monthly_token_limit,
+                       daily_request_limit, monthly_budget
+                FROM rag_model_budget_policies
+                WHERE organization_id = %s
+                ORDER BY provider_id, purpose
+                """,
+                (self._context.organization_id,),
+            ).fetchall()
+        return [_policy_from_row(row) for row in rows]
+
     async def get_policy(
-        self, *, organization_id: str, provider_id: str, purpose: BudgetPurpose
+        self, *, provider_id: str, purpose: BudgetPurpose
     ) -> ModelBudgetPolicy | None:
-        async with self._pool.connection() as connection, connection.cursor(
-            row_factory=dict_row
-        ) as cursor:
-            await cursor.execute(
+        return await asyncio.to_thread(self._get_policy, provider_id, purpose)
+
+    def _get_policy(self, provider_id: str, purpose: BudgetPurpose) -> ModelBudgetPolicy | None:
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
                 """
                 SELECT provider_id, purpose, daily_token_limit, monthly_token_limit,
                        daily_request_limit, monthly_budget
                 FROM rag_model_budget_policies
                 WHERE organization_id = %s AND provider_id = %s AND purpose = %s
                 """,
-                (organization_id, provider_id, purpose),
-            )
-            row = await cursor.fetchone()
-        if row is None:
-            return None
-        values = cast(dict[str, object], row)
-        return ModelBudgetPolicy(
-            provider_id=str(values["provider_id"]),
-            purpose=cast(BudgetPurpose, str(values["purpose"])),
-            daily_token_limit=cast(int, values["daily_token_limit"]),
-            monthly_token_limit=cast(int, values["monthly_token_limit"]),
-            daily_request_limit=cast(int, values["daily_request_limit"]),
-            monthly_budget=cast(float, values["monthly_budget"]),
-        )
+                (self._context.organization_id, provider_id, purpose),
+            ).fetchone()
+        return _policy_from_row(row) if row is not None else None
 
-    async def add_usage(
-        self,
-        *,
-        organization_id: str,
-        provider_id: str,
-        purpose: BudgetPurpose,
-        period_start: date,
-        daily_tokens: int,
-        monthly_tokens: int,
-        daily_requests: int,
-        monthly_cost: float,
-    ) -> None:
+    async def add_usage(self, *, provider_id: str, purpose: BudgetPurpose,
+                        period_start: date, daily_tokens: int, monthly_tokens: int,
+                        daily_requests: int, monthly_cost: float) -> None:
         if min(daily_tokens, monthly_tokens, daily_requests) < 0 or monthly_cost < 0:
             raise ValueError("额度用量增量不能为负数")
-        async with self._pool.connection() as connection, connection.transaction():
-            await connection.execute(
+        await asyncio.to_thread(
+            self._add_usage, provider_id, purpose, period_start,
+            daily_tokens, monthly_tokens, daily_requests, monthly_cost,
+        )
+
+    def _add_usage(self, provider_id: str, purpose: BudgetPurpose, period_start: date,
+                   daily_tokens: int, monthly_tokens: int, daily_requests: int,
+                   monthly_cost: float) -> None:
+        with self._sessions.transaction(self._context) as connection:
+            connection.execute(
                 """
                 INSERT INTO rag_model_budget_usage
                     (organization_id, provider_id, purpose, period_start,
@@ -112,45 +110,42 @@ class PostgresModelBudgetGateway:
                     monthly_cost = rag_model_budget_usage.monthly_cost + EXCLUDED.monthly_cost,
                     updated_at = CURRENT_TIMESTAMP
                 """,
-                (
-                    organization_id,
-                    provider_id,
-                    purpose,
-                    period_start,
-                    daily_tokens,
-                    monthly_tokens,
-                    daily_requests,
-                    monthly_cost,
-                ),
+                (self._context.organization_id, provider_id, purpose, period_start,
+                 daily_tokens, monthly_tokens, daily_requests, monthly_cost),
             )
 
-    async def get_usage(
-        self,
-        *,
-        organization_id: str,
-        provider_id: str,
-        purpose: BudgetPurpose,
-        period_start: date,
-    ) -> ModelBudgetUsage:
-        async with self._pool.connection() as connection, connection.cursor(
-            row_factory=dict_row
-        ) as cursor:
-            await cursor.execute(
+    async def get_usage(self, *, provider_id: str, purpose: BudgetPurpose,
+                        period_start: date) -> ModelBudgetUsage:
+        return await asyncio.to_thread(self._get_usage, provider_id, purpose, period_start)
+
+    def _get_usage(self, provider_id: str, purpose: BudgetPurpose,
+                   period_start: date) -> ModelBudgetUsage:
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
                 """
                 SELECT daily_tokens, monthly_tokens, daily_requests, monthly_cost
                 FROM rag_model_budget_usage
                 WHERE organization_id = %s AND provider_id = %s
                   AND purpose = %s AND period_start = %s
                 """,
-                (organization_id, provider_id, purpose, period_start),
-            )
-            row = await cursor.fetchone()
+                (self._context.organization_id, provider_id, purpose, period_start),
+            ).fetchone()
         if row is None:
             return ModelBudgetUsage(0, 0, 0, 0.0)
-        values = cast(dict[str, object], row)
         return ModelBudgetUsage(
-            daily_tokens=cast(int, values["daily_tokens"]),
-            monthly_tokens=cast(int, values["monthly_tokens"]),
-            daily_requests=cast(int, values["daily_requests"]),
-            monthly_cost=cast(float, values["monthly_cost"]),
+            daily_tokens=cast(int, row["daily_tokens"]),
+            monthly_tokens=cast(int, row["monthly_tokens"]),
+            daily_requests=cast(int, row["daily_requests"]),
+            monthly_cost=cast(float, row["monthly_cost"]),
         )
+
+
+def _policy_from_row(row: object) -> ModelBudgetPolicy:
+    values = cast(dict[str, object], row)
+    return ModelBudgetPolicy(
+        provider_id=str(values["provider_id"]), purpose=cast(BudgetPurpose, str(values["purpose"])),
+        daily_token_limit=cast(int, values["daily_token_limit"]),
+        monthly_token_limit=cast(int, values["monthly_token_limit"]),
+        daily_request_limit=cast(int, values["daily_request_limit"]),
+        monthly_budget=cast(float, values["monthly_budget"]),
+    )

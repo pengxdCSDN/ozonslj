@@ -332,6 +332,11 @@ PDF 目标流程：
 - `GET /v1/model-budget-policies` 与 `PUT /v1/model-budget-policies/{provider_id}`：仅管理员查看/配置每日、每月 token 与估算费用预算，以及用途级单请求输入、输出和调用次数上限；写入要求敏感操作确认、乐观并发和审计。
 - `GET /v1/model-budget-usage?provider_id=&period=`：返回当前周期已结算、已预留、剩余比例、70%/90%/100% 状态和估算费用；不返回 API Key、完整提示词或用户问题正文。
 
+当前实现说明：额度管理页面已通过 `/v1/model-budgets` 读取持久化策略和用量，并通过
+`PUT /v1/model-budgets/{provider_id}` 保存策略；RAG Embedding 运行路径会在调用前执行预算门禁，
+成功响应中的 `usage.total_tokens` 和请求次数自动写入 PostgreSQL 台账。翻译与知识问答正式业务调用
+尚未接入该记账路径，供应商官方账单用量对账属于后续阶段。
+
 预算接口以 `Asia/Shanghai` 自然日/月展示周期，同时返回 UTC `period_start`/`period_end`、`billing_currency`、原币种金额和 token。可选 `display_cny` 必须携带参考汇率版本与“仅供展示”标记；客户端不得用折算值判断是否允许调用。时区、币种或预算变更只对下一周期生效。
 
 用途绑定请求只接受一个 `primary_model_ref` 和至多一个 `fallback_model_ref`。服务端拒绝相同引用、能力不匹配、未通过数据策略/`shadow` 门禁，以及嵌入配置不兼容的备用绑定；客户端不能提交第三候选或修改“每请求最多切换一次”的执行上限。
@@ -411,3 +416,6 @@ API 层只接收一次明文 `api_key` 并立即交给 `HostFileModelCredentialS
 | OCR 校对、策略代码、提示词/成本高级运营 | 无客户端可写契约 | 非首期 |
 
 界面不能根据按钮可见性代替服务端权限。所有状态变更请求携带 `expected_revision`；任务轮询使用有限退避和取消机制，页面卸载后停止无用请求。
+### 模型额度预算币种
+
+模型额度页面的“月度预算”统一按人民币（RMB）填写和展示。`monthly_budget` 表示人民币金额，不是 token 数量；接口同时返回 `budget_currency: "RMB"`。日/月 token 上限仍以 token 计，三者不得混用。后续如接入供应商原币种，需要增加明确的汇率版本和原币种台账，不能继续使用无单位数字。

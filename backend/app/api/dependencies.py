@@ -79,6 +79,7 @@ from backend.app.infrastructure.ozon.account_verifier import (
 from backend.app.infrastructure.ozon.gateway import (
     ProductOfferGateway,
 )
+from backend.app.infrastructure.postgres.model_budgets import PostgresModelBudgetGateway
 from backend.app.infrastructure.postgresql.advertising_analysis import (
     PostgresAdvertisingAnalysisGateway,
 )
@@ -443,6 +444,14 @@ def get_model_adapter_gateway(
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ModelAdapterGateway:
     return PostgresModelAdapterGateway(sessions, context)
+
+
+def get_model_budget_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> PostgresModelBudgetGateway:
+    """返回按租户隔离的模型额度 PostgreSQL 网关。"""
+    return PostgresModelBudgetGateway(sessions, context)
 
 
 def get_rag_model_provider_gateway(

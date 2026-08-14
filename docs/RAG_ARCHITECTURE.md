@@ -46,7 +46,7 @@ Chroma 只保存允许检索的文档分块向量和最少必要的非敏感过�
 
 ### 模型服务
 
-首期嵌入、查询重写、重排和回答生成均通过服务端厂商无关端口调用经过审核的外部模型 API；2GB 开发服务器不运行本地模型。`ModelProviderRegistry` 允许注册 DeepSeek、MiniMax、GPT 等适配器和后续兼容供应商，不在业务代码中写死供应商。每项注册配置包含受控 API 地址、模型目录、处理区域、数据保留/训练声明、超时、限流、预算、启用状态和宿主机凭据引用。
+首期嵌入、查询重写、重排和回答生成均通过服务端厂商无关端口调用经过审核的外部模型 API；2GB 开发服务器不运行本地模型。当前已接入生产运行路径的是 Embedding：调用前执行用途级预算门禁，成功响应 usage 自动进入 PostgreSQL 用量台账，并按候选优先级跳过超限供应商。翻译与知识问答正式业务调用仍待接入同一运行时路由。`ModelProviderRegistry` 允许注册 DeepSeek、MiniMax、GPT 等适配器和后续兼容供应商，不在业务代码中写死供应商。每项注册配置包含受控 API 地址、模型目录、处理区域、数据保留/训练声明、超时、限流、预算、启用状态和宿主机凭据引用。
 
 适配层首期包含 `DeepSeekAdapter`、`MiniMaxAdapter`、`OpenAIAdapter` 和 `OpenAICompatibleAdapter`。专用适配器分别实现厂商真实协议、认证、错误归一化和限流提示；通用适配器只实现已验证的 OpenAI-compatible 子集，不用字段猜测模拟不兼容厂商。适配器通过能力清单声明 `embedding`、`structured_output`、`rerank`、`chat_generation`，用途绑定只能选择明确支持该能力的模型。
 

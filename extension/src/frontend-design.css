@@ -248,6 +248,61 @@ h1, h2, h3, strong { font-family: var(--fd-display); }
 .login-card h1 { font-family: var(--fd-display); letter-spacing: -0.05em; }
 .login-button { min-height: 44px; border-radius: 11px; }
 
+/* 模型额度：把“治理”做成一张可扫描的运行台账，而不是堆叠的表单行。 */
+.budget-view { gap: 16px; }
+.budget-heading { align-items: center; }
+.budget-heading-mark { display: grid; justify-items: center; gap: 4px; min-width: 76px; padding: 11px 9px; border: 1px solid rgba(161,132,255,.2); border-radius: 13px; color: var(--fd-violet); background: linear-gradient(145deg, rgba(93,62,164,.25), rgba(15,16,31,.2)); }
+.budget-heading-mark span { color: var(--fd-muted); font: 8px var(--fd-mono); }
+.budget-overview { display: grid; grid-template-columns: minmax(190px, 1.6fr) repeat(3, 1fr); gap: 10px; }
+.budget-overview-lead, .budget-stat { display: grid; gap: 4px; min-height: 104px; padding: 16px 18px; border: 1px solid var(--fd-line); border-radius: 14px; background: linear-gradient(145deg, #1b1832f5, #101321f5); }
+.budget-overview-lead { position: relative; overflow: hidden; border-color: rgba(161,132,255,.35); background: radial-gradient(circle at 90% 0, rgba(161,132,255,.23), transparent 45%), linear-gradient(145deg, #241b46, #111526); }
+.budget-overview-lead strong { margin-top: 1px; color: var(--fd-violet-hot); font: 700 32px var(--fd-mono); letter-spacing: -.08em; }
+.budget-overview-lead > span:not(.eyebrow) { margin-top: -8px; color: var(--fd-text-soft); font-size: 10px; }
+.budget-overview small, .budget-stat small { color: var(--fd-muted); font-size: 9px; }
+.budget-stat > span { color: var(--fd-text-soft); font-size: 10px; }
+.budget-stat strong { font: 700 27px var(--fd-mono); color: var(--fd-green); }
+.budget-stat-warning { border-color: rgba(255,156,98,.22); }
+.budget-stat-warning strong { color: var(--fd-orange); }
+.budget-stat-danger { border-color: rgba(255,110,147,.22); }
+.budget-stat-danger strong { color: var(--fd-rose); }
+.budget-panel { overflow: hidden; }
+.budget-section-heading { align-items: center; }
+.budget-help { color: var(--fd-muted); font-size: 9px; }
+.budget-panel .operation-row { grid-template-columns: minmax(220px, 1.25fr) minmax(150px, .8fr) minmax(420px, 2.2fr) auto 22px; align-items: center; gap: 13px; padding: 17px 22px; border-top-color: rgba(143,112,255,.13); }
+.budget-row-identity { display: flex; min-width: 0; align-items: center; gap: 10px; }
+.budget-row-identity > span { display: grid; min-width: 0; gap: 5px; }
+.budget-row-identity strong { overflow: hidden; color: var(--fd-text); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.budget-row-identity small { overflow: hidden; color: var(--fd-muted); font: 9px var(--fd-mono); text-overflow: ellipsis; white-space: nowrap; }
+.budget-provider-orb { display: grid; flex: 0 0 34px; width: 34px; height: 34px; place-items: center; border: 1px solid rgba(161,132,255,.3); border-radius: 10px; color: var(--fd-violet); background: #33255b; box-shadow: inset 0 1px rgba(255,255,255,.08); }
+.budget-row-state { display: grid; gap: 6px; min-width: 0; }
+.budget-row-state em { grid-column: auto; width: max-content; padding: 4px 8px; border: 1px solid rgba(70,223,176,.18); border-radius: 99px; color: var(--fd-green); background: rgba(70,223,176,.08); font-size: 9px; font-style: normal; font-weight: 800; }
+.budget-row-state em.warning { border-color: rgba(255,156,98,.22); color: var(--fd-orange); background: rgba(255,156,98,.08); }
+.budget-row-state em.danger { border-color: rgba(255,110,147,.22); color: var(--fd-rose); background: rgba(255,110,147,.08); }
+.budget-row-state em.pending { border-color: rgba(161,132,255,.22); color: var(--fd-violet-hot); background: rgba(161,132,255,.08); }
+.budget-row-state small { overflow: hidden; color: var(--fd-muted); font: 9px var(--fd-mono); text-overflow: ellipsis; white-space: nowrap; }
+.budget-fields { display: grid; grid-template-columns: repeat(4, minmax(82px, 1fr)); gap: 8px; }
+.budget-fields label { display: grid; gap: 5px; color: var(--fd-muted); font-size: 8px; font-weight: 700; }
+.budget-fields input { width: 100%; min-width: 0; height: 34px; padding: 7px 8px; border: 1px solid rgba(143,112,255,.16); border-radius: 8px; color: var(--fd-text); background: rgba(8,8,20,.65); font: 10px var(--fd-mono); }
+.budget-fields input:focus-visible { border-color: var(--fd-violet); outline: 0; box-shadow: 0 0 0 3px rgba(161,132,255,.14); }
+.budget-save { white-space: nowrap; }
+.budget-alert-icon { color: var(--fd-rose); filter: drop-shadow(0 0 8px rgba(255,110,147,.3)); }
+.budget-ok-icon { color: var(--fd-green); filter: drop-shadow(0 0 8px rgba(70,223,176,.25)); }
+.spin { animation: budget-spin .8s linear infinite; }
+@keyframes budget-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 899px) {
+  .budget-overview { grid-template-columns: repeat(2, 1fr); }
+  .budget-overview-lead { grid-column: 1 / -1; }
+  .budget-panel .operation-row { grid-template-columns: 1fr auto; align-items: start; }
+  .budget-row-identity { grid-column: 1; }
+  .budget-row-state { grid-column: 2; justify-items: end; }
+  .budget-fields { grid-column: 1 / -1; grid-template-columns: repeat(2, 1fr); width: 100%; }
+  .budget-save { grid-column: 1; justify-self: start; }
+  .budget-alert-icon, .budget-ok-icon { grid-column: 2; justify-self: end; align-self: center; }
+}
+
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
 @keyframes fd-view-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
 
 @media (min-width: 900px) {
