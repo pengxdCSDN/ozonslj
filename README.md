@@ -45,6 +45,7 @@ API/Worker 服务。Web 静态资源使用服务器 `deploy/web` 挂载目录发
 - [项目需求](./docs/REQUIREMENTS.md)
 - [项目需求 V3（待确认）](./docs/REQUIREMENTS_V3.md)
 - [项目需求 V4（已确认）](./docs/REQUIREMENTS_V4.md)
+- [需求文档 V5（已确认）](./docs/project-baseline/07-ozonslj需求文档-V5-已确认.md)
 - [数据库设计](./docs/DATABASE.md)
 - [接口文档](./docs/API.md)
 - [前后端开发规范](./docs/DEVELOPMENT_STANDARDS.md)
