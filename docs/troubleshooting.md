@@ -217,3 +217,29 @@ curl -fsS http://127.0.0.1/api/health/ready
 ```
 
 以后每次执行 `up -d --no-deps api worker` 后，必须同步重启 `web` 并验证登录/关键 API；发布脚本不得只更新 API/Worker 而跳过 Web upstream 刷新。若仍为 502，检查 `docker logs ozonslj-web-1` 中的 `connect() failed` 和 upstream 地址，再确认 API 容器监听 `8000` 且状态为 healthy。
+
+## 2026-08-14：SiliconFlow BAAI/bge-m3 返回 HTTP 400 参数无效
+
+### 根因
+
+OpenAI 兼容协议不代表所有供应商支持完全相同的可选字段。SiliconFlow 的 `BAAI/bge-m3` 请求必须使用 `/v1/embeddings`，不发送 `dimensions`；为避免网关对单条输入数组形态的差异，单条文本使用字符串，批量文本才使用字符串数组。供应商名称不能作为能力判断依据，必须结合实际请求域名。
+
+### 可复用规则
+
+- Embedding 请求默认只发送 `model` 和 `input`，供应商特有参数通过能力开关显式加入。
+- `api.siliconflow.cn` 下的 `BAAI/bge-m3` 禁止发送 `dimensions`。
+- 单条请求优先发送字符串；只有批量请求发送数组。
+- 仅在明确的供应商兼容模式下，对 HTTP 400 做一次相反输入形态重试；禁止无界重试或把所有 400 自动重试。
+- 上游错误只提取 `message`、`error_msg`、`detail`、`code` 等短摘要，不返回请求体、响应全文或 Authorization。
+- 真实外部验证必须使用临时内存凭据；凭据不得写入文件、数据库、日志、测试夹具或 Git。凭据一旦在聊天、截图或日志中暴露，应立即轮换。
+
+### 验证基线
+
+```json
+{
+  "model": "BAAI/bge-m3",
+  "input": "连接测试"
+}
+```
+
+目标地址为 `https://api.siliconflow.cn/v1/embeddings`，应以真实 HTTP 200 和合法向量响应作为连通性成功条件，不能只依据本地参数校验成功。
