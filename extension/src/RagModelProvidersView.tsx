@@ -75,7 +75,9 @@ export function RagModelProvidersView() {
   const [connectivityState, setConnectivityState] = useState<"idle" | "success" | "error">("idle");
   const [customAdapter, setCustomAdapter] = useState(false);
   const [adapterMenuOpen, setAdapterMenuOpen] = useState(false);
+  const [modelKindMenuOpen, setModelKindMenuOpen] = useState(false);
   const adapterMenuRef = useRef<HTMLDivElement>(null);
+  const modelKindMenuRef = useRef<HTMLDivElement>(null);
 
   const showSuccess = (text: string) => { setMessageTone("success"); setMessage(text); };
   const showError = (text: string) => { setMessageTone("error"); setMessage(text); };
@@ -121,6 +123,17 @@ export function RagModelProvidersView() {
     document.addEventListener("mousedown", closeMenu);
     return () => document.removeEventListener("mousedown", closeMenu);
   }, [adapterMenuOpen]);
+
+  useEffect(() => {
+    if (!modelKindMenuOpen) return;
+    const closeMenu = (event: MouseEvent) => {
+      if (modelKindMenuRef.current && !modelKindMenuRef.current.contains(event.target as Node)) {
+        setModelKindMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", closeMenu);
+    return () => document.removeEventListener("mousedown", closeMenu);
+  }, [modelKindMenuOpen]);
 
   const updateForm = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -331,7 +344,7 @@ export function RagModelProvidersView() {
           <div><span className="eyebrow">配置入口</span><h2>{editingId ? "编辑模型配置" : "新增模型配置"}</h2></div>
         </div>
         <div className="model-form-grid">
-          <label><span>模型类型</span><select value={form.model_kind} onChange={(event) => updateForm("model_kind", event.target.value as ModelKind)}><option value="embedding">向量模型 · Embedding</option><option value="rerank">重排序模型 · Reranker</option><option value="text">文本模型 · 翻译 / Agent</option></select></label>
+          <label><span>模型类型</span><div className="soft-select" ref={modelKindMenuRef}><button className="soft-select-trigger" type="button" aria-haspopup="listbox" aria-expanded={modelKindMenuOpen} onClick={() => setModelKindMenuOpen((current) => !current)}><span>{modelKindLabel(form.model_kind)}</span><CaretDown size={16} /></button>{modelKindMenuOpen ? <div className="soft-select-menu" role="listbox">{MODEL_KIND_OPTIONS.map((option) => <button className="soft-select-option" type="button" role="option" aria-selected={option.value === form.model_kind} key={option.value} onClick={() => { updateForm("model_kind", option.value); setModelKindMenuOpen(false); }}><span>{option.label}</span>{option.value === form.model_kind ? <Check className="soft-select-check" size={15} weight="bold" /> : null}</button>)}</div> : null}</div></label>
           <label><span>供应商名称</span><input value={form.name} onChange={(event) => updateForm("name", event.target.value)} placeholder="例如：阿里云百炼 / SiliconFlow" /></label>
           <label><span>调用协议</span><div className="soft-select" ref={adapterMenuRef}><button className="soft-select-trigger" type="button" aria-haspopup="listbox" aria-expanded={adapterMenuOpen} onClick={() => setAdapterMenuOpen((current) => !current)}><span>{customAdapter ? "自定义协议" : ADAPTER_OPTIONS.find((option) => option.value === form.adapter_type)?.label ?? form.adapter_type}</span><CaretDown size={16} /></button>{adapterMenuOpen ? <div className="soft-select-menu" role="listbox">{ADAPTER_OPTIONS.map((option) => { const selected = option.value === (customAdapter ? "custom" : form.adapter_type); return <button className="soft-select-option" type="button" role="option" aria-selected={selected} key={option.value} onClick={() => { setAdapterMenuOpen(false); setCustomAdapter(option.value === "custom"); if (option.value !== "custom") updateForm("adapter_type", option.value); }}><span>{option.label}</span>{selected ? <Check className="soft-select-check" size={15} weight="bold" /> : null}</button>; })}</div> : null}</div>{customAdapter ? <input value={form.adapter_type === "openai-compatible" ? "" : form.adapter_type} onChange={(event) => updateForm("adapter_type", event.target.value)} placeholder="输入协议标识" required /> : null}</label>
           <label className="model-field"><span>Model <em>必填</em></span><input value={form.model} onChange={(event) => updateForm("model", event.target.value)} placeholder="text-embedding-v4 / Qwen/Qwen2.5-7B-Instruct" /></label>
@@ -368,6 +381,16 @@ function sortedProviders(providers: RagModelProvider[], kind: ModelKind) {
 
 function purposeLabel(purpose: RagModelPurpose) {
   return purpose === "embedding" ? "向量化" : TEXT_PURPOSES.find((item) => item.key === purpose)?.label ?? purpose;
+}
+
+const MODEL_KIND_OPTIONS: Array<{ value: ModelKind; label: string }> = [
+  { value: "embedding", label: "向量模型 · Embedding" },
+  { value: "rerank", label: "重排序模型 · Reranker" },
+  { value: "text", label: "文本模型 · 翻译 / Agent" },
+];
+
+function modelKindLabel(kind: ModelKind): string {
+  return MODEL_KIND_OPTIONS.find((option) => option.value === kind)?.label ?? "选择模型类型";
 }
 
 function validateModelEndpoint(kind: ModelKind, model: string, baseUrl: string): string | null {
