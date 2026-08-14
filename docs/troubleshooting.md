@@ -187,6 +187,20 @@ pnpm typecheck
 pnpm build
 ```
 
+## 2026-08-14：浏览器拒绝执行前端模块脚本
+
+### 现象
+
+浏览器控制台提示 `Failed to load module script`，并显示服务器返回 `text/html`，页面为空白。
+
+### 原因与修复
+
+Web 发布目录中的 `index.html` 引用了不存在的哈希 JS/CSS 文件。Nginx 的 `try_files` 将缺失的
+静态资源回退到 `/index.html`，导致模块请求收到 HTML，触发浏览器的严格 MIME 检查。
+构建 Web 版本时必须使用 `vite build --mode web`，并将生成的 `index.html` 与整个 `assets/`
+目录成套同步到 `deploy/web`；不能只替换 HTML 或只上传单个资源。发布后逐一检查首页、哈希
+JS/CSS 均返回 200，且 JS 的 `Content-Type` 为 JavaScript 类型。
+
 如果 npm 或 Playwright 缓存仍报 `EPERM`，先确认没有遗留的 Node、Vite 或浏览器自动化进程，再使用已批准的非沙箱执行权限；不要循环重试同一个失败命令。
 
 ### 预防措施

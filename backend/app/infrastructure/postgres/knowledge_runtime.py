@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import date
 from typing import Literal, Protocol, cast
 
 from psycopg.rows import dict_row
@@ -13,6 +14,7 @@ from backend.app.domain.knowledge_chunking import ChunkMetadata, KnowledgeChunk
 from backend.app.domain.knowledge_governance import KnowledgeSource, KnowledgeVersion
 from backend.app.domain.knowledge_query import KnowledgeQueryEngine
 from backend.app.domain.knowledge_retrieval import DeterministicEmbedding, EmbeddingPort
+from backend.app.domain.model_budget import ModelBudgetPolicy, ModelBudgetUsage, decide_budget
 from backend.app.infrastructure.cloud_models import CloudModelError, DashScopeEmbeddingClient
 from backend.app.infrastructure.local.chroma_vector_index import (
     HttpChromaCollection,
@@ -48,15 +50,16 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
         self._organization_id = organization_id
         self._credentials = credentials
         self._fallback = fallback
-
-    @property
-    def dimension(self) -> int:
-        return self._fallback.dimension
+        self.model_id = fallback.model_id
+        self.dimension = fallback.dimension
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         candidates = await self._candidates()
         errors: list[str] = []
         for provider_id, model, base_url, _credential_ref in candidates:
+            if not await self._budget_allows(provider_id):
+                errors.append(f"{provider_id}:budget_exceeded")
+                continue
             api_key = await self._credentials.get(provider_id)
             if not api_key:
                 errors.append(f"{provider_id}:credential_missing")
@@ -70,12 +73,74 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
                     model=model,
                     dimension=self.dimension,
                 )
-                return await client.embed(texts)
+                vectors = await client.embed(texts)
+                await self._record_usage(provider_id, client.last_usage.total_tokens)
+                return vectors
             except (CloudModelError, TimeoutError, RuntimeError) as error:
                 errors.append(f"{provider_id}:{type(error).__name__}")
         if candidates:
             raise RuntimeError("所有已配置向量供应商均不可用，已安全降级：" + ",".join(errors))
         return await self._fallback.embed(texts)
+
+    async def _budget_allows(self, provider_id: str) -> bool:
+        """调用前读取同一组织、同一用途的预算门禁，超限不再消耗供应商额度。"""
+        period_start = _period_start()
+        async with self._pool.connection() as connection, connection.cursor(
+            row_factory=dict_row
+        ) as cursor:
+            await _set_scope(connection, self._organization_id)
+            await cursor.execute(
+                """
+                SELECT p.daily_token_limit, p.monthly_token_limit, p.daily_request_limit,
+                       p.monthly_budget, u.daily_tokens, u.monthly_tokens,
+                       u.daily_requests, u.monthly_cost
+                FROM rag_model_budget_policies p
+                LEFT JOIN rag_model_budget_usage u
+                  ON u.organization_id=p.organization_id AND u.provider_id=p.provider_id
+                 AND u.purpose=p.purpose AND u.period_start=%s
+                WHERE p.organization_id=%s AND p.provider_id=%s AND p.purpose='embedding'
+                """,
+                (period_start, self._organization_id, provider_id),
+            )
+            row = await cursor.fetchone()
+        if row is None:
+            return True
+        policy = ModelBudgetPolicy(
+            provider_id=provider_id,
+            daily_token_limit=int(row["daily_token_limit"]),
+            monthly_token_limit=int(row["monthly_token_limit"]),
+            daily_request_limit=int(row["daily_request_limit"]),
+            monthly_budget=float(row["monthly_budget"]),
+            purpose="embedding",
+        )
+        usage = ModelBudgetUsage(
+            daily_tokens=int(row["daily_tokens"] or 0),
+            monthly_tokens=int(row["monthly_tokens"] or 0),
+            daily_requests=int(row["daily_requests"] or 0),
+            monthly_cost=float(row["monthly_cost"] or 0),
+        )
+        return decide_budget(policy, usage).allowed
+
+    async def _record_usage(self, provider_id: str, total_tokens: int) -> None:
+        """将真实响应 token 和一次请求原子累加到应用台账。"""
+        period_start = _period_start()
+        async with self._pool.connection() as connection, connection.transaction():
+            await _set_scope(connection, self._organization_id)
+            await connection.execute(
+                """
+                INSERT INTO rag_model_budget_usage
+                    (organization_id, provider_id, purpose, period_start,
+                     daily_tokens, monthly_tokens, daily_requests, monthly_cost)
+                VALUES (%s, %s, 'embedding', %s, %s, %s, 1, 0)
+                ON CONFLICT (organization_id, provider_id, purpose, period_start)
+                DO UPDATE SET
+                    daily_tokens=rag_model_budget_usage.daily_tokens+EXCLUDED.daily_tokens,
+                    monthly_tokens=rag_model_budget_usage.monthly_tokens+EXCLUDED.monthly_tokens,
+                    daily_requests=rag_model_budget_usage.daily_requests+1,
+                    updated_at=CURRENT_TIMESTAMP
+                """,
+                (self._organization_id, provider_id, period_start, total_tokens, total_tokens),
+            )
 
     async def _candidates(self) -> list[tuple[str, str, str, str | None]]:
         async with self._pool.connection() as connection, connection.cursor(
@@ -96,6 +161,11 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
             (str(row["id"]), str(row["model"]), str(row["base_url"]), row["credential_ref"])
             for row in rows
         ]
+
+
+def _period_start() -> date:
+    today = date.today()
+    return today.replace(day=1)
 
 
 class PostgresChromaKnowledgeRuntime:
@@ -123,6 +193,7 @@ class PostgresChromaKnowledgeRuntime:
         # 未配置云端 Key 时保留确定性实现，便于本地迁移和健康检查；生产启用真实
         # Embedding 前必须显式注入 RAG_EMBEDDING_API_KEY，并为新维度重建 Chroma 索引。
         self._embedding: EmbeddingPort
+        configured_embedding: EmbeddingPort
         if settings.rag_embedding_api_key:
             if settings.rag_embedding_provider not in {None, "dashscope"}:
                 raise ValueError("当前生产运行时只允许使用已实现的 DashScope Embedding 适配器")

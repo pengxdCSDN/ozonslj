@@ -8,12 +8,22 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
 
 from backend.app.domain.knowledge_retrieval import EmbeddingPort
+
+
+@dataclass(frozen=True, slots=True)
+class CloudModelUsage:
+    """供应商响应中的脱敏用量；不保存提示词、响应正文或密钥。"""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
 
 
 class CloudModelError(RuntimeError):
@@ -114,6 +124,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         self._endpoint = f"{base_url.rstrip('/')}/embeddings"
         self._timeout = httpx.Timeout(timeout_seconds)
         self._transport = transport
+        self.last_usage = CloudModelUsage()
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
@@ -136,6 +147,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
                 raise
             payload["input"] = texts
             response = await self._post(payload)
+        self.last_usage = _usage_from_response(response)
         data = response.get("data")
         if not isinstance(data, list) or len(data) != len(texts):
             raise CloudModelError("Embedding 响应数量与输入不一致")
@@ -240,6 +252,7 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
             )
         try:
             result = response.json()
+            self.last_usage = _usage_from_response(result)
             translated = result["choices"][0]["message"]["content"]
         except (json.JSONDecodeError, KeyError, IndexError, TypeError) as error:
             raise CloudModelError("翻译响应结构无效") from error
@@ -285,3 +298,18 @@ def _safe_upstream_error_message(response: httpx.Response, fallback: str) -> str
         return fallback
     # 只返回短错误摘要；不记录请求体、响应体、Authorization 或其他敏感字段。
     return f"{fallback}：{detail[:240]}"
+
+
+def _usage_from_response(response: dict[str, Any]) -> CloudModelUsage:
+    """兼容 OpenAI-compatible usage 结构，缺失时保守记为零 token。"""
+    raw = response.get("usage")
+    if not isinstance(raw, dict):
+        return CloudModelUsage()
+    input_tokens = _non_negative_int(raw.get("prompt_tokens", raw.get("input_tokens")))
+    output_tokens = _non_negative_int(raw.get("completion_tokens", raw.get("output_tokens")))
+    total_tokens = _non_negative_int(raw.get("total_tokens")) or input_tokens + output_tokens
+    return CloudModelUsage(input_tokens, output_tokens, total_tokens)
+
+
+def _non_negative_int(value: object) -> int:
+    return value if isinstance(value, int) and value >= 0 else 0

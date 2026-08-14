@@ -51,6 +51,7 @@ export interface ModelBudget {
     monthly_token_limit: number;
     daily_request_limit: number;
     monthly_budget: number;
+    budget_currency: "RMB";
     purpose: string;
   };
   usage: {
@@ -909,6 +910,19 @@ export function submitKnowledgeFeedback(answerId: string, reason: string, note?:
 
 export function listModelBudgets(): Promise<ModelBudget[]> {
   return requestJson("/v1/model-budgets", { method: "GET" });
+}
+
+export function saveModelBudget(providerId: string, payload: {
+  daily_token_limit: number;
+  monthly_token_limit: number;
+  daily_request_limit: number;
+  monthly_budget: number;
+  budget_currency: "RMB";
+  purpose: string;
+}): Promise<ModelBudget> {
+  return requestJson(`/v1/model-budgets/${encodeURIComponent(providerId)}`, {
+    method: "PUT", body: JSON.stringify(payload),
+  });
 }
 
 /** 供应商适配器名称可扩展，不能把示例供应商固化为有限枚举。 */
