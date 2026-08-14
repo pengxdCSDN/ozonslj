@@ -301,14 +301,14 @@ export function RagModelProvidersView() {
         </button>
       </section>
 
-      <div
-        className={`model-pool-callout message_${messageTone}${connectivityState === "success" ? " is-success" : connectivityState === "error" ? " is-error" : ""}`}
+      {message ? <div
+        className={`feedback-toast message_${messageTone}${connectivityState === "success" ? " is-success" : connectivityState === "error" ? " is-error" : ""}`}
         role={messageTone === "error" ? "alert" : "status"}
         aria-live="polite"
       >
-        {connectivityState === "success" ? <CheckCircle size={17} /> : connectivityState === "error" ? <WarningCircle size={17} /> : <ShieldCheck size={17} />}
+        {messageTone === "success" ? <CheckCircle size={17} /> : messageTone === "error" ? <WarningCircle size={17} /> : <ShieldCheck size={17} />}
         <span>{message}</span>
-      </div>
+      </div> : null}
 
       <section className="panel model-form-panel">
         <div className="section-heading model-form-heading">
