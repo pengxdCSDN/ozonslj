@@ -23,6 +23,10 @@ class PerformanceCredentialGateway(Protocol):
         self, *, workspace_id: str,
     ) -> tuple[str, str] | None: ...
 
+    async def get_access_token(
+        self, *, workspace_id: str,
+    ) -> tuple[str, str] | None: ...
+
     async def save_tokens(
         self, *, workspace_id: str, access_token: str, refresh_token: str | None,
         expires_at: str, client_id_present: bool,

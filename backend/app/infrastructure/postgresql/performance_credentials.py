@@ -101,6 +101,9 @@ class PostgresPerformanceCredentialGateway:
     async def get_client_credentials(self, *, workspace_id: str) -> tuple[str, str] | None:
         return await asyncio.to_thread(self._get_client_credentials, workspace_id)
 
+    async def get_access_token(self, *, workspace_id: str) -> tuple[str, str] | None:
+        return await asyncio.to_thread(self._get_access_token, workspace_id)
+
     def _get_client_credentials(self, workspace_id: str) -> tuple[str, str] | None:
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
@@ -120,6 +123,26 @@ class PostgresPerformanceCredentialGateway:
             self._protector.unprotect(
                 row["encrypted_client_secret"], credential_version=self._protector.key_version,
             ),
+        )
+
+    def _get_access_token(self, workspace_id: str) -> tuple[str, str] | None:
+        """读取解密后的令牌和过期时间，仅供后端外部 API 适配器使用。"""
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
+                """
+                SELECT encrypted_access_token, expires_at
+                FROM performance_oauth_credentials
+                WHERE organization_id = %s AND workspace_id = %s
+                """,
+                (self._context.organization_id, workspace_id),
+            ).fetchone()
+        if row is None or not row["encrypted_access_token"] or row["expires_at"] is None:
+            return None
+        return (
+            self._protector.unprotect(
+                row["encrypted_access_token"], credential_version=self._protector.key_version,
+            ),
+            row["expires_at"].isoformat(),
         )
 
     def _get_status(self, workspace_id: str) -> PerformanceCredentialStatus | None:

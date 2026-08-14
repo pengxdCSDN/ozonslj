@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { getPerformanceCredentialStatus, savePerformanceClientCredentials, requestPerformanceToken, type PerformanceCredentialStatus } from "./api";
+import {
+  fetchPerformanceCampaigns,
+  getPerformanceCredentialStatus,
+  requestPerformanceToken,
+  savePerformanceClientCredentials,
+  type PerformanceCredentialStatus,
+} from "./api";
 
 interface Props { workspaceId: string; }
 
@@ -13,26 +19,37 @@ export function PerformanceOAuthView({ workspaceId }: Props) {
   const load = async () => {
     setBusy(true);
     try { setStatus(await getPerformanceCredentialStatus(workspaceId)); setMessage(""); }
-    catch { setStatus(null); setMessage("尚未配置 Performance Client ID 和 Client Secret。"); }
+    catch { setStatus(null); setMessage("尚未配置 Performance Client ID 和 Client Secret。 "); }
     finally { setBusy(false); }
   };
   useEffect(() => { void load(); }, [workspaceId]);
 
   const save = async () => {
-    if (!clientId.trim() || !clientSecret.trim()) { setMessage("请填写 Client ID 和 Client Secret。"); return; }
+    if (!clientId.trim() || !clientSecret.trim()) { setMessage("请填写 Client ID 和 Client Secret。 "); return; }
     setBusy(true);
     try {
       setStatus(await savePerformanceClientCredentials(workspaceId, { client_id: clientId, client_secret: clientSecret }));
       setClientSecret("");
-      setMessage("Client ID 和 Client Secret 已加密保存。");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "保存失败，请检查字段后重试。"); }
+      setMessage("Client ID 和 Client Secret 已加密保存。 ");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "保存失败，请检查字段后重试。 "); }
     finally { setBusy(false); }
   };
 
   const fetchToken = async () => {
     setBusy(true);
-    try { setStatus(await requestPerformanceToken(workspaceId)); setMessage("Performance API Token 获取成功，连接已验证。"); }
-    catch (error) { setMessage(error instanceof Error ? error.message : "Token 获取失败，请检查 Client ID 和 Secret。"); }
+    try { setStatus(await requestPerformanceToken(workspaceId)); setMessage("Performance API Token 获取成功，连接已验证。 "); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "Token 获取失败，请检查 Client ID 和 Secret。 "); }
+    finally { setBusy(false); }
+  };
+
+  const fetchCampaigns = async () => {
+    setBusy(true);
+    try {
+      const result = await fetchPerformanceCampaigns(workspaceId);
+      const candidates = result.list ?? result.campaigns ?? result.items;
+      const count = Array.isArray(candidates) ? candidates.length : null;
+      setMessage(count === null ? "真实只读接口已调通，已收到广告活动响应。" : `真实只读接口已调通，收到 ${count} 个广告活动。`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "广告活动只读接口调用失败，请检查 Performance 权限。 "); }
     finally { setBusy(false); }
   };
 
@@ -44,7 +61,7 @@ export function PerformanceOAuthView({ workspaceId }: Props) {
         <div className="form-title"><span>01</span><div><h2>Ozon Performance 服务账号</h2><p>从 Ozon Seller 的“分析 → 外部流量 → 服务账号”获取这两个值。</p></div></div>
         <label>Client ID<input value={clientId} onChange={(event) => setClientId(event.target.value)} autoComplete="off" placeholder="粘贴 Performance Client ID" /></label>
         <label>Client Secret<input type="password" value={clientSecret} onChange={(event) => setClientSecret(event.target.value)} autoComplete="new-password" placeholder="粘贴 Performance Client Secret" /></label>
-        <div className="credential-actions"><button className="primary-button" disabled={busy} onClick={() => void save()}>加密保存密钥</button><button className="secondary-button" disabled={busy} onClick={() => void fetchToken()}>获取 Token 并测试连接</button></div>
+        <div className="credential-actions"><button className="primary-button" disabled={busy} onClick={() => void save()}>加密保存密钥</button><button className="secondary-button" disabled={busy} onClick={() => void fetchToken()}>获取 Token 并测试连接</button><button className="secondary-button" disabled={busy || !status?.access_token_present} onClick={() => void fetchCampaigns()}>读取广告活动（只读）</button></div>
       </div>
       {message ? <p className="form-message" role="status">{message}</p> : null}
     </section>

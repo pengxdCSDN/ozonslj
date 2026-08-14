@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,7 +15,9 @@ from backend.app.domain.performance_credentials import (
 from backend.app.domain.performance_oauth import PerformanceToken, build_performance_token
 from backend.app.domain.store_workspace import StoreWorkspaceGateway
 from backend.app.infrastructure.ozon.performance_client import (
+    PerformanceApiError,
     PerformanceTokenError,
+    fetch_performance_campaigns,
     request_performance_token,
 )
 
@@ -159,4 +161,56 @@ async def refresh_performance_token(
         raise HTTPException(
             status_code=502,
             detail={"code": "performance_token_request_failed", "message": str(error)},
+        ) from error
+
+
+async def _ensure_performance_access_token(
+    workspace_id: str, gateway: PerformanceCredentialGateway,
+) -> str:
+    """在真实只读调用前复用有效令牌，临近过期时自动换取新令牌。"""
+    current = await gateway.get_access_token(workspace_id=workspace_id)
+    if current is not None:
+        token, stored_expires_at = current
+        expiry = datetime.fromisoformat(stored_expires_at.replace("Z", "+00:00"))
+        if expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=UTC)
+        if expiry > datetime.now(UTC) + timedelta(seconds=60):
+            return token
+    credentials = await gateway.get_client_credentials(workspace_id=workspace_id)
+    if credentials is None:
+        raise HTTPException(
+            status_code=422, detail={"code": "performance_client_credentials_missing"}
+        )
+    try:
+        token, token_expires_at = await request_performance_token(
+            client_id=credentials[0], client_secret=credentials[1],
+        )
+        await gateway.save_tokens(
+            workspace_id=workspace_id, client_id_present=True, access_token=token,
+            refresh_token=None, expires_at=token_expires_at.isoformat(),
+        )
+        return token
+    except PerformanceTokenError as error:
+        raise HTTPException(
+            status_code=502,
+            detail={"code": "performance_token_request_failed", "message": str(error)},
+        ) from error
+
+
+@router.get("/store-workspaces/{workspace_id}/campaigns")
+async def list_performance_campaigns(
+    workspace_id: str,
+    gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
+    workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
+) -> dict[str, object]:
+    """自动刷新令牌后读取 Performance 广告活动；该接口只读。"""
+    if await workspace_gateway.get_workspace(workspace_id) is None:
+        raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
+    token = await _ensure_performance_access_token(workspace_id, gateway)
+    try:
+        return await fetch_performance_campaigns(access_token=token)
+    except PerformanceApiError as error:
+        raise HTTPException(
+            status_code=502,
+            detail={"code": "performance_campaign_request_failed", "message": str(error)},
         ) from error

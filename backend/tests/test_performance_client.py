@@ -4,7 +4,10 @@ from datetime import UTC
 import httpx
 import pytest
 
-from backend.app.infrastructure.ozon.performance_client import request_performance_token
+from backend.app.infrastructure.ozon.performance_client import (
+    fetch_performance_campaigns,
+    request_performance_token,
+)
 
 
 @pytest.mark.asyncio
@@ -27,3 +30,18 @@ async def test_request_performance_token_uses_client_credentials() -> None:
 
     assert token == "access"
     assert expires_at.tzinfo == UTC
+
+
+@pytest.mark.asyncio
+async def test_fetch_performance_campaigns_is_read_only() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/api/client/campaign"
+        assert request.headers["authorization"] == "Bearer access"
+        return httpx.Response(200, json={"list": [{"id": "1"}]})
+
+    result = await fetch_performance_campaigns(
+        access_token="access", transport=httpx.MockTransport(handler),
+    )
+
+    assert result == {"list": [{"id": "1"}]}
