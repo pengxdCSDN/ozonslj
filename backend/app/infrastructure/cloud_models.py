@@ -205,13 +205,23 @@ def _safe_upstream_error_message(response: httpx.Response, fallback: str) -> str
     try:
         body = response.json()
     except (json.JSONDecodeError, ValueError):
-        return fallback
+        text = response.text.strip()
+        return f"{fallback}：{text[:240]}" if text else fallback
     if not isinstance(body, dict):
         return fallback
     error = body.get("error")
-    candidates: list[object] = [body.get("message"), body.get("code")]
+    candidates: list[object] = [
+        body.get("message"),
+        body.get("error_msg"),
+        body.get("detail"),
+        body.get("code"),
+    ]
     if isinstance(error, dict):
-        candidates.extend([error.get("message"), error.get("code")])
+        candidates.extend(
+            [error.get("message"), error.get("error_msg"), error.get("detail"), error.get("code")]
+        )
+    elif isinstance(error, str):
+        candidates.append(error)
     detail = next((str(item).strip() for item in candidates if item), "")
     if not detail:
         return fallback
