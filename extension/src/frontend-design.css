@@ -275,3 +275,21 @@ h1, h2, h3, strong { font-family: var(--fd-display); }
   .view-content { animation: none; }
   .view-tabs button, .primary-button, .secondary-button, .verify-button, .operation-row { transition: none; }
 }
+
+/* 所有后端操作共用的结果语义：成功、失败和处理中不能只靠颜色区分。 */
+.message_success,
+.message_error {
+  border-left-width: 3px;
+}
+
+.message_success {
+  border-color: rgba(65, 211, 167, .55) !important;
+  border-left-color: #5ce0ba !important;
+  color: #baf4df !important;
+}
+
+.message_error {
+  border-color: rgba(240, 120, 154, .65) !important;
+  border-left-color: #f0789a !important;
+  color: #ffd2dc !important;
+}

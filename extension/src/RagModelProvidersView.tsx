@@ -71,10 +71,15 @@ export function RagModelProvidersView() {
   const [busy, setBusy] = useState(false);
   const [testingConnectivity, setTestingConnectivity] = useState(false);
   const [message, setMessage] = useState("先新增模型配置，再按优先级生成自动降级链。");
+  const [messageTone, setMessageTone] = useState<"success" | "error" | "info">("info");
   const [connectivityState, setConnectivityState] = useState<"idle" | "success" | "error">("idle");
   const [customAdapter, setCustomAdapter] = useState(false);
   const [adapterMenuOpen, setAdapterMenuOpen] = useState(false);
   const adapterMenuRef = useRef<HTMLDivElement>(null);
+
+  const showSuccess = (text: string) => { setMessageTone("success"); setMessage(text); };
+  const showError = (text: string) => { setMessageTone("error"); setMessage(text); };
+  const showInfo = (text: string) => { setMessageTone("info"); setMessage(text); };
 
   const refresh = async () => {
     setBusy(true);
@@ -86,9 +91,9 @@ export function RagModelProvidersView() {
       ]);
       setProviders(nextProviders);
       setBindings(nextBindings);
-      setMessage(nextProviders.length ? "配置已刷新。优先级数字越小，越优先使用。" : "还没有模型配置，请从上方新增。");
+      showSuccess(nextProviders.length ? "配置已刷新。优先级数字越小，越优先使用。" : "还没有模型配置，请从上方新增。");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "模型配置加载失败");
+      showError(error instanceof Error ? error.message : "模型配置加载失败");
     } finally {
       setBusy(false);
     }
@@ -119,11 +124,11 @@ export function RagModelProvidersView() {
 
   const submit = async () => {
     if (!form.name.trim() || !form.adapter_type.trim() || !form.model.trim() || !form.base_url.trim()) {
-      setMessage("请填写供应商名称、调用协议、Model 和 Base URL。");
+      showError("请填写供应商名称、调用协议、Model 和 Base URL。");
       return;
     }
     if (!editingId && !form.api_key.trim()) {
-      setMessage("新增配置必须填写 API Key；编辑时留空表示保留原 Key。");
+      showError("新增配置必须填写 API Key；编辑时留空表示保留原 Key。");
       return;
     }
     setBusy(true);
@@ -140,15 +145,15 @@ export function RagModelProvidersView() {
       if (form.api_key.trim()) payload.api_key = form.api_key.trim();
       if (editingId) {
         await updateRagModelProvider(editingId, payload);
-        setMessage("模型配置已更新。");
+        showSuccess("模型配置已更新。");
       } else {
         await createRagModelProvider({ ...payload, api_key: form.api_key.trim() });
-        setMessage("模型配置已新增。请在下方生成用途路由。");
+        showSuccess("模型配置已新增。请在下方生成用途路由。");
       }
       resetForm();
       await refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "模型配置保存失败");
+      showError(error instanceof Error ? error.message : "模型配置保存失败");
       setBusy(false);
     }
   };
@@ -165,7 +170,7 @@ export function RagModelProvidersView() {
       model_kind: provider.model_kind,
     });
     setCustomAdapter(!["openai-compatible", "dashscope", "siliconflow", "zhipu"].includes(provider.adapter_type));
-    setMessage("正在编辑；API Key 留空会保留服务端已有凭据。");
+    showInfo("正在编辑；API Key 留空会保留服务端已有凭据。");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -184,7 +189,7 @@ export function RagModelProvidersView() {
       });
       await refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "模型状态更新失败");
+      showError(error instanceof Error ? error.message : "模型状态更新失败");
       setBusy(false);
     }
   };
@@ -196,9 +201,9 @@ export function RagModelProvidersView() {
     try {
       await deleteRagModelProvider(provider.provider_id);
       await refresh();
-      setMessage("模型配置已删除。");
+      showSuccess("模型配置已删除。");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "模型删除失败；已绑定用途请先重新生成路由。");
+      showError(error instanceof Error ? error.message : "模型删除失败；已绑定用途请先重新生成路由。");
       setBusy(false);
     }
   };
@@ -212,7 +217,7 @@ export function RagModelProvidersView() {
     ].filter(Boolean);
     if (missingFields.length) {
       setConnectivityState("error");
-      setMessage(`测试连接未执行：请填写${missingFields.join("、")}。`);
+      showError(`测试连接未执行：请填写${missingFields.join("、")}。`);
       return;
     }
     let parsedUrl: URL;
@@ -220,12 +225,12 @@ export function RagModelProvidersView() {
       parsedUrl = new URL(form.base_url.trim());
     } catch {
       setConnectivityState("error");
-      setMessage("测试连接未执行：Base URL 不是合法地址，请填写 https:// 开头的接口根地址。");
+      showError("测试连接未执行：Base URL 不是合法地址，请填写 https:// 开头的接口根地址。");
       return;
     }
     if (!['https:', 'http:'].includes(parsedUrl.protocol) || (parsedUrl.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(parsedUrl.hostname))) {
       setConnectivityState("error");
-      setMessage("测试连接未执行：Base URL 必须使用 HTTPS 地址。");
+      showError("测试连接未执行：Base URL 必须使用 HTTPS 地址。");
       return;
     }
     setBusy(true);
@@ -241,10 +246,10 @@ export function RagModelProvidersView() {
         ...(editingId ? { provider_id: editingId } : {}),
       });
       setConnectivityState(result.ok ? "success" : "error");
-      setMessage(`${result.ok ? "连接成功" : "连接失败"}：${result.message} · 外部请求${result.external_request_sent ? "已发出" : "未发出"} · ${result.endpoint_host}${result.http_status ? ` · HTTP ${result.http_status}` : ""}`);
+      (result.ok ? showSuccess : showError)(`${result.ok ? "连接成功" : "连接失败"}：${result.message} · 外部请求${result.external_request_sent ? "已发出" : "未发出"} · ${result.endpoint_host}${result.http_status ? ` · HTTP ${result.http_status}` : ""}`);
     } catch (error) {
       setConnectivityState("error");
-      setMessage(error instanceof Error ? error.message : "模型连接测试失败");
+      showError(error instanceof Error ? error.message : "模型连接测试失败");
     } finally {
       setTestingConnectivity(false);
       setBusy(false);
@@ -256,7 +261,7 @@ export function RagModelProvidersView() {
       .filter((provider) => provider.enabled && provider.model_kind === kind)
       .sort((left, right) => left.priority - right.priority || left.provider_id.localeCompare(right.provider_id));
     if (!candidates.length) {
-      setMessage(`${kind === "embedding" ? "向量" : "文本"}模型池没有启用的候选。`);
+      showError(`${kind === "embedding" ? "向量" : "文本"}模型池没有启用的候选。`);
       return;
     }
     setBusy(true);
@@ -267,9 +272,9 @@ export function RagModelProvidersView() {
         fallback_provider_ids: candidates.slice(1).map((provider) => provider.provider_id),
       });
       await refresh();
-      setMessage(`${purposeLabel(purpose)} 已生成 ${candidates.length} 级自动降级链。`);
+      showSuccess(`${purposeLabel(purpose)} 已生成 ${candidates.length} 级自动降级链。`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "自动降级链保存失败");
+      showError(error instanceof Error ? error.message : "自动降级链保存失败");
       setBusy(false);
     }
   };
@@ -291,8 +296,8 @@ export function RagModelProvidersView() {
       </section>
 
       <div
-        className={`model-pool-callout${connectivityState === "success" ? " is-success" : connectivityState === "error" ? " is-error" : ""}`}
-        role={connectivityState === "error" ? "alert" : "status"}
+        className={`model-pool-callout message_${messageTone}${connectivityState === "success" ? " is-success" : connectivityState === "error" ? " is-error" : ""}`}
+        role={messageTone === "error" ? "alert" : "status"}
         aria-live="polite"
       >
         {connectivityState === "success" ? <CheckCircle size={17} /> : connectivityState === "error" ? <WarningCircle size={17} /> : <ShieldCheck size={17} />}
