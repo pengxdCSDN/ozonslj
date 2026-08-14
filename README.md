@@ -52,6 +52,7 @@ API/Worker 服务。Web 静态资源使用服务器 `deploy/web` 挂载目录发
 - [开发计划](./docs/PROJECT_PLAN.md)
 - [Linux 部署](./docs/DEPLOYMENT.md)
 - [前后端可复用修复基线](./docs/FRONTEND_REUSABLE_FIXES.md)
+- [当前项目文档基线（Obsidian 00–24）](./docs/project-baseline/00-ozonslj项目文档索引.md)
 
 ## 完整检查
 
