@@ -73,7 +73,6 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         payload = {
             "model": self.model_id,
             "input": texts,
-            "encoding_format": "float",
         }
         if self.send_dimensions:
             payload["dimensions"] = self.dimension
