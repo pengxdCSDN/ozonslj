@@ -14,6 +14,10 @@ from backend.app.domain.performance_credentials import (
 )
 from backend.app.domain.performance_oauth import PerformanceToken, build_performance_token
 from backend.app.domain.store_workspace import StoreWorkspaceGateway
+from backend.app.infrastructure.ozon.performance_client import (
+    PerformanceTokenError,
+    request_performance_token,
+)
 
 router = APIRouter(prefix="/v1/advertising/performance-oauth", tags=["advertising"])
 
@@ -31,6 +35,11 @@ class SavePerformanceCredentialPayload(BaseModel):
     access_token: SecretStr
     refresh_token: SecretStr | None = None
     expires_at: datetime
+
+
+class SavePerformanceClientCredentialsPayload(BaseModel):
+    client_id: str
+    client_secret: SecretStr
 
 
 @router.post("/inspect", response_model=PerformanceToken)
@@ -92,3 +101,62 @@ async def get_performance_credentials_status(
     if status_result is None:
         raise HTTPException(status_code=404, detail={"code": "performance_credentials_not_found"})
     return status_result
+
+
+@router.post(
+    "/store-workspaces/{workspace_id}/client-credentials",
+    response_model=PerformanceCredentialStatus,
+)
+async def save_performance_client_credentials(
+    workspace_id: str,
+    payload: SavePerformanceClientCredentialsPayload,
+    gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
+    workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
+) -> PerformanceCredentialStatus:
+    if await workspace_gateway.get_workspace(workspace_id) is None:
+        raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
+    try:
+        return await gateway.save_client_credentials(
+            workspace_id=workspace_id,
+            client_id=payload.client_id,
+            client_secret=payload.client_secret.get_secret_value(),
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "performance_client_credentials_invalid", "message": str(error)},
+        ) from error
+
+
+@router.post(
+    "/store-workspaces/{workspace_id}/token",
+    response_model=PerformanceCredentialStatus,
+)
+async def refresh_performance_token(
+    workspace_id: str,
+    gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
+    workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
+) -> PerformanceCredentialStatus:
+    if await workspace_gateway.get_workspace(workspace_id) is None:
+        raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
+    credentials = await gateway.get_client_credentials(workspace_id=workspace_id)
+    if credentials is None:
+        raise HTTPException(
+            status_code=422, detail={"code": "performance_client_credentials_missing"}
+        )
+    try:
+        access_token, expires_at = await request_performance_token(
+            client_id=credentials[0], client_secret=credentials[1],
+        )
+        return await gateway.save_tokens(
+            workspace_id=workspace_id,
+            client_id_present=True,
+            access_token=access_token,
+            refresh_token=None,
+            expires_at=expires_at.isoformat(),
+        )
+    except PerformanceTokenError as error:
+        raise HTTPException(
+            status_code=502,
+            detail={"code": "performance_token_request_failed", "message": str(error)},
+        ) from error

@@ -30,6 +30,42 @@ class PostgresPerformanceCredentialGateway:
             client_id_present,
         )
 
+    async def save_client_credentials(
+        self, *, workspace_id: str, client_id: str, client_secret: str,
+    ) -> PerformanceCredentialStatus:
+        return await asyncio.to_thread(
+            self._save_client_credentials, workspace_id, client_id, client_secret,
+        )
+
+    def _save_client_credentials(
+        self, workspace_id: str, client_id: str, client_secret: str,
+    ) -> PerformanceCredentialStatus:
+        if not client_id.strip() or not client_secret.strip():
+            raise ValueError("Performance Client ID 和 Client Secret 不能为空")
+        with self._sessions.transaction(self._context) as connection:
+            connection.execute(
+                """
+                INSERT INTO performance_oauth_credentials
+                    (id, organization_id, workspace_id, encrypted_client_id,
+                     encrypted_client_secret, encrypted_access_token, expires_at)
+                VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                ON CONFLICT (organization_id, workspace_id) DO UPDATE SET
+                    encrypted_client_id = EXCLUDED.encrypted_client_id,
+                    encrypted_client_secret = EXCLUDED.encrypted_client_secret,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    str(uuid4()), self._context.organization_id, workspace_id,
+                    self._protector.protect(client_id),
+                    self._protector.protect(client_secret),
+                    None,
+                ),
+            )
+        status = self._get_status(workspace_id)
+        if status is None:
+            raise RuntimeError("Performance 凭据保存后无法读取状态")
+        return status
+
     def _save_tokens(
         self, workspace_id: str, access_token: str, refresh_token: str | None,
         expires_at: str, client_id_present: bool,
@@ -62,11 +98,36 @@ class PostgresPerformanceCredentialGateway:
     async def get_status(self, *, workspace_id: str) -> PerformanceCredentialStatus | None:
         return await asyncio.to_thread(self._get_status, workspace_id)
 
+    async def get_client_credentials(self, *, workspace_id: str) -> tuple[str, str] | None:
+        return await asyncio.to_thread(self._get_client_credentials, workspace_id)
+
+    def _get_client_credentials(self, workspace_id: str) -> tuple[str, str] | None:
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
+                """
+                SELECT encrypted_client_id, encrypted_client_secret
+                FROM performance_oauth_credentials
+                WHERE organization_id = %s AND workspace_id = %s
+                """,
+                (self._context.organization_id, workspace_id),
+            ).fetchone()
+        if row is None or not row["encrypted_client_id"] or not row["encrypted_client_secret"]:
+            return None
+        return (
+            self._protector.unprotect(
+                row["encrypted_client_id"], credential_version=self._protector.key_version,
+            ),
+            self._protector.unprotect(
+                row["encrypted_client_secret"], credential_version=self._protector.key_version,
+            ),
+        )
+
     def _get_status(self, workspace_id: str) -> PerformanceCredentialStatus | None:
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """
-                SELECT expires_at, encrypted_access_token, encrypted_refresh_token
+                SELECT expires_at, encrypted_client_id, encrypted_access_token,
+                       encrypted_refresh_token
                 FROM performance_oauth_credentials
                 WHERE organization_id = %s AND workspace_id = %s
                 """,
@@ -75,7 +136,8 @@ class PostgresPerformanceCredentialGateway:
         if row is None:
             return None
         return inspect_performance_credentials(
-            client_id="configured", access_token="stored",
+            client_id="stored" if row["encrypted_client_id"] else None,
+            access_token="stored" if row["encrypted_access_token"] else None,
             refresh_token="stored" if row["encrypted_refresh_token"] else None,
             expires_at=row["expires_at"].isoformat(),
         )

@@ -70,6 +70,7 @@
 .credential-panel > .credential-form .primary-button { width: max-content; min-width: 180px; }
 .credential-check { display: flex !important; align-items: center; gap: 8px !important; }
 .credential-check input { width: 16px !important; min-height: 16px !important; accent-color: var(--violet); }
+.credential-actions { display: flex; flex-wrap: wrap; gap: 10px; grid-column: 1 / -1; }
 @media (max-width: 700px) {
   .credential-panel > .credential-form { grid-template-columns: 1fr; }
   .credential-panel > .credential-form .form-title { grid-column: auto; }
