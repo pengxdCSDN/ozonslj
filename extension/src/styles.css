@@ -9,6 +9,17 @@
 
 /* 供应商配置的技术字段提供可读解释，避免把“适配器”误解为模型名称。 */
 .model-form-grid label:nth-child(3) select { border-color: #59428d; background: linear-gradient(90deg, #111026, #15112a); }
+
+/* 供应商页面的默认小字号在宽屏上可读性不足，统一提升一级但不改变布局密度。 */
+.model-form-grid label { font-size: 11px; }
+.model-form-grid label em { font-size: 9px; }
+.model-form-grid input, .model-form-grid select { font-size: 12px; }
+.provider-title strong { font-size: 13px; }
+.provider-title span { font-size: 9px; }
+.provider-model { font-size: 11px; }
+.provider-meta, .provider-priority small { font-size: 9px; }
+.priority-mark { font-size: 11px; }
+.provider-priority strong { font-size: 18px; }
 .model-form-grid label:nth-child(3) input { border-color: #59428d; background: linear-gradient(90deg, #111026, #15112a); }
 .model-form-grid select option { color: #f2effc; background: #15132a; }
 .model-form-grid select option:checked { color: #ffffff; background: #4b3685; }
