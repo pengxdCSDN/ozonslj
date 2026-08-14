@@ -137,6 +137,11 @@ export function RagModelProvidersView() {
       showError("请填写供应商名称、调用协议、Model 和 Base URL。");
       return;
     }
+    const shapeError = validateModelEndpoint(form.model_kind, form.model, form.base_url);
+    if (shapeError) {
+      showError(shapeError);
+      return;
+    }
     if (!editingId && !form.api_key.trim()) {
       showError("新增配置必须填写 API Key；编辑时留空表示保留原 Key。");
       return;
@@ -228,6 +233,12 @@ export function RagModelProvidersView() {
     if (missingFields.length) {
       setConnectivityState("error");
       showError(`测试连接未执行：请填写${missingFields.join("、")}。`);
+      return;
+    }
+    const shapeError = validateModelEndpoint(form.model_kind, form.model, form.base_url);
+    if (shapeError) {
+      setConnectivityState("error");
+      showError(`测试连接未执行：${shapeError}`);
       return;
     }
     let parsedUrl: URL;
@@ -354,6 +365,23 @@ function sortedProviders(providers: RagModelProvider[], kind: ModelKind) {
 
 function purposeLabel(purpose: RagModelPurpose) {
   return purpose === "embedding" ? "向量化" : TEXT_PURPOSES.find((item) => item.key === purpose)?.label ?? purpose;
+}
+
+function validateModelEndpoint(kind: ModelKind, model: string, baseUrl: string): string | null {
+  const normalizedModel = model.trim().toLowerCase();
+  const normalizedUrl = baseUrl.trim().toLowerCase();
+  const isEmbeddingPath = normalizedUrl.endsWith("/embedding") || normalizedUrl.endsWith("/embeddings");
+  const isChatPath = normalizedUrl.endsWith("/chat/completions");
+  if (kind === "embedding" && isChatPath) {
+    return "当前模型类型是 Embedding，但 Base URL 是 /chat/completions；请改为 Embedding 模型和 /v1/embeddings 接口。";
+  }
+  if (kind === "text" && isEmbeddingPath) {
+    return "当前模型类型是文本模型，但 Base URL 是 /embeddings；请改为聊天模型和 /v1/chat/completions 接口。";
+  }
+  if (kind === "embedding" && (normalizedModel.includes("instruct") || normalizedModel.includes("chat"))) {
+    return "当前模型类型是 Embedding，但 Model 看起来是聊天模型；请填写 bge-m3、text-embedding 等向量模型。";
+  }
+  return null;
 }
 
 function ProviderPool({ title, eyebrow, providers, busy, onEdit, onToggle, onDelete }: { title: string; eyebrow: string; providers: RagModelProvider[]; busy: boolean; onEdit: (provider: RagModelProvider) => void; onToggle: (provider: RagModelProvider) => void; onDelete: (provider: RagModelProvider) => void }) {
