@@ -368,7 +368,7 @@ export function RagModelProvidersView() {
         <div className="route-list">
           <RouteCard label="向量化 / Embedding" providers={embeddingProviders} binding={bindings.find((item) => item.purpose === "embedding")} disabled={busy} onSave={() => void saveAutomaticRoute("embedding", "embedding")} />
           <RouteCard label="重排序 / Rerank" providers={rerankProviders} binding={bindings.find((item) => item.purpose === "rerank")} disabled={busy} onSave={() => void saveAutomaticRoute("rerank", "rerank")} />
-          {TEXT_PURPOSES.map(({ key, label }) => <RouteCard key={key} label={label} providers={textProviders} binding={bindings.find((item) => item.purpose === key)} disabled={busy} onSave={() => void saveAutomaticRoute(key, "text")} />)}
+          {TEXT_PURPOSES.filter(({ key }) => key !== "rerank").map(({ key, label }) => <RouteCard key={key} label={label} providers={textProviders} binding={bindings.find((item) => item.purpose === key)} disabled={busy} onSave={() => void saveAutomaticRoute(key, "text")} />)}
         </div>
       </section>
     </div>
