@@ -234,6 +234,11 @@ def _normalize_model_base_url(base_url: str) -> str:
     ``/chat/completions``，测试时剥离该后缀后交给客户端统一拼接，避免产生错误 URL。
     """
     value = base_url.strip().rstrip("/")
+    # 百炼 Workspace 的 /api/v1 是原生接口路径；OpenAI 兼容模型调用必须使用
+    # /compatible-mode/v1，否则 text-embedding-v4 会返回 404。仅对百炼域名做转换。
+    parsed = urlparse(value)
+    if parsed.hostname and parsed.hostname.lower().endswith(".maas.aliyuncs.com") and parsed.path.lower() == "/api/v1":
+        value = f"{parsed.scheme}://{parsed.netloc}/compatible-mode/v1"
     # 兼容历史配置中误填的完整路径；Embedding 最终统一由客户端拼接为 /embeddings。
     supported_endpoint_suffixes = ("/chat/completions", "/embeddings", "/embedding", "/rerank")
     for suffix in supported_endpoint_suffixes:
