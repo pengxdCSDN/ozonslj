@@ -105,7 +105,10 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         if response.status_code == 429:
             raise CloudModelQuotaError("Embedding 供应商额度或限流已触发", status_code=429)
         if response.is_error:
-            raise CloudModelError("Embedding 云端请求失败", status_code=response.status_code)
+            raise CloudModelError(
+                _safe_upstream_error_message(response, "Embedding 云端请求失败"),
+                status_code=response.status_code,
+            )
         try:
             result = response.json()
         except json.JSONDecodeError as error:
@@ -173,7 +176,10 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
         if response.status_code == 429:
             raise CloudModelQuotaError("翻译供应商额度或限流已触发", status_code=429)
         if response.is_error:
-            raise CloudModelError("翻译云端请求失败", status_code=response.status_code)
+            raise CloudModelError(
+                _safe_upstream_error_message(response, "翻译云端请求失败"),
+                status_code=response.status_code,
+            )
         try:
             result = response.json()
             translated = result["choices"][0]["message"]["content"]
@@ -192,3 +198,22 @@ def _validate_cloud_base_url(base_url: str) -> None:
         raise ValueError("云端模型地址必须是合法 HTTP(S) URL")
     if parsed.scheme == "http" and parsed.hostname not in {"localhost", "127.0.0.1"}:
         raise ValueError("非本地云端模型地址必须使用 HTTPS")
+
+
+def _safe_upstream_error_message(response: httpx.Response, fallback: str) -> str:
+    """提取上游可诊断的错误摘要，但禁止把响应正文或凭据返回给浏览器。"""
+    try:
+        body = response.json()
+    except (json.JSONDecodeError, ValueError):
+        return fallback
+    if not isinstance(body, dict):
+        return fallback
+    error = body.get("error")
+    candidates: list[object] = [body.get("message"), body.get("code")]
+    if isinstance(error, dict):
+        candidates.extend([error.get("message"), error.get("code")])
+    detail = next((str(item).strip() for item in candidates if item), "")
+    if not detail:
+        return fallback
+    # 只返回短错误摘要；不记录请求体、响应体、Authorization 或其他敏感字段。
+    return f"{fallback}：{detail[:240]}"

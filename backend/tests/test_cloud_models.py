@@ -7,6 +7,7 @@ import pytest
 
 from backend.app.domain.product_localization import LocalizedProductContent
 from backend.app.infrastructure.cloud_models import (
+    CloudModelError,
     CloudModelQuotaError,
     DashScopeEmbeddingClient,
     OpenAICompatibleTranslationClient,
@@ -68,6 +69,24 @@ async def test_embedding_can_omit_unsupported_dimensions() -> None:
     )
     client.dimension = 2
     assert await client.embed(["测试"]) == [[0.0, 1.0]]
+
+
+@pytest.mark.asyncio
+async def test_embedding_error_exposes_safe_upstream_reason_without_secret() -> None:
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            400,
+            json={"error": {"message": "unsupported field: dimensions", "api_key": "secret"}},
+        )
+
+    client = DashScopeEmbeddingClient(
+        api_key="top-secret",
+        dimension=2,
+        transport=httpx.MockTransport(handler),
+    )
+    with pytest.raises(CloudModelError, match="unsupported field: dimensions") as error:
+        await client.embed(["测试"])
+    assert "top-secret" not in str(error.value)
 
 
 @pytest.mark.asyncio
