@@ -56,6 +56,7 @@ async def test_embedding_can_omit_unsupported_dimensions() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.read().decode("utf-8"))
         assert "dimensions" not in body
+        assert body["input"] == "测试"
         return httpx.Response(
             200,
             json={"data": [{"index": 0, "embedding": [0.0, 1.0]}]},

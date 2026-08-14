@@ -72,7 +72,8 @@ class DashScopeEmbeddingClient(EmbeddingPort):
             raise ValueError("Embedding 输入不能包含空文本")
         payload = {
             "model": self.model_id,
-            "input": texts,
+            # SiliconFlow 官方单文本示例使用字符串；单条请求采用该形态，批量请求仍保留数组。
+            "input": texts[0] if len(texts) == 1 else texts,
         }
         if self.send_dimensions:
             payload["dimensions"] = self.dimension
