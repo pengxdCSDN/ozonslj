@@ -22,6 +22,7 @@ from backend.app.infrastructure.cloud_models import (
     CloudModelError,
     CloudModelQuotaError,
     DashScopeEmbeddingClient,
+    OpenAICompatibleRerankClient,
     OpenAICompatibleTranslationClient,
 )
 from backend.app.infrastructure.model_credentials import ModelCredentialStore
@@ -33,7 +34,7 @@ router = APIRouter(prefix="/v1/model-providers/managed", tags=["rag-model-provid
 # 适配器名称不限定为内置供应商清单，便于接入任意 OpenAI-compatible 服务。
 # 具体协议能力由连接测试和运行时客户端决定，数据库只校验名称非空。
 ManagedAdapter = str
-ManagedModelKind = Literal["embedding", "text"]
+ManagedModelKind = Literal["embedding", "rerank", "text"]
 ManagedPurpose = Literal[
     "embedding", "translation", "intent_rewrite", "rerank", "answer_generation"
 ]
@@ -77,7 +78,7 @@ class ManagedBindingResponse(BaseModel):
 
 
 class ConnectivityTestPayload(BaseModel):
-    purpose: Literal["embedding", "translation"]
+    purpose: Literal["embedding", "rerank", "translation"]
     adapter_type: ManagedAdapter
     model: str = Field(min_length=1, max_length=160)
     base_url: str = Field(min_length=12, max_length=500)
@@ -169,6 +170,16 @@ async def test_model_provider_connectivity(
                 send_dimensions=not is_siliconflow_bge_m3,
             )
             await embedding_client.embed(["连接测试"])
+        elif payload.purpose == "rerank":
+            rerank_client = OpenAICompatibleRerankClient(
+                api_key=api_key,
+                base_url=normalized_base_url,
+                model=payload.model,
+            )
+            await rerank_client.rerank(
+                query="连接测试",
+                documents=["这是一个用于验证重排序接口的候选文档。"],
+            )
         else:
             translation_client = OpenAICompatibleTranslationClient(
                 api_key=api_key,

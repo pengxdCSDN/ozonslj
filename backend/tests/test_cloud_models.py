@@ -11,6 +11,7 @@ from backend.app.infrastructure.cloud_models import (
     CloudModelQuotaError,
     DashScopeEmbeddingClient,
     OpenAICompatibleTranslationClient,
+    OpenAICompatibleRerankClient,
 )
 
 
@@ -145,3 +146,25 @@ def test_localized_content_keeps_russian_and_builds_bilingual_embedding_text() -
     assert "Куртка мужская зимняя" in text
     assert "男士冬季夹克" in text
     assert content.source_hash == content.source_hash
+
+
+@pytest.mark.asyncio
+async def test_rerank_client_sends_query_and_documents() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.read().decode("utf-8"))
+        assert body == {
+            "model": "BAAI/bge-reranker-v2-m3",
+            "query": "颜色",
+            "documents": ["红色", "蓝色"],
+        }
+        return httpx.Response(200, json={"data": [{"index": 0, "relevance_score": 0.9}]})
+
+    client = OpenAICompatibleRerankClient(
+        api_key="test-key",
+        model="BAAI/bge-reranker-v2-m3",
+        base_url="https://example.test/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    assert await client.rerank(query="颜色", documents=["红色", "蓝色"]) == [
+        {"index": 0, "relevance_score": 0.9}
+    ]

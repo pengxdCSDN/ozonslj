@@ -36,6 +36,50 @@ class CloudTranslationPort:
         raise NotImplementedError
 
 
+class OpenAICompatibleRerankClient:
+    """调用供应商 Rerank 接口；重排序模型不是 Embedding，也不生成文本。"""
+
+    def __init__(self, *, api_key: str, model: str, base_url: str, timeout_seconds: float = 30.0,
+                 transport: httpx.AsyncBaseTransport | None = None) -> None:
+        if not api_key.strip() or not model.strip() or not base_url.strip():
+            raise ValueError("重排序供应商必须配置 API Key、模型和 HTTPS 地址")
+        _validate_cloud_base_url(base_url)
+        self.model_id = model.strip()
+        self._api_key = api_key
+        self._endpoint = f"{base_url.rstrip('/')}/rerank"
+        self._timeout = httpx.Timeout(timeout_seconds)
+        self._transport = transport
+
+    async def rerank(self, *, query: str, documents: list[str]) -> list[dict[str, Any]]:
+        if not query.strip() or not documents or any(not item.strip() for item in documents):
+            raise ValueError("重排序请求的 query 和 documents 不能为空")
+        payload = {"model": self.model_id, "query": query, "documents": documents}
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout, transport=self._transport) as client:
+                response = await client.post(
+                    self._endpoint,
+                    headers={"Authorization": f"Bearer {self._api_key}"},
+                    json=payload,
+                )
+        except httpx.HTTPError as error:
+            raise CloudModelError("重排序云端网络请求失败") from error
+        if response.status_code == 429:
+            raise CloudModelQuotaError("重排序供应商额度或限流已触发", status_code=429)
+        if response.is_error:
+            raise CloudModelError(
+                _safe_upstream_error_message(response, "重排序云端请求失败"),
+                status_code=response.status_code,
+            )
+        try:
+            body = response.json()
+        except (json.JSONDecodeError, ValueError) as error:
+            raise CloudModelError("重排序响应不是合法 JSON") from error
+        data = body.get("data") if isinstance(body, dict) else None
+        if not isinstance(data, list):
+            raise CloudModelError("重排序响应缺少 data 数组")
+        return [item for item in data if isinstance(item, dict)]
+
+
 class DashScopeEmbeddingClient(EmbeddingPort):
     """阿里云百炼 Embedding 客户端，默认使用多语言 text-embedding-v4。"""
 

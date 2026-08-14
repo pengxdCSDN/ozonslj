@@ -913,7 +913,7 @@ export type RagModelAdapter = string;
 export type RagModelPurpose = "embedding" | "translation" | "intent_rewrite" | "rerank" | "answer_generation";
 export interface RagModelProvider {
   provider_id: string; name: string; adapter_type: RagModelAdapter; model: string; base_url: string;
-  model_kind: "embedding" | "text"; priority: number; enabled: boolean; credential_configured: boolean; credential_mask: string;
+  model_kind: "embedding" | "rerank" | "text"; priority: number; enabled: boolean; credential_configured: boolean; credential_mask: string;
 }
 export interface RagModelBinding { purpose: RagModelPurpose; primary_provider_id: string; fallback_provider_ids: string[]; revision: number; }
 export interface RagModelCatalog { embedding: Array<Record<string, string>>; translation: Array<Record<string, string>>; }

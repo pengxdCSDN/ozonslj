@@ -27,7 +27,7 @@ import {
   type RagModelPurpose,
 } from "./api";
 
-type ModelKind = "embedding" | "text";
+type ModelKind = "embedding" | "rerank" | "text";
 type FormState = {
   name: string;
   adapter_type: RagModelAdapter;
@@ -259,7 +259,7 @@ export function RagModelProvidersView() {
     setTestingConnectivity(true);
     try {
       const result = await testRagModelConnectivity({
-        purpose: form.model_kind === "embedding" ? "embedding" : "translation",
+      purpose: form.model_kind === "embedding" ? "embedding" : form.model_kind === "rerank" ? "rerank" : "translation",
         adapter_type: form.adapter_type,
         model: form.model,
         base_url: form.base_url,
@@ -301,6 +301,7 @@ export function RagModelProvidersView() {
   };
 
   const embeddingProviders = useMemo(() => sortedProviders(providers, "embedding"), [providers]);
+  const rerankProviders = useMemo(() => sortedProviders(providers, "rerank"), [providers]);
   const textProviders = useMemo(() => sortedProviders(providers, "text"), [providers]);
 
   return (
@@ -330,7 +331,7 @@ export function RagModelProvidersView() {
           <div><span className="eyebrow">配置入口</span><h2>{editingId ? "编辑模型配置" : "新增模型配置"}</h2></div>
         </div>
         <div className="model-form-grid">
-          <label><span>模型类型</span><select value={form.model_kind} onChange={(event) => updateForm("model_kind", event.target.value as ModelKind)}><option value="embedding">向量模型 · Embedding</option><option value="text">文本模型 · 翻译 / Agent</option></select></label>
+          <label><span>模型类型</span><select value={form.model_kind} onChange={(event) => updateForm("model_kind", event.target.value as ModelKind)}><option value="embedding">向量模型 · Embedding</option><option value="rerank">重排序模型 · Reranker</option><option value="text">文本模型 · 翻译 / Agent</option></select></label>
           <label><span>供应商名称</span><input value={form.name} onChange={(event) => updateForm("name", event.target.value)} placeholder="例如：阿里云百炼 / SiliconFlow" /></label>
           <label><span>调用协议</span><div className="soft-select" ref={adapterMenuRef}><button className="soft-select-trigger" type="button" aria-haspopup="listbox" aria-expanded={adapterMenuOpen} onClick={() => setAdapterMenuOpen((current) => !current)}><span>{customAdapter ? "自定义协议" : ADAPTER_OPTIONS.find((option) => option.value === form.adapter_type)?.label ?? form.adapter_type}</span><CaretDown size={16} /></button>{adapterMenuOpen ? <div className="soft-select-menu" role="listbox">{ADAPTER_OPTIONS.map((option) => { const selected = option.value === (customAdapter ? "custom" : form.adapter_type); return <button className="soft-select-option" type="button" role="option" aria-selected={selected} key={option.value} onClick={() => { setAdapterMenuOpen(false); setCustomAdapter(option.value === "custom"); if (option.value !== "custom") updateForm("adapter_type", option.value); }}><span>{option.label}</span>{selected ? <Check className="soft-select-check" size={15} weight="bold" /> : null}</button>; })}</div> : null}</div>{customAdapter ? <input value={form.adapter_type === "openai-compatible" ? "" : form.adapter_type} onChange={(event) => updateForm("adapter_type", event.target.value)} placeholder="输入协议标识" required /> : null}</label>
           <label className="model-field"><span>Model <em>必填</em></span><input value={form.model} onChange={(event) => updateForm("model", event.target.value)} placeholder="text-embedding-v4 / Qwen/Qwen2.5-7B-Instruct" /></label>
@@ -346,12 +347,14 @@ export function RagModelProvidersView() {
       </section>
 
       <ProviderPool title="向量模型池" eyebrow="Embedding / 向量检索" providers={embeddingProviders} busy={busy} onEdit={editProvider} onToggle={(provider) => void toggleProvider(provider)} onDelete={(provider) => void removeProvider(provider)} />
-      <ProviderPool title="文本模型池" eyebrow="翻译 / 意图 / 重排 / 答案" providers={textProviders} busy={busy} onEdit={editProvider} onToggle={(provider) => void toggleProvider(provider)} onDelete={(provider) => void removeProvider(provider)} />
+          <ProviderPool title="重排序模型池" eyebrow="Rerank / 精排" providers={rerankProviders} busy={busy} onEdit={editProvider} onToggle={(provider) => void toggleProvider(provider)} onDelete={(provider) => void removeProvider(provider)} />
+          <ProviderPool title="文本模型池" eyebrow="翻译 / 意图 / 答案" providers={textProviders} busy={busy} onEdit={editProvider} onToggle={(provider) => void toggleProvider(provider)} onDelete={(provider) => void removeProvider(provider)} />
 
       <section className="panel route-panel">
         <div className="section-heading"><div><span className="eyebrow">用途路由</span><h2>按优先级生成自动降级链</h2></div><ShieldCheck size={22} /></div>
         <div className="route-list">
           <RouteCard label="向量化 / Embedding" providers={embeddingProviders} binding={bindings.find((item) => item.purpose === "embedding")} disabled={busy} onSave={() => void saveAutomaticRoute("embedding", "embedding")} />
+          <RouteCard label="重排序 / Rerank" providers={rerankProviders} binding={bindings.find((item) => item.purpose === "rerank")} disabled={busy} onSave={() => void saveAutomaticRoute("rerank", "rerank")} />
           {TEXT_PURPOSES.map(({ key, label }) => <RouteCard key={key} label={label} providers={textProviders} binding={bindings.find((item) => item.purpose === key)} disabled={busy} onSave={() => void saveAutomaticRoute(key, "text")} />)}
         </div>
       </section>
@@ -377,6 +380,9 @@ function validateModelEndpoint(kind: ModelKind, model: string, baseUrl: string):
   }
   if (kind === "text" && isEmbeddingPath) {
     return "当前模型类型是文本模型，但 Base URL 是 /embeddings；请改为聊天模型和 /v1/chat/completions 接口。";
+  }
+  if (kind === "rerank" && (isEmbeddingPath || isChatPath)) {
+    return "当前模型类型是 Reranker，但 Base URL 不是 /rerank；请填写供应商的重排序接口地址。";
   }
   if (kind === "embedding" && (normalizedModel.includes("instruct") || normalizedModel.includes("chat"))) {
     return "当前模型类型是 Embedding，但 Model 看起来是聊天模型；请填写 bge-m3、text-embedding 等向量模型。";
