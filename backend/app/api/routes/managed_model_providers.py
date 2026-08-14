@@ -235,7 +235,7 @@ def _normalize_model_base_url(base_url: str) -> str:
     """
     value = base_url.strip().rstrip("/")
     # 兼容历史配置中误填的完整路径；Embedding 最终统一由客户端拼接为 /embeddings。
-    for suffix in ("/chat/completions", "/embeddings", "/embedding"):
+    for suffix in ("/chat/completions", "/embeddings", "/embedding", "/rerank"):
         if value.lower().endswith(suffix):
             return value[: -len(suffix)].rstrip("/")
     return value
