@@ -63,3 +63,15 @@
 .provider-pool-panel .empty-search span { max-width: 56ch; font-size: 9px; line-height: 1.6; }
 .provider-pool-panel .empty-search::after { content: "回到上方配置入口添加供应商"; color: #a88bf7; font-size: 9px; font-weight: 700; }
 @media (max-width: 720px) { .model-form-actions { flex-wrap: wrap; } .model-form-actions .model-action-button { flex: 1 1 142px; } }
+
+.credential-panel { overflow: hidden; }
+.credential-panel > .credential-form { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 18px; }
+.credential-panel > .credential-form .form-title { grid-column: 1 / -1; }
+.credential-panel > .credential-form .primary-button { width: max-content; min-width: 180px; }
+.credential-check { display: flex !important; align-items: center; gap: 8px !important; }
+.credential-check input { width: 16px !important; min-height: 16px !important; accent-color: var(--violet); }
+@media (max-width: 700px) {
+  .credential-panel > .credential-form { grid-template-columns: 1fr; }
+  .credential-panel > .credential-form .form-title { grid-column: auto; }
+  .credential-panel > .credential-form .primary-button { width: 100%; }
+}
