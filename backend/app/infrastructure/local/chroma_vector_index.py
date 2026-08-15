@@ -119,6 +119,10 @@ class HttpChromaCollection:
         except ValueError as error:
             raise RuntimeError(f"Chroma {operation} 返回非 JSON") from error
         if not isinstance(body, dict):
+            # Chroma 的 upsert/delete 成功响应可能是空数组；这些写操作
+            # 不依赖响应正文，只有 query 必须返回对象供检索解析。
+            if operation in {"upsert", "delete"}:
+                return {}
             raise RuntimeError(f"Chroma {operation} 返回格式无效")
         return cast(dict[str, object], body)
 
