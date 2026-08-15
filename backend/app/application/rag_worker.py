@@ -45,6 +45,8 @@ class RagWorker:
                 raise ValueError("rag_task_type_not_supported")
         except ValueError as error:
             finished = await self._tasks.finish(task_id, "failed", str(error))
+        except RuntimeError as error:
+            finished = await self._tasks.finish(task_id, "failed", str(error)[:100])
         except Exception:
             finished = await self._tasks.finish(task_id, "failed", "rag_task_failed")
         else:
