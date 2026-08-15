@@ -58,3 +58,40 @@ curl -fsS http://127.0.0.1/api/health/ready
 - 云端部署继续沿用现有 PostgreSQL + Redis Compose 基线，不引入第二套数据库或 SaaS 组织开发任务。
 - 当前需要外部授权的验证项是只读 Seller 账号、官方接口契约，以及 Worker/Scheduler 和备份恢复的只读 SSH 检查；Secret 不通过聊天传输。
 - 已有备份方案优先复用；只有缺失项才按本项目文档补齐，恢复验证必须使用隔离数据库，不覆盖运行库。
+
+## 2026-08-15 前后端部署操作手册
+
+本节是当前项目的标准发布闭环，适用于前端静态资源和后端 API/Worker 镜像一起发布。所有命令均不得把密码、API Key、访问令牌或 `.env` 内容复制到聊天、日志或 GitHub。
+
+### A. 发布前：本地代码与文档
+
+1. 确认工作树和目标提交：`git status --short`、`git log -1 --oneline`；只处理本次变更，不覆盖用户已有未跟踪目录。
+2. 执行前端类型检查和 Web 构建：
+   - `extension\node_modules\.bin\tsc.CMD -b extension\tsconfig.json --pretty false`
+   - `Set-Location extension; .\node_modules\.bin\vite.CMD build --mode web --configLoader runner --outDir ..\deploy\web --emptyOutDir true`
+3. 执行后端相关测试、Ruff/mypy、schema 校验和 `git diff --check`；构建失败不得发布。
+4. 检查 `deploy/web/index.html` 引用的 JS/CSS 文件确实存在，避免静态入口引用旧哈希文件。
+5. 提交代码、`docs/` 项目基线和必要的 `deploy/web` 产物；明确排除 `.env`、凭据、数据库、诊断日志和临时构建目录。
+6. 推送目标分支并核对远端 SHA：`git ls-remote origin refs/heads/main refs/heads/codex/deployment-base-images`。
+
+### B. 前端静态资源发布
+
+1. 服务器发布前先执行第 4 节的 Compose 配置和健康检查。
+2. 将 `deploy/web/index.html` 上传到 `/opt/ozonslj/app/deploy/web/`，将 `deploy/web/assets/` 内容上传到对应 assets 目录；上传后设置目录 `755`、文件 `644`。
+3. 用 `curl -I http://127.0.0.1/` 检查入口，用 `curl -I http://127.0.0.1/assets/<实际文件名>.js` 检查 JS 返回 `Content-Type: application/javascript`，CSS 返回 `text/css`。
+4. 浏览器执行强制刷新，检查控制台无 MIME、模块加载和资源 404；再回归首页、登录、模型供应商和模型额度页面。
+
+### C. 后端 ACR 镜像发布
+
+1. 代码推送后等待 ACR 完成目标镜像构建，记录镜像 tag/digest；服务器不在 2GB 节点本地构建镜像。
+2. 登录服务器后执行：`cd /opt/ozonslj/app/deploy`，再执行 `docker compose --env-file .env config --quiet` 和 `docker compose --env-file .env ps`。
+3. 只拉取并重建变更的 API/Worker：`docker compose --env-file .env pull api worker`，随后 `docker compose --env-file .env up -d --no-deps api worker`。未变更的 PostgreSQL、Redis、Nginx 不重建。
+4. 等待容器稳定后依次检查 `/api/health/live`、`/api/health/ready`，再查看脱敏日志：`docker compose logs --tail=100 api worker`。
+5. 若健康检查失败，先保留失败日志和镜像 digest，停止继续发布；按上一版已验证镜像回滚并重新执行健康检查，不直接删除数据库或卷。
+
+### D. 发布后验收与回滚
+
+- 前端：入口 200、JS/CSS MIME 正确、无模块加载错误、首次进入不弹操作提示、按钮成功/失败 Toast 正常。
+- 后端：live/ready 均返回 `status=ok`，API/Worker 容器为 running，数据库迁移版本与代码兼容。
+- 联调：登录、配置模型、测试外部模型、刷新配置和模型额度页面至少各回归一次；真实外部凭据只在服务器安全配置中使用。
+- 回滚：恢复上一版 `index.html` 与 assets，后端恢复上一版镜像 tag/digest，重新执行 C/D 两节验收；不得使用 `git reset --hard` 覆盖开发工作树。
