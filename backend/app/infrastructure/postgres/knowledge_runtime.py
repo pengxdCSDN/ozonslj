@@ -83,7 +83,8 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
                 await self._record_usage(provider_id, client.last_usage.total_tokens)
                 return vectors
             except (CloudModelError, TimeoutError, RuntimeError) as error:
-                errors.append(f"{provider_id}:{type(error).__name__}")
+                # 仅记录适配器生成的脱敏业务错误，禁止传播供应商原始响应或凭据。
+                errors.append(f"{provider_id}:{type(error).__name__}:{error}")
         if candidates:
             raise RuntimeError("所有已配置向量供应商均不可用，已安全降级：" + ",".join(errors))
         return await self._fallback.embed(texts)
