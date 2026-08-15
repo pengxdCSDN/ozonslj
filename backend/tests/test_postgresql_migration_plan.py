@@ -121,3 +121,10 @@ def test_all_redeclared_tables_have_an_explicit_archive_boundary() -> None:
     }
 
     assert expected == _SUPERSEDED_TABLES_BY_SOURCE_VERSION
+
+
+def test_rerank_model_kind_migration_accepts_dedicated_provider_pool() -> None:
+    sql = Path("database/migrations/0100_rag_rerank_model_kind.sql").read_text(encoding="utf-8")
+
+    assert "DROP CONSTRAINT IF EXISTS rag_model_providers_model_kind_check" in sql
+    assert "CHECK (model_kind IN ('embedding', 'rerank', 'text'))" in sql

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from typing import Annotated, Literal, cast
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -21,6 +22,7 @@ from backend.app.infrastructure.cloud_models import (
     CloudModelError,
     CloudModelQuotaError,
     DashScopeEmbeddingClient,
+    OpenAICompatibleRerankClient,
     OpenAICompatibleTranslationClient,
 )
 from backend.app.infrastructure.model_credentials import ModelCredentialStore
@@ -32,7 +34,7 @@ router = APIRouter(prefix="/v1/model-providers/managed", tags=["rag-model-provid
 # 适配器名称不限定为内置供应商清单，便于接入任意 OpenAI-compatible 服务。
 # 具体协议能力由连接测试和运行时客户端决定，数据库只校验名称非空。
 ManagedAdapter = str
-ManagedModelKind = Literal["embedding", "text"]
+ManagedModelKind = Literal["embedding", "rerank", "text"]
 ManagedPurpose = Literal[
     "embedding", "translation", "intent_rewrite", "rerank", "answer_generation"
 ]
@@ -76,7 +78,7 @@ class ManagedBindingResponse(BaseModel):
 
 
 class ConnectivityTestPayload(BaseModel):
-    purpose: Literal["embedding", "translation"]
+    purpose: Literal["embedding", "rerank", "translation"]
     adapter_type: ManagedAdapter
     model: str = Field(min_length=1, max_length=160)
     base_url: str = Field(min_length=12, max_length=500)
@@ -91,6 +93,9 @@ class ConnectivityTestResponse(BaseModel):
     status: Literal["reachable", "quota_exceeded", "failed"]
     message: str
     model: str
+    external_request_sent: bool
+    endpoint_host: str
+    http_status: int | None = None
 
 
 @router.get("/catalog")
@@ -136,22 +141,49 @@ async def test_model_provider_connectivity(
             api_key = await credentials.get(payload.provider_id)
     if not api_key:
         raise HTTPException(
-            status_code=422, detail="测试连接需要填写 API Key，或选择已有供应商配置"
+            status_code=422,
+            detail="服务端未读取到该供应商的已保存 API Key，请重新录入后再测试",
         )
+    normalized_base_url = _normalize_model_base_url(payload.base_url)
+    _validate_connectivity_target(payload.adapter_type, normalized_base_url, api_key)
 
     try:
         if payload.purpose == "embedding":
+            # SiliconFlow 的 BAAI/bge-m3 不支持 dimensions；该字段是 Qwen3 Embedding
+            # 系列的可选能力，不能因为客户端统一使用 1024 维就发送给所有模型。
+            adapter_type = payload.adapter_type.strip().lower()
+            model_id = payload.model.strip()
+            endpoint_hostname = (urlparse(normalized_base_url).hostname or "").lower()
+            is_siliconflow = adapter_type == "siliconflow" or endpoint_hostname.endswith(
+                ".siliconflow.cn"
+            ) or endpoint_hostname == "siliconflow.cn"
+            is_siliconflow_bge_m3 = is_siliconflow and model_id.lower() in {
+                "bge-m3",
+                "baai/bge-m3",
+            }
             embedding_client = DashScopeEmbeddingClient(
                 api_key=api_key,
-                base_url=payload.base_url,
-                model=payload.model,
+                base_url=normalized_base_url,
+                model=model_id,
                 dimension=1024,
+                retry_alternate_input=is_siliconflow_bge_m3,
+                send_dimensions=not is_siliconflow_bge_m3,
             )
             await embedding_client.embed(["连接测试"])
+        elif payload.purpose == "rerank":
+            rerank_client = OpenAICompatibleRerankClient(
+                api_key=api_key,
+                base_url=normalized_base_url,
+                model=payload.model,
+            )
+            await rerank_client.rerank(
+                query="连接测试",
+                documents=["这是一个用于验证重排序接口的候选文档。"],
+            )
         else:
             translation_client = OpenAICompatibleTranslationClient(
                 api_key=api_key,
-                base_url=payload.base_url,
+                base_url=normalized_base_url,
                 model=payload.model,
             )
             await translation_client.translate(["Привет"])
@@ -159,16 +191,85 @@ async def test_model_provider_connectivity(
         return ConnectivityTestResponse(
             ok=False,
             status="quota_exceeded",
-            message="模型地址可达，但额度或限流已触发。",
+            message="已收到外部模型接口响应，但额度或限流已触发。",
             model=payload.model,
+            external_request_sent=True,
+            endpoint_host=urlparse(normalized_base_url).hostname or "未知",
+            http_status=429,
         )
     except (CloudModelError, ValueError) as error:
         return ConnectivityTestResponse(
-            ok=False, status="failed", message=str(error), model=payload.model
+            ok=False,
+            status="failed",
+            message=_connectivity_error_message(error),
+            model=payload.model,
+            external_request_sent=isinstance(error, CloudModelError),
+            endpoint_host=urlparse(normalized_base_url).hostname or "未知",
+            http_status=error.status_code if isinstance(error, CloudModelError) else None,
         )
     return ConnectivityTestResponse(
-        ok=True, status="reachable", message="模型连接成功，最小请求已完成。", model=payload.model
+        ok=True,
+        status="reachable",
+        message="已收到外部模型接口的合法响应，鉴权和模型调用均通过。",
+        model=payload.model,
+        external_request_sent=True,
+        endpoint_host=urlparse(normalized_base_url).hostname or "未知",
+        http_status=200,
     )
+
+
+def _connectivity_error_message(error: CloudModelError | ValueError) -> str:
+    """把失败阶段和安全的 HTTP 状态提供给页面，不传播供应商响应正文。"""
+    if isinstance(error, ValueError):
+        return f"本地校验未通过，尚未调用外部模型：{error}"
+    if error.status_code is not None:
+        return f"已调用外部模型接口，但接口返回 HTTP {error.status_code}：{error}"
+    return f"已尝试调用外部模型接口，但未收到有效 HTTP 响应：{error}"
+
+
+def _normalize_model_base_url(base_url: str) -> str:
+    """兼容误保存为完整 endpoint 的历史配置，避免重复拼接路径。
+
+    页面字段语义是供应商 API 根地址；历史数据若保存了 ``/embeddings`` 或
+    ``/chat/completions``，测试时剥离该后缀后交给客户端统一拼接，避免产生错误 URL。
+    """
+    value = base_url.strip().rstrip("/")
+    # 百炼 Workspace 的 /api/v1 是原生接口路径；OpenAI 兼容模型调用必须使用
+    # /compatible-mode/v1，否则 text-embedding-v4 会返回 404。仅对百炼域名做转换。
+    parsed = urlparse(value)
+    if parsed.hostname and parsed.hostname.lower().endswith(".maas.aliyuncs.com") and parsed.path.lower() == "/api/v1":
+        value = f"{parsed.scheme}://{parsed.netloc}/compatible-mode/v1"
+    # 兼容历史配置中误填的完整路径；Embedding 最终统一由客户端拼接为 /embeddings。
+    supported_endpoint_suffixes = ("/chat/completions", "/embeddings", "/embedding", "/rerank")
+    for suffix in supported_endpoint_suffixes:
+        if value.lower().endswith(suffix):
+            return value[: -len(suffix)].rstrip("/")
+    return value
+
+
+def _validate_connectivity_target(adapter_type: str, base_url: str, api_key: str | None) -> None:
+    """拒绝开发占位目标，避免未认证的示例接口被误报为真实连接成功。
+
+    连接测试必须验证真实供应商的鉴权和模型响应；因此不能把 ``example.com``、
+    本地地址或 ``test`` 一类占位值当作生产供应商。内置适配器还必须使用其官方域名，
+    防止把密钥发送到名称伪装的第三方地址。
+    """
+    parsed = urlparse(base_url.strip())
+    hostname = (parsed.hostname or "").lower().rstrip(".")
+    if hostname in {"example.com", "example.test", "localhost", "127.0.0.1", "::1"}:
+        raise ValueError("连接测试必须填写真实模型供应商地址，不能使用示例或本地地址")
+    if not api_key or api_key.strip().lower() in {
+        "test", "test-key", "test_key", "test-api-key", "your-api-key", "changeme"
+    }:
+        raise ValueError("连接测试必须填写真实 API Key，不能使用占位值")
+    required_domains = {
+        "dashscope": ("aliyuncs.com",),
+        "siliconflow": ("siliconflow.cn",),
+        "zhipu": ("bigmodel.cn",),
+    }
+    for domain in required_domains.get(adapter_type.strip().lower(), ()):
+        if not (hostname == domain or hostname.endswith(f".{domain}")):
+            raise ValueError(f"{adapter_type} 连接测试必须使用官方模型接口地址")
 
 
 def _response(item: dict[str, object]) -> ManagedProviderResponse:

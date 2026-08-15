@@ -157,7 +157,7 @@ class PostgresRagModelProviderGateway:
     def _bind_purpose(self, purpose: str, primary: str, fallbacks: list[str]) -> None:
         with self._sessions.transaction(self._context) as connection:
             provider_ids = [primary, *fallbacks]
-            required_kind = "embedding" if purpose == "embedding" else "text"
+            required_kind = {"embedding": "embedding", "rerank": "rerank"}.get(purpose, "text")
             rows = connection.execute(
                 """
                 SELECT id, enabled, model_kind

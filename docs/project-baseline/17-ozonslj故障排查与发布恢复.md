@@ -187,20 +187,6 @@ pnpm typecheck
 pnpm build
 ```
 
-## 2026-08-14：浏览器拒绝执行前端模块脚本
-
-### 现象
-
-浏览器控制台提示 `Failed to load module script`，并显示服务器返回 `text/html`，页面为空白。
-
-### 原因与修复
-
-Web 发布目录中的 `index.html` 引用了不存在的哈希 JS/CSS 文件。Nginx 的 `try_files` 将缺失的
-静态资源回退到 `/index.html`，导致模块请求收到 HTML，触发浏览器的严格 MIME 检查。
-构建 Web 版本时必须使用 `vite build --mode web`，并将生成的 `index.html` 与整个 `assets/`
-目录成套同步到 `deploy/web`；不能只替换 HTML 或只上传单个资源。发布后逐一检查首页、哈希
-JS/CSS 均返回 200，且 JS 的 `Content-Type` 为 JavaScript 类型。
-
 如果 npm 或 Playwright 缓存仍报 `EPERM`，先确认没有遗留的 Node、Vite 或浏览器自动化进程，再使用已批准的非沙箱执行权限；不要循环重试同一个失败命令。
 
 ### 预防措施
@@ -211,49 +197,3 @@ JS/CSS 均返回 200，且 JS 的 `Content-Type` 为 JavaScript 类型。
 - 被占用的 `dist` 不作为验证输出目录；使用工作区内独立的 `verify-dist`。
 - Playwright 在一个浏览器会话内完成导航与多张截图，减少重复 npx 和浏览器启动。
 - 记录每条验证命令的退出码；超时或被终止的命令不得计为通过。
-## 2026-08-14：API 重建后登录返回 HTTP 502
-
-### 现象
-
-API 容器显示 `healthy`，但登录、`/api/v1/auth/*` 或健康检查经过 Nginx 返回 502。
-
-### 原因判断
-
-Compose 重建 API 后，API 容器的网络 IP 发生变化；Nginx 已启动进程仍缓存旧 upstream IP，因此连接被拒绝。该问题不是 API 代码或数据库故障。
-
-### 恢复办法与预防措施
-
-```bash
-docker compose --env-file .env restart web
-docker compose --env-file .env ps
-curl -fsS http://127.0.0.1/api/health/live
-curl -fsS http://127.0.0.1/api/health/ready
-```
-
-以后每次执行 `up -d --no-deps api worker` 后，必须同步重启 `web` 并验证登录/关键 API；发布脚本不得只更新 API/Worker 而跳过 Web upstream 刷新。若仍为 502，检查 `docker logs ozonslj-web-1` 中的 `connect() failed` 和 upstream 地址，再确认 API 容器监听 `8000` 且状态为 healthy。
-
-## 2026-08-14：SiliconFlow BAAI/bge-m3 返回 HTTP 400 参数无效
-
-### 根因
-
-OpenAI 兼容协议不代表所有供应商支持完全相同的可选字段。SiliconFlow 的 `BAAI/bge-m3` 请求必须使用 `/v1/embeddings`，不发送 `dimensions`；为避免网关对单条输入数组形态的差异，单条文本使用字符串，批量文本才使用字符串数组。供应商名称不能作为能力判断依据，必须结合实际请求域名。
-
-### 可复用规则
-
-- Embedding 请求默认只发送 `model` 和 `input`，供应商特有参数通过能力开关显式加入。
-- `api.siliconflow.cn` 下的 `BAAI/bge-m3` 禁止发送 `dimensions`。
-- 单条请求优先发送字符串；只有批量请求发送数组。
-- 仅在明确的供应商兼容模式下，对 HTTP 400 做一次相反输入形态重试；禁止无界重试或把所有 400 自动重试。
-- 上游错误只提取 `message`、`error_msg`、`detail`、`code` 等短摘要，不返回请求体、响应全文或 Authorization。
-- 真实外部验证必须使用临时内存凭据；凭据不得写入文件、数据库、日志、测试夹具或 Git。凭据一旦在聊天、截图或日志中暴露，应立即轮换。
-
-### 验证基线
-
-```json
-{
-  "model": "BAAI/bge-m3",
-  "input": "连接测试"
-}
-```
-
-目标地址为 `https://api.siliconflow.cn/v1/embeddings`，应以真实 HTTP 200 和合法向量响应作为连通性成功条件，不能只依据本地参数校验成功。

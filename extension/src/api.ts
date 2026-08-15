@@ -236,10 +236,10 @@ export interface QualityCheckResult {
 }
 
 interface ApiErrorPayload {
-  detail?: {
+  detail?: string | {
     code?: string;
     message?: string;
-  };
+  } | Array<{ loc?: Array<string | number>; msg?: string }>;
 }
 
 export class ApiError extends Error {
@@ -289,10 +289,17 @@ async function requestJson<T>(
     } catch {
       // 非 JSON 错误由统一消息处理，避免把后端原始内容带入界面。
     }
+    const detail = payload.detail;
+    const detailMessage = typeof detail === "string"
+      ? detail
+      : Array.isArray(detail)
+        ? detail.map((item) => item.msg ?? "字段校验失败").join("；")
+        : detail?.message;
+    const detailCode = typeof detail === "object" && !Array.isArray(detail) ? detail?.code : undefined;
     throw new ApiError(
-      payload.detail?.message ?? `本地服务请求失败，状态码 ${response.status}`,
+      detailMessage ?? `本地服务请求失败，状态码 ${response.status}`,
       response.status,
-      payload.detail?.code ?? "request_failed"
+      detailCode ?? "request_failed"
     );
   }
   if (response.status === 204) {
@@ -841,6 +848,9 @@ export interface PerformanceCredentialStatus { credential_scope: string; client_
 export function inspectPerformanceCredentials(payload: Record<string, unknown>): Promise<PerformanceCredentialStatus> { return requestJson("/v1/performance/credentials/inspect", { method: "POST", body: JSON.stringify(payload) }); }
 export function savePerformanceCredentials(workspaceId: string, payload: Record<string, unknown>): Promise<PerformanceCredentialStatus> { return requestJson(`/v1/advertising/performance-oauth/store-workspaces/${encodeURIComponent(workspaceId)}/credentials`, { method: "POST", body: JSON.stringify(payload) }); }
 export function getPerformanceCredentialStatus(workspaceId: string): Promise<PerformanceCredentialStatus> { return requestJson(`/v1/advertising/performance-oauth/store-workspaces/${encodeURIComponent(workspaceId)}/credentials`, { method: "GET" }); }
+export function savePerformanceClientCredentials(workspaceId: string, payload: Record<string, unknown>): Promise<PerformanceCredentialStatus> { return requestJson(`/v1/advertising/performance-oauth/store-workspaces/${encodeURIComponent(workspaceId)}/client-credentials`, { method: "POST", body: JSON.stringify(payload) }); }
+export function requestPerformanceToken(workspaceId: string): Promise<PerformanceCredentialStatus> { return requestJson(`/v1/advertising/performance-oauth/store-workspaces/${encodeURIComponent(workspaceId)}/token`, { method: "POST" }); }
+export function fetchPerformanceCampaigns(workspaceId: string): Promise<Record<string, unknown>> { return requestJson(`/v1/advertising/performance-oauth/store-workspaces/${encodeURIComponent(workspaceId)}/campaigns`, { method: "GET" }); }
 export interface SellerProductSyncItem { offer_id: string; ozon_product_id: string | null; name: string; price_minor: number; currency: string; available_stock: number; source: string; }
 export interface SellerProductSyncPreview { items: SellerProductSyncItem[]; total: number; next_cursor: string | null; source: string; credentials_required: boolean; dry_run: boolean; }
 export function previewSellerProductSync(response: Record<string, unknown>, cursor?: string): Promise<SellerProductSyncPreview> { return requestJson("/v1/seller/products/sync-preview", { method: "POST", body: JSON.stringify({ response, cursor }) }); }
@@ -920,14 +930,14 @@ export type RagModelAdapter = string;
 export type RagModelPurpose = "embedding" | "translation" | "intent_rewrite" | "rerank" | "answer_generation";
 export interface RagModelProvider {
   provider_id: string; name: string; adapter_type: RagModelAdapter; model: string; base_url: string;
-  model_kind: "embedding" | "text"; priority: number; enabled: boolean; credential_configured: boolean; credential_mask: string;
+  model_kind: "embedding" | "rerank" | "text"; priority: number; enabled: boolean; credential_configured: boolean; credential_mask: string;
 }
 export interface RagModelBinding { purpose: RagModelPurpose; primary_provider_id: string; fallback_provider_ids: string[]; revision: number; }
 export interface RagModelCatalog { embedding: Array<Record<string, string>>; translation: Array<Record<string, string>>; }
 export function getRagModelCatalog(): Promise<RagModelCatalog> { return requestJson("/v1/model-providers/managed/catalog", { method: "GET" }); }
 export function listRagModelProviders(): Promise<RagModelProvider[]> { return requestJson("/v1/model-providers/managed", { method: "GET" }); }
 export function createRagModelProvider(payload: Record<string, unknown>): Promise<RagModelProvider> { return requestJson("/v1/model-providers/managed", { method: "POST", body: JSON.stringify(payload) }); }
-export interface RagModelConnectivityResult { ok: boolean; status: "reachable" | "quota_exceeded" | "failed"; message: string; model: string; }
+export interface RagModelConnectivityResult { ok: boolean; status: "reachable" | "quota_exceeded" | "failed"; message: string; model: string; external_request_sent: boolean; endpoint_host: string; http_status: number | null; }
 export function testRagModelConnectivity(payload: Record<string, unknown>): Promise<RagModelConnectivityResult> { return requestJson("/v1/model-providers/managed/test", { method: "POST", body: JSON.stringify(payload) }); }
 export function updateRagModelProvider(providerId: string, payload: Record<string, unknown>): Promise<RagModelProvider> { return requestJson(`/v1/model-providers/managed/${encodeURIComponent(providerId)}`, { method: "PUT", body: JSON.stringify(payload) }); }
 export function disableRagModelProvider(providerId: string): Promise<RagModelProvider> { return requestJson(`/v1/model-providers/managed/${encodeURIComponent(providerId)}/disable`, { method: "POST" }); }

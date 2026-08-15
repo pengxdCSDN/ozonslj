@@ -9,6 +9,17 @@
 
 /* 供应商配置的技术字段提供可读解释，避免把“适配器”误解为模型名称。 */
 .model-form-grid label:nth-child(3) select { border-color: #59428d; background: linear-gradient(90deg, #111026, #15112a); }
+
+/* 供应商页面的默认小字号在宽屏上可读性不足，统一提升一级但不改变布局密度。 */
+.model-form-grid label { font-size: 11px; }
+.model-form-grid label em { font-size: 9px; }
+.model-form-grid input, .model-form-grid select { font-size: 12px; }
+.provider-title strong { font-size: 13px; }
+.provider-title span { font-size: 9px; }
+.provider-model { font-size: 11px; }
+.provider-meta, .provider-priority small { font-size: 9px; }
+.priority-mark { font-size: 11px; }
+.provider-priority strong { font-size: 18px; }
 .model-form-grid label:nth-child(3) input { border-color: #59428d; background: linear-gradient(90deg, #111026, #15112a); }
 .model-form-grid select option { color: #f2effc; background: #15132a; }
 .model-form-grid select option:checked { color: #ffffff; background: #4b3685; }
@@ -63,3 +74,16 @@
 .provider-pool-panel .empty-search span { max-width: 56ch; font-size: 9px; line-height: 1.6; }
 .provider-pool-panel .empty-search::after { content: "回到上方配置入口添加供应商"; color: #a88bf7; font-size: 9px; font-weight: 700; }
 @media (max-width: 720px) { .model-form-actions { flex-wrap: wrap; } .model-form-actions .model-action-button { flex: 1 1 142px; } }
+
+.credential-panel { overflow: hidden; }
+.credential-panel > .credential-form { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 18px; }
+.credential-panel > .credential-form .form-title { grid-column: 1 / -1; }
+.credential-panel > .credential-form .primary-button { width: max-content; min-width: 180px; }
+.credential-check { display: flex !important; align-items: center; gap: 8px !important; }
+.credential-check input { width: 16px !important; min-height: 16px !important; accent-color: var(--violet); }
+.credential-actions { display: flex; flex-wrap: wrap; gap: 10px; grid-column: 1 / -1; }
+@media (max-width: 700px) {
+  .credential-panel > .credential-form { grid-template-columns: 1fr; }
+  .credential-panel > .credential-form .form-title { grid-column: auto; }
+  .credential-panel > .credential-form .primary-button { width: 100%; }
+}

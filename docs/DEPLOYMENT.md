@@ -154,8 +154,8 @@ docker compose --env-file .env exec -e PYTHONPATH=/app api \
 3. 在 `/opt/ozonslj/app/deploy` 执行 `docker compose --env-file .env config --quiet`。
 4. 等待 ACR 自动构建完成，然后执行 `docker compose --env-file .env pull api worker`。
 5. 不要只根据可变的 `dev` 标签判断发布成功。使用 `docker image inspect` 核对镜像创建时间和摘要，并在镜像内检查本次发布的关键文件；若仍是旧镜像，等待 ACR 构建结束后重新拉取。
-6. 仅重建应用进程：`docker compose --env-file .env up -d --no-deps api worker`。未修改 PostgreSQL、Redis 或 Web 镜像时，不重建这些服务。
-7. 核对 API 与 Worker 的镜像摘要一致，并验证容器状态、`/api/health/live`、`/api/health/ready`、新增路由、启动日志和公网静态资源。
+6. 重建应用进程：`docker compose --env-file .env up -d --no-deps api worker`。API 容器重建后可能获得新的 Compose 网络 IP，必须随后执行 `docker compose --env-file .env restart web`，让 Nginx 重新解析 API upstream；不能只重建 API/Worker。
+7. 核对 API 与 Worker 的镜像摘要一致，并验证容器状态、`/api/health/live`、`/api/health/ready`、登录/关键 API、启动日志和公网静态资源。健康检查失败或出现 502 时，先检查 Web 容器日志中的 upstream 地址，再重启 Web 刷新解析。
 
 推荐的服务器命令：
 
@@ -170,6 +170,7 @@ docker compose --env-file .env pull api worker
 docker image inspect "$APP_IMAGE" --format '{{.Id}} {{.Created}}'
 docker compose --env-file .env run --rm --no-deps api test -f /app/path/to/release-marker.py
 docker compose --env-file .env up -d --no-deps api worker
+docker compose --env-file .env restart web
 docker compose --env-file .env ps
 docker inspect -f '{{.Config.Image}} {{.Image}}' ozonslj-api-1 ozonslj-worker-1
 curl -fsS http://127.0.0.1/api/health/live

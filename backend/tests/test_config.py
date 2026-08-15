@@ -42,3 +42,14 @@ def test_production_accepts_explicit_cloud_dependencies() -> None:
 
     assert settings.database_url is not None
     assert settings.redis_url is not None
+
+
+def test_scheduler_role_does_not_require_model_credentials() -> None:
+    settings = Settings(
+        app_env="production",
+        service_role="scheduler",
+        database_url="postgresql://app:secret@postgres:5432/ozonslj",
+        redis_url="redis://redis:6379/0",
+    )
+
+    assert settings.service_role == "scheduler"
