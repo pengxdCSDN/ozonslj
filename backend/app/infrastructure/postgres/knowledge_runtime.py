@@ -45,13 +45,16 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
         organization_id: str,
         credentials: ModelCredentialStore,
         fallback: EmbeddingPort,
+        configured_dimension: int,
     ) -> None:
         self._pool = pool
         self._organization_id = organization_id
         self._credentials = credentials
         self._fallback = fallback
         self.model_id = fallback.model_id
-        self.dimension = fallback.dimension
+        # 生产主备模型必须共享配置中的索引维度；不能继承测试用确定性
+        # Embedding 的 32 维，否则真实 1024 维响应会被误判为不兼容。
+        self.dimension = configured_dimension
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         candidates = await self._candidates()
@@ -221,6 +224,7 @@ class PostgresChromaKnowledgeRuntime:
             organization_id=self.organization_id,
             credentials=self._credentials,
             fallback=configured_embedding,
+            configured_dimension=settings.rag_embedding_dimension,
         )
         self._pool_open = False
 
