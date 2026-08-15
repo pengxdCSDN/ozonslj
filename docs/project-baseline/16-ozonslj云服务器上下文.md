@@ -103,6 +103,7 @@ curl -fsS http://127.0.0.1/api/health/ready
 - PostgreSQL/Redis/API/Web/Worker：容器均运行；API、PostgreSQL、Redis 健康，Worker 进程为 `python -m backend.app.worker`。
 - 备份：最新备份 `ozonslj-20260811T073627Z.dump` 为 PostgreSQL CUSTOM 格式，`pg_restore --list` 成功；恢复到临时数据库成功后已删除临时数据库和临时副本。
 - 前端：线上入口已切换到最新 `index-DLCnFVSL.js`，JS 返回 HTTP 200 和 `application/javascript`。
-- 修复项：Compose 增加独立 `scheduler` 服务，避免只有 Worker 而没有到期任务投递进程；Scheduler 角色不挂载模型凭据，只依赖 PostgreSQL/Redis。
-- 当前阻塞：GitHub 已推送 Scheduler 角色隔离代码，但 ACR 的 `ozonslj-api-dev` 标签仍返回旧镜像摘要 `4fdbcf8cf927`；旧镜像不认识 `SERVICE_ROLE=scheduler`，因此 Scheduler 不能安全启动。不得伪造模型 Secret 或把生产环境降级为 local；待 ACR 构建新镜像后执行 `pull api worker scheduler`、启动 Scheduler，再将本项更新为通过。
+- 修复项：Compose 增加独立 `scheduler` 服务，避免只有 Worker 而没有到期任务投递进程；Scheduler 使用同一应用镜像但通过 `SERVICE_ROLE=scheduler` 启动，只挂载 PostgreSQL Secret，不读取模型或 Seller 凭据。
+- Scheduler 验收：ACR 新镜像已拉取，服务端 Compose 已显式补齐 PostgreSQL、Redis 和调度参数；Scheduler 已连续运行并确认进程为 `scheduler_main`，无启动 traceback。
+- 2026-08-15 闭环结果：API/Worker/Scheduler/PostgreSQL/Redis/Web/Chroma 均运行；HTTPS `live`、`ready` 返回 `status=ok`，`/api/health/rag` 返回 `healthy`。API/Worker 仍沿用既有健康容器，未因缺失的可选 RAG Secret 强行重建；不得伪造模型 Secret 或把生产环境降级为 local。
 - 尚未具备的真实能力：当前云端同步处理器在 `stub` 模式；真实 Seller API 只读授权和供应商真实模型调用仍需单独授权与验收，不能标记为真实业务闭环完成。
