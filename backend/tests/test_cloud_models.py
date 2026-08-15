@@ -18,6 +18,7 @@ from backend.app.infrastructure.cloud_models import (
 @pytest.mark.asyncio
 async def test_dashscope_embedding_sends_dimension_and_preserves_order() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == "https://example.test/v1/embeddings"
         body = json.loads(request.read().decode("utf-8"))
         assert request.headers["Authorization"] == "Bearer test-key"
         assert body["dimensions"] == 2
@@ -32,7 +33,8 @@ async def test_dashscope_embedding_sends_dimension_and_preserves_order() -> None
         )
 
     client = DashScopeEmbeddingClient(
-        api_key="test-key", dimension=1024, transport=httpx.MockTransport(handler)
+        api_key="test-key", base_url="https://example.test/v1/embeddings",
+        dimension=1024, transport=httpx.MockTransport(handler)
     )
     # 2 维仅用于契约测试，生产配置使用供应商支持的 1024 维。
     client.dimension = 2

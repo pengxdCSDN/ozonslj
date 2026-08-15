@@ -126,7 +126,12 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         self.send_dimensions = send_dimensions
         self.retry_alternate_input = retry_alternate_input
         self._api_key = api_key
-        self._endpoint = f"{base_url.rstrip('/')}/embeddings"
+        normalized_base_url = base_url.rstrip("/")
+        # 管理端已规范化多数地址，但历史配置可能仍包含资源后缀；避免
+        # 形成 /embeddings/embeddings，导致供应商返回 404。
+        if normalized_base_url.endswith("/embeddings"):
+            normalized_base_url = normalized_base_url[: -len("/embeddings")]
+        self._endpoint = f"{normalized_base_url}/embeddings"
         self._timeout = httpx.Timeout(timeout_seconds)
         self._transport = transport
         self.last_usage = CloudModelUsage()
