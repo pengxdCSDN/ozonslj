@@ -63,7 +63,7 @@ class PostgresRagTaskGateway:
                    SET status = 'queued', lease_expires_at = NULL
                    FROM candidates
                    WHERE jobs.organization_id = %s AND jobs.id = candidates.id
-                   RETURNING id
+                   RETURNING jobs.id AS id
                    """,
                 (self._context.organization_id, limit, self._context.organization_id),
             ).fetchall()
