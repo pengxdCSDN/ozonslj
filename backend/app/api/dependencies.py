@@ -155,6 +155,7 @@ from backend.app.infrastructure.postgresql.public_snapshots import PostgresPubli
 from backend.app.infrastructure.postgresql.rag_model_providers import (
     PostgresRagModelProviderGateway,
 )
+from backend.app.infrastructure.postgresql.rag_tasks import PostgresRagTaskGateway
 from backend.app.infrastructure.postgresql.readback_verifications import (
     PostgresReadbackVerificationGateway,
 )
@@ -200,6 +201,7 @@ from backend.app.infrastructure.postgresql.store_workspaces import (
 from backend.app.infrastructure.postgresql.summary_reports import PostgresSummaryReportGateway
 from backend.app.infrastructure.postgresql.sync_jobs import PostgresSyncJobGateway
 from backend.app.infrastructure.readiness import InfrastructureReadinessProbe
+from backend.app.infrastructure.redis_rag_tasks import RedisRagTaskQueue
 
 
 class LoginRateLimiter(Protocol):
@@ -466,6 +468,21 @@ def get_rag_model_provider_gateway(
 def get_model_credential_store() -> ModelCredentialStore:
     """模型凭据只写入部署专用 Secret 卷，目录由环境配置决定。"""
     return ModelCredentialStore(get_settings().rag_provider_credentials_dir)
+
+
+def get_rag_task_gateway(
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+) -> PostgresRagTaskGateway:
+    """RAG 任务状态统一从 PostgreSQL 读取，避免 API/Worker 各自持有内存队列。"""
+    return PostgresRagTaskGateway(sessions, context)
+
+
+def get_rag_task_queue(
+    redis: Annotated[Redis, Depends(get_redis_client)],
+) -> RedisRagTaskQueue:
+    """返回 RAG Redis Stream 投递器；Redis 只保存可重放的任务触发信号。"""
+    return RedisRagTaskQueue(redis)
 
 
 def get_readonly_tool_gateway(

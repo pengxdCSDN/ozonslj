@@ -65,7 +65,9 @@ class OpenAICompatibleRerankClient:
             raise ValueError("重排序请求的 query 和 documents 不能为空")
         payload = {"model": self.model_id, "query": query, "documents": documents}
         try:
-            async with httpx.AsyncClient(timeout=self._timeout, transport=self._transport) as client:
+            async with httpx.AsyncClient(
+                timeout=self._timeout, transport=self._transport
+            ) as client:
                 response = await client.post(
                     self._endpoint,
                     headers={"Authorization": f"Bearer {self._api_key}"},
@@ -134,7 +136,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
             return []
         if any(not text.strip() for text in texts):
             raise ValueError("Embedding 输入不能包含空文本")
-        payload = {
+        payload: dict[str, object] = {
             "model": self.model_id,
             # SiliconFlow 官方单文本示例使用字符串；单条请求采用该形态，批量请求仍保留数组。
             "input": texts[0] if len(texts) == 1 else texts,

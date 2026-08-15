@@ -1,15 +1,64 @@
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from backend.app.api.dependencies import get_rag_task_gateway, get_rag_task_queue
 from backend.app.api.routes.knowledge_tasks import router
+from backend.app.domain.rag_worker import RagWorkerTask
+
+
+class FakeRagGateway:
+    def __init__(self) -> None:
+        self.tasks: dict[str, RagWorkerTask] = {}
+
+    async def create(self, task_type: str, idempotency_key: str, source_id: str,
+                     document_version_id: str) -> RagWorkerTask:
+        task = next(
+            (task for task in self.tasks.values() if task.error_code == idempotency_key), None
+        )
+        if task is None:
+            task = RagWorkerTask(idempotency_key, task_type, "org-1", error_code=idempotency_key)
+            self.tasks[task.task_id] = task
+        return task
+
+    async def list_tasks(self) -> list[RagWorkerTask]:
+        return list(self.tasks.values())
+
+    async def claim(self, task_id: str, worker_id: str, lease_seconds: int) -> RagWorkerTask | None:
+        task = self.tasks[task_id]
+        claimed = RagWorkerTask(task.task_id, task.task_type, task.organization_id, "running", 1)
+        self.tasks[task_id] = claimed
+        return claimed
+
+    async def finish(
+        self, task_id: str, status: str, error_code: str | None = None
+    ) -> RagWorkerTask:
+        task = self.tasks[task_id]
+        finished = RagWorkerTask(
+            task.task_id, task.task_type, task.organization_id, status,
+            task.attempt, None, error_code,
+        )
+        self.tasks[task_id] = finished
+        return finished
+
+
+class FakeRagQueue:
+    async def enqueue(self, task_id: str) -> None:
+        return None
 
 
 def test_task_is_idempotent_claimed_and_finished() -> None:
     app = FastAPI()
     app.include_router(router)
+    fake_gateway = FakeRagGateway()
+    app.dependency_overrides[get_rag_task_gateway] = lambda: fake_gateway
+    app.dependency_overrides[get_rag_task_queue] = FakeRagQueue
     client = TestClient(app)
     created = client.post(
-        "/v1/knowledge-tasks", json={"task_type": "index", "organization_id": "org-1"}
+        "/v1/knowledge-tasks",
+        json={
+            "task_type": "index", "organization_id": "org-1", "source_id": "source-1",
+            "document_version_id": "version-1", "idempotency_key": "task-1",
+        },
     )
     task_id = created.json()["task_id"]
     listed = client.get("/v1/knowledge-tasks?organization_id=org-1")

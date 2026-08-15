@@ -2,21 +2,23 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from uuid import uuid4
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.app.domain.rag_worker import RagWorkerQueue, RagWorkerTask
+from backend.app.api.dependencies import get_rag_task_gateway, get_rag_task_queue
+from backend.app.domain.rag_worker import RagWorkerTask
+from backend.app.infrastructure.postgresql.rag_tasks import PostgresRagTaskGateway
+from backend.app.infrastructure.redis_rag_tasks import RedisRagTaskQueue
 
 router = APIRouter(prefix="/v1/knowledge-tasks", tags=["knowledge-tasks"])
-_queue = RagWorkerQueue(max_concurrency=1, lease_seconds=300)
-
-
 class TaskCreatePayload(BaseModel):
     task_type: str = Field(pattern="^(ingest|parse|chunk|index|withdraw|delete|rebuild)$")
     organization_id: str = Field(min_length=1, max_length=100)
+    source_id: str = Field(min_length=1, max_length=100)
+    document_version_id: str = Field(min_length=1, max_length=100)
+    idempotency_key: str = Field(min_length=1, max_length=200)
 
 
 class TaskFinishPayload(BaseModel):
@@ -35,38 +37,54 @@ def _task_response(task: RagWorkerTask) -> dict[str, object]:
 
 
 @router.post("", response_model=dict[str, object], status_code=202)
-async def create_knowledge_task(payload: TaskCreatePayload) -> dict[str, object]:
-    task = _queue.enqueue(RagWorkerTask(str(uuid4()), payload.task_type, payload.organization_id))
+async def create_knowledge_task(
+    payload: TaskCreatePayload,
+    gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
+    queue: Annotated[RedisRagTaskQueue, Depends(get_rag_task_queue)],
+) -> dict[str, object]:
+    task = await gateway.create(
+        payload.task_type, payload.idempotency_key, payload.source_id,
+        payload.document_version_id,
+    )
+    await queue.enqueue(task.task_id)
     return _task_response(task)
 
 
 @router.get("", response_model=list[dict[str, object]])
-async def list_knowledge_tasks(organization_id: str | None = None) -> list[dict[str, object]]:
+async def list_knowledge_tasks(
+    gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
+    organization_id: str | None = None,
+) -> list[dict[str, object]]:
     """返回任务状态，供管理页显示排队、租约过期和失败原因。"""
 
-    return [_task_response(task) for task in _queue.list(organization_id=organization_id)]
+    tasks = await gateway.list_tasks()
+    return [
+        _task_response(task)
+        for task in tasks
+        if organization_id is None or task.organization_id == organization_id
+    ]
 
 
 @router.post("/{task_id}/claim", response_model=dict[str, object], status_code=200)
-async def claim_knowledge_task(task_id: str, organization_id: str) -> dict[str, object]:
-    try:
-        existing = _queue.get(task_id)
-    except KeyError as error:
-        raise HTTPException(status_code=404, detail="RAG 任务不存在") from error
-    if existing.organization_id != organization_id:
-        raise HTTPException(status_code=404, detail="RAG 任务不存在")
-    claimed = _queue.claim(organization_id=organization_id, now=datetime.now(UTC))
-    if claimed is None or claimed.task_id != task_id:
+async def claim_knowledge_task(
+    task_id: str,
+    organization_id: str,
+    gateway: Annotated[
+        PostgresRagTaskGateway, Depends(get_rag_task_gateway)
+    ],
+) -> dict[str, object]:
+    claimed = await gateway.claim(task_id, "rag-api-claim", 300)
+    if claimed is None or claimed.organization_id != organization_id:
         raise HTTPException(status_code=409, detail="任务当前不可领取")
     return _task_response(claimed)
 
 
 @router.post("/{task_id}/finish", response_model=dict[str, object])
-async def finish_knowledge_task(task_id: str, payload: TaskFinishPayload) -> dict[str, object]:
-    try:
-        finished = _queue.finish(task_id, status=payload.status, error_code=payload.error_code)  # type: ignore[arg-type]
-    except KeyError as error:
-        raise HTTPException(status_code=404, detail="RAG 任务不存在") from error
-    except ValueError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
+async def finish_knowledge_task(
+    task_id: str, payload: TaskFinishPayload,
+    gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
+) -> dict[str, object]:
+    finished = await gateway.finish(task_id, payload.status, payload.error_code)
+    if finished is None:
+        raise HTTPException(status_code=409, detail="任务不存在或不在 running 状态")
     return _task_response(finished)

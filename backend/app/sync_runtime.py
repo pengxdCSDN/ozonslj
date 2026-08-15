@@ -6,13 +6,16 @@ import socket
 
 from redis.asyncio import Redis
 
+from backend.app.application.rag_worker import RagWorker
 from backend.app.application.sync_dispatch import SyncJobDispatcher
 from backend.app.application.sync_processes import run_scheduler_loop, run_worker_loop
 from backend.app.application.sync_worker import SyncWorker
 from backend.app.config import Settings, get_settings
 from backend.app.domain.sync_job import SyncHandler, SyncResourceType
+from backend.app.infrastructure.postgresql.rag_tasks import PostgresRagTaskGateway
 from backend.app.infrastructure.postgresql.session import PostgresSessionFactory, TenantContext
 from backend.app.infrastructure.postgresql.sync_jobs import PostgresSyncJobGateway
+from backend.app.infrastructure.redis_rag_tasks import RedisRagTaskConsumer, RedisRagTaskQueue
 from backend.app.infrastructure.redis_sync_consumer import RedisSyncJobConsumer
 from backend.app.infrastructure.redis_sync_queue import RedisSyncJobQueue
 from backend.app.infrastructure.stub_sync_handlers import StubSyncHandler
@@ -67,12 +70,17 @@ async def run_scheduler(settings: Settings) -> None:
         sessions.open()
         jobs = PostgresSyncJobGateway(sessions, _service_context(settings))
         dispatcher = SyncJobDispatcher(jobs, RedisSyncJobQueue(redis))
+        rag_tasks = PostgresRagTaskGateway(sessions, _service_context(settings))
+        rag_queue = RedisRagTaskQueue(redis)
 
         async def dispatch_once() -> int:
             count = await dispatcher.dispatch_due_jobs(limit=settings.sync_dispatch_batch_size)
             if count:
                 logger.info("同步调度本轮投递 %d 个任务", count)
-            return count
+            rag_ids = await rag_tasks.dispatchable_ids(settings.sync_dispatch_batch_size)
+            for task_id in rag_ids:
+                await rag_queue.enqueue(task_id)
+            return count + len(rag_ids)
 
         await run_scheduler_loop(
             dispatch_once,
@@ -109,7 +117,20 @@ async def run_worker(settings: Settings) -> None:
         async def process_one() -> bool:
             return await worker.process_one(block_ms=settings.sync_worker_block_ms)
 
-        await run_worker_loop(process_one, stop)
+        rag_tasks = PostgresRagTaskGateway(sessions, _service_context(settings))
+        rag_consumer = RedisRagTaskConsumer(redis, consumer_name=f"rag-{worker_id}")
+        rag_worker = RagWorker(
+            rag_tasks, rag_consumer, worker_id=worker_id,
+            lease_seconds=settings.sync_worker_lease_seconds,
+        )
+
+        async def process_rag_one() -> bool:
+            return await rag_worker.process_one(block_ms=settings.sync_worker_block_ms)
+
+        await asyncio.gather(
+            run_worker_loop(process_one, stop),
+            run_worker_loop(process_rag_one, stop),
+        )
     finally:
         await redis.aclose()
         sessions.close()
