@@ -70,7 +70,9 @@ export function RagModelProvidersView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [testingConnectivity, setTestingConnectivity] = useState(false);
-  const [message, setMessage] = useState("先新增模型配置，再按优先级生成自动降级链。");
+  // 初始状态必须为空：页面加载属于静默数据同步，不应把引导文案当作操作结果弹出。
+  // Toast 只由用户主动刷新、测试、保存、启停或删除等操作写入。
+  const [message, setMessage] = useState("");
   const [messageTone, setMessageTone] = useState<"success" | "error" | "info">("info");
   const [connectivityState, setConnectivityState] = useState<"idle" | "success" | "error">("idle");
   const [customAdapter, setCustomAdapter] = useState(false);
