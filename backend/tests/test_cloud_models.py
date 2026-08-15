@@ -8,6 +8,7 @@ import pytest
 from backend.app.domain.product_localization import LocalizedProductContent
 from backend.app.infrastructure.cloud_models import (
     CloudModelError,
+    CloudModelNotFoundError,
     CloudModelQuotaError,
     DashScopeEmbeddingClient,
     OpenAICompatibleRerankClient,
@@ -94,6 +95,32 @@ async def test_embedding_error_exposes_safe_upstream_reason_without_secret() -> 
 
 
 @pytest.mark.asyncio
+async def test_embedding_can_auto_detect_dimension_once() -> None:
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"data": [{"index": 0, "embedding": [0.0, 1.0]}]})
+
+    client = DashScopeEmbeddingClient(
+        api_key="test-key", auto_detect_dimension=True,
+        transport=httpx.MockTransport(handler)
+    )
+    assert await client.embed(["测试"]) == [[0.0, 1.0]]
+    assert client.dimension == 2
+
+
+@pytest.mark.asyncio
+async def test_text_404_is_classified_as_model_not_found() -> None:
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={"message": "model not found"})
+
+    client = OpenAICompatibleTranslationClient(
+        api_key="test-key", model="missing", base_url="https://example.test/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    with pytest.raises(CloudModelNotFoundError, match="model not found"):
+        await client.translate(["测试"])
+
+
+@pytest.mark.asyncio
 async def test_embedding_retries_with_batch_input_after_provider_400() -> None:
     attempts = 0
 
@@ -153,11 +180,14 @@ def test_localized_content_keeps_russian_and_builds_bilingual_embedding_text() -
 @pytest.mark.asyncio
 async def test_rerank_client_sends_query_and_documents() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == "https://example.test/v1/rerank"
         body = json.loads(request.read().decode("utf-8"))
         assert body == {
             "model": "BAAI/bge-reranker-v2-m3",
             "query": "颜色",
             "documents": ["红色", "蓝色"],
+            "top_n": 2,
+            "return_documents": False,
         }
         return httpx.Response(200, json={"results": [{"index": 0, "relevance_score": 0.9}]})
 
@@ -169,4 +199,30 @@ async def test_rerank_client_sends_query_and_documents() -> None:
     )
     assert await client.rerank(query="颜色", documents=["红色", "蓝色"]) == [
         {"index": 0, "relevance_score": 0.9}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_rerank_and_text_clients_accept_complete_resource_urls() -> None:
+    seen: list[str] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if request.url.path.endswith("/rerank"):
+            return httpx.Response(200, json={"results": []})
+        return httpx.Response(200, json={"choices": [{"message": {"content": "完成"}}]})
+
+    rerank = OpenAICompatibleRerankClient(
+        api_key="test-key", model="reranker", base_url="https://example.test/v1/rerank",
+        transport=httpx.MockTransport(handler),
+    )
+    text = OpenAICompatibleTranslationClient(
+        api_key="test-key", model="text", base_url="https://example.test/v1/chat/completions",
+        transport=httpx.MockTransport(handler),
+    )
+    await rerank.rerank(query="q", documents=["d"])
+    await text.translate(["x"])
+    assert seen == [
+        "https://example.test/v1/rerank",
+        "https://example.test/v1/chat/completions",
     ]

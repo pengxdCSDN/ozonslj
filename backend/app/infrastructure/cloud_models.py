@@ -39,6 +39,10 @@ class CloudModelQuotaError(CloudModelError):
     """云端供应商额度、限流或余额不足，调用方应切换备用供应商。"""
 
 
+class CloudModelNotFoundError(CloudModelError):
+    """供应商找不到模型或请求资源，通常需要修正模型 ID 或 Base URL。"""
+
+
 class CloudTranslationPort:
     """翻译端口；实现必须返回与输入顺序一致的中文译文。"""
 
@@ -56,14 +60,22 @@ class OpenAICompatibleRerankClient:
         _validate_cloud_base_url(base_url)
         self.model_id = model.strip()
         self._api_key = api_key
-        self._endpoint = f"{base_url.rstrip('/')}/rerank"
+        self._endpoint = _normalize_endpoint(base_url, "/rerank")
         self._timeout = httpx.Timeout(timeout_seconds)
         self._transport = transport
 
     async def rerank(self, *, query: str, documents: list[str]) -> list[dict[str, Any]]:
         if not query.strip() or not documents or any(not item.strip() for item in documents):
             raise ValueError("重排序请求的 query 和 documents 不能为空")
-        payload = {"model": self.model_id, "query": query, "documents": documents}
+        payload = {
+            "model": self.model_id,
+            "query": query,
+            "documents": documents,
+            # SiliconFlow 的经典 Rerank 契约要求显式给出返回数量；限制为候选数
+            # 以内，避免供应商因缺少 top_n 拒绝请求或返回不稳定数量。
+            "top_n": len(documents),
+            "return_documents": False,
+        }
         try:
             async with httpx.AsyncClient(
                 timeout=self._timeout, transport=self._transport
@@ -77,6 +89,11 @@ class OpenAICompatibleRerankClient:
             raise CloudModelError("重排序云端网络请求失败") from error
         if response.status_code == 429:
             raise CloudModelQuotaError("重排序供应商额度或限流已触发", status_code=429)
+        if response.status_code == 404:
+            raise CloudModelNotFoundError(
+                _safe_upstream_error_message(response, "重排序模型或接口不存在"),
+                status_code=404,
+            )
         if response.is_error:
             raise CloudModelError(
                 _safe_upstream_error_message(response, "重排序云端请求失败"),
@@ -105,6 +122,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         api_key: str,
         model: str = "text-embedding-v4",
         dimension: int = 1024,
+        auto_detect_dimension: bool = False,
         base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1",
         timeout_seconds: float = 30.0,
         retry_alternate_input: bool = False,
@@ -116,11 +134,12 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         # 不在客户端硬编码供应商维度白名单；不同模型支持的维度集合不同。
         # 这里只保证配置是正整数，真正的向量长度仍在响应解析时强校验，避免把
         # 不兼容向量写入当前索引。
-        if dimension <= 0:
+        if dimension is not None and dimension <= 0:
             raise ValueError("Embedding 维度必须是正整数")
         _validate_cloud_base_url(base_url)
         self.model_id = model.strip()
-        self.dimension = dimension
+        self.dimension = 0 if auto_detect_dimension else dimension
+        self.auto_detect_dimension = auto_detect_dimension
         # 不同 OpenAI 兼容供应商对可选字段的支持并不一致；调用方可关闭该字段，避免把
         # DashScope/Qwen 的参数发送给不接受它的模型（例如 SiliconFlow 的 BAAI/bge-m3）。
         self.send_dimensions = send_dimensions
@@ -165,7 +184,13 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         vectors: list[list[float]] = []
         for item in ordered:
             vector = item.get("embedding") if isinstance(item, dict) else None
-            if not isinstance(vector, list) or len(vector) != self.dimension:
+            if not isinstance(vector, list):
+                raise CloudModelError("Embedding 响应缺少向量数组")
+            if self.auto_detect_dimension and self.dimension == 0:
+                # 首次探测只接受供应商实际返回的正维度；后续请求固定该维度，防止
+                # 同一客户端在模型响应漂移时把不兼容向量写入当前索引。
+                self.dimension = len(vector)
+            if len(vector) != self.dimension:
                 raise CloudModelError("Embedding 响应维度不符合当前索引配置")
             vectors.append([float(value) for value in vector])
         return vectors
@@ -184,6 +209,11 @@ class DashScopeEmbeddingClient(EmbeddingPort):
             raise CloudModelError("Embedding 云端网络请求失败") from error
         if response.status_code == 429:
             raise CloudModelQuotaError("Embedding 供应商额度或限流已触发", status_code=429)
+        if response.status_code == 404:
+            raise CloudModelNotFoundError(
+                _safe_upstream_error_message(response, "Embedding 模型或接口不存在"),
+                status_code=404,
+            )
         if response.is_error:
             raise CloudModelError(
                 _safe_upstream_error_message(response, "Embedding 云端请求失败"),
@@ -215,7 +245,7 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
         _validate_cloud_base_url(base_url)
         self.model_id = model.strip()
         self._api_key = api_key
-        self._endpoint = f"{base_url.rstrip('/')}/chat/completions"
+        self._endpoint = _normalize_endpoint(base_url, "/chat/completions")
         self._timeout = httpx.Timeout(timeout_seconds)
         self._transport = transport
 
@@ -255,6 +285,11 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
             raise CloudModelError("翻译云端网络请求失败") from error
         if response.status_code == 429:
             raise CloudModelQuotaError("翻译供应商额度或限流已触发", status_code=429)
+        if response.status_code == 404:
+            raise CloudModelNotFoundError(
+                _safe_upstream_error_message(response, "文本模型或接口不存在"),
+                status_code=404,
+            )
         if response.is_error:
             raise CloudModelError(
                 _safe_upstream_error_message(response, "翻译云端请求失败"),
@@ -279,6 +314,15 @@ def _validate_cloud_base_url(base_url: str) -> None:
         raise ValueError("云端模型地址必须是合法 HTTP(S) URL")
     if parsed.scheme == "http" and parsed.hostname not in {"localhost", "127.0.0.1"}:
         raise ValueError("非本地云端模型地址必须使用 HTTPS")
+
+
+def _normalize_endpoint(base_url: str, suffix: str) -> str:
+    """兼容管理页面保存基础地址或完整资源地址两种配置形态。"""
+
+    normalized = base_url.rstrip("/")
+    if normalized.endswith(suffix):
+        return normalized
+    return f"{normalized}{suffix}"
 
 def _safe_upstream_error_message(response: httpx.Response, fallback: str) -> str:
     """提取上游可诊断的错误摘要，但禁止把响应正文或凭据返回给浏览器。"""
