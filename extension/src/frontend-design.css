@@ -253,7 +253,7 @@ h1, h2, h3, strong { font-family: var(--fd-display); }
 .budget-heading { align-items: center; }
 .budget-heading-mark { display: grid; justify-items: center; gap: 4px; min-width: 76px; padding: 11px 9px; border: 1px solid rgba(161,132,255,.2); border-radius: 13px; color: var(--fd-violet); background: linear-gradient(145deg, rgba(93,62,164,.25), rgba(15,16,31,.2)); }
 .budget-heading-mark span { color: var(--fd-muted); font: 8px var(--fd-mono); }
-.budget-overview { display: grid; grid-template-columns: minmax(190px, 1.6fr) repeat(3, 1fr); gap: 10px; }
+.budget-overview { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(260px, 1.6fr) repeat(3, minmax(180px, 1fr)); gap: 12px; width: 100%; }
 .budget-overview-lead, .budget-stat { display: grid; gap: 4px; min-height: 104px; padding: 16px 18px; border: 1px solid var(--fd-line); border-radius: 14px; background: linear-gradient(145deg, #1b1832f5, #101321f5); }
 .budget-overview-lead { position: relative; overflow: hidden; border-color: rgba(161,132,255,.35); background: radial-gradient(circle at 90% 0, rgba(161,132,255,.23), transparent 45%), linear-gradient(145deg, #241b46, #111526); }
 .budget-overview-lead strong { margin-top: 1px; color: var(--fd-violet-hot); font: 700 32px var(--fd-mono); letter-spacing: -.08em; }
@@ -373,6 +373,30 @@ h1, h2, h3, strong { font-family: var(--fd-display); }
 .feedback-toast svg { flex: none; margin-top: 1px; }
 .feedback-toast.message_success svg { color: #66dfba; }
 .feedback-toast.message_error svg { color: #f3a174; }
+
+/* 全局可读性基线：所有页面的主要文字统一放大 2px，布局尺寸保持不变。 */
+body { font-size: 12px; }
+.view-tabs button { font-size: 14px; }
+.nav-section-label { font-size: 11px; }
+.advanced-navigation summary { font-size: 12px; }
+.advanced-navigation details button { font-size: 13px; }
+.page-heading h1 { font-size: calc(clamp(24px, 2.4vw, 34px) + 2px); }
+.page-heading p:last-child { font-size: 13px; }
+.eyebrow { font-size: 11px; }
+.section-heading h2 { font-size: 18px; }
+.text-button, .muted-note { font-size: 12px; }
+.form-grid label, .credential-form label, .account-field, .login-field { font-size: 12px; }
+.form-grid input, .form-grid select, .credential-form input, .account-field input, .login-field input { font-size: 12px; }
+.primary-button, .secondary-button, .verify-button { font-size: 12px; }
+.form-message, .feedback-toast { font-size: 13px; }
+.provider-title strong { font-size: 15px; }
+.provider-model { font-size: 13px; }
+.provider-meta, .provider-priority small { font-size: 11px; }
+.route-copy strong { font-size: 13px; }
+.route-copy small { font-size: 10px; }
+.budget-row-identity strong { font-size: 14px; }
+.budget-row-identity small, .budget-row-state small { font-size: 11px; }
+.budget-fields label { font-size: 10px; }
 
 @keyframes feedback-toast-in {
   from { opacity: 0; transform: translate3d(0, -8px, 0); }
