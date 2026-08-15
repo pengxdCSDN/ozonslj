@@ -89,7 +89,7 @@ const NAV_GROUPS: { label: string; icon: React.ReactNode; items: { view: View; l
   { label: "选品研究", icon: <MagnifyingGlass size={17} />, items: [{ view: "explore", label: "探索选品" }, { view: "validate", label: "选品验证" }, { view: "competition", label: "竞争分析" }, { view: "profit", label: "利润模型" }] },
   { label: "内容增长", icon: <ClipboardText size={17} />, items: [{ view: "listing-keywords", label: "关键词策略" }, { view: "listing-title", label: "标题草稿" }, { view: "listing-risk", label: "内容风险" }, { view: "listing-publish", label: "受控发布" }] },
   { label: "广告分析", icon: <ChartLineUp size={17} />, items: [{ view: "advertising-campaigns", label: "广告活动" }, { view: "advertising-metrics", label: "广告指标" }, { view: "advertising-keywords", label: "关键词诊断" }, { view: "summary-report", label: "汇总报告" }] },
-  { label: "系统工具", icon: <Key size={17} />, items: [{ view: "performance-credentials", label: "Performance 凭据（配置与状态）" }, { view: "model-providers", label: "模型供应商" }, { view: "model-budget", label: "模型额度" }, { view: "seller-product-sync", label: "Seller 数据同步" }, { view: "agent-permissions", label: "Agent 权限" }, { view: "external-notifications", label: "外部通知" }] },
+  { label: "系统工具", icon: <Key size={17} />, items: [{ view: "performance-credentials", label: "Performance 凭据" }, { view: "model-providers", label: "模型供应商" }, { view: "model-budget", label: "模型额度" }, { view: "seller-product-sync", label: "Seller 数据同步" }, { view: "agent-permissions", label: "Agent 权限" }, { view: "external-notifications", label: "外部通知" }] },
 ];
 
 const VIEW_LABELS: Partial<Record<View, string>> = {
