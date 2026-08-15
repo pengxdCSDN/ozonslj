@@ -10,8 +10,8 @@ from backend.app.infrastructure.cloud_models import (
     CloudModelError,
     CloudModelQuotaError,
     DashScopeEmbeddingClient,
-    OpenAICompatibleTranslationClient,
     OpenAICompatibleRerankClient,
+    OpenAICompatibleTranslationClient,
 )
 
 
