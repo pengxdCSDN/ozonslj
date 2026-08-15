@@ -75,6 +75,9 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
                     # SiliconFlow 等 OpenAI-compatible 网关不一定支持
                     # dimensions 可选字段；响应解析仍会严格校验向量维度。
                     send_dimensions=False,
+                    # 不同兼容网关对单文本 input 的字符串/数组形态实现不同；
+                    # 400 时只允许一次有限的数组形态重试。
+                    retry_alternate_input=True,
                 )
                 vectors = await client.embed(texts)
                 await self._record_usage(provider_id, client.last_usage.total_tokens)
