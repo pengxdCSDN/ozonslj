@@ -397,6 +397,10 @@ body { font-size: 12px; }
 .budget-row-identity strong { font-size: 14px; }
 .budget-row-identity small, .budget-row-state small { font-size: 11px; }
 .budget-fields label { font-size: 10px; }
+.empty-search span, .empty-search::after { font-size: 10px; }
+.empty-search strong { font-size: 15px; }
+.state-panel p, .quality-result, .quality-result span { font-size: 13px; }
+.workspace-main small, .workspace-menu small { font-size: 10px; }
 
 @keyframes feedback-toast-in {
   from { opacity: 0; transform: translate3d(0, -8px, 0); }
