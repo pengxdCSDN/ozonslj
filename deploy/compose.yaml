@@ -146,6 +146,23 @@ services:
         limits:
           memory: 192M
 
+  scheduler:
+    # Scheduler 只负责把到期任务投递到 Redis；执行和租约续期由独立 Worker 负责。
+    # 两者必须分进程，避免 Worker 重启或阻塞时导致到期任务永远无法投递。
+    <<: *app-common
+    # 调度器只访问 PostgreSQL/Redis，不读取模型或 Seller 凭据；显式清空挂载，
+    # 避免某个可选 Secret 缺失时阻断整个调度进程启动。
+    environment:
+      SERVICE_ROLE: scheduler
+    volumes: []
+    secrets:
+      - postgres_password
+    command: ["python", "-c", "from backend.app.sync_runtime import scheduler_main; scheduler_main()"]
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
   web:
     image: ${REGISTRY_PREFIX}/pxd:nginx-1.27-alpine
     restart: unless-stopped

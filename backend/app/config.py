@@ -7,6 +7,7 @@ from pydantic import Field, HttpUrl, PostgresDsn, RedisDsn, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+ServiceRole = Literal["api", "worker", "scheduler"]
 
 
 class Settings(BaseSettings):
@@ -17,6 +18,8 @@ class Settings(BaseSettings):
     )
 
     app_env: Literal["local", "test", "production"] = "local"
+    # 进程角色用于最小化 Secret 挂载；调度器只投递任务，不应要求模型凭据。
+    service_role: ServiceRole = "api"
     app_host: str = "127.0.0.1"
     app_port: int = 8000
     # 正式运行只允许 PostgreSQL 保存业务事实；该连接串必须由部署环境注入，
@@ -68,20 +71,21 @@ class Settings(BaseSettings):
     def require_postgresql_and_cloud_runtime_dependencies(self) -> "Settings":
         """所有环境必须配置 PostgreSQL；生产环境还必须配置 Redis。"""
         missing: list[str] = []
-        for env_name, key_name, file_name in (
-            ("RAG_EMBEDDING_API_KEY", "rag_embedding_api_key", "rag_embedding_api_key_file"),
-            ("RAG_TRANSLATION_API_KEY", "rag_translation_api_key", "rag_translation_api_key_file"),
-        ):
-            if getattr(self, key_name) is None and getattr(self, file_name) is not None:
-                path = getattr(self, file_name)
-                try:
-                    secret = path.read_text(encoding="utf-8").strip()
-                except OSError:
-                    secret = ""
-                if secret:
-                    object.__setattr__(self, key_name, secret)
-                elif self.app_env == "production":
-                    missing.append(env_name)
+        if self.service_role != "scheduler":
+            for env_name, key_name, file_name in (
+                ("RAG_EMBEDDING_API_KEY", "rag_embedding_api_key", "rag_embedding_api_key_file"),
+                ("RAG_TRANSLATION_API_KEY", "rag_translation_api_key", "rag_translation_api_key_file"),
+            ):
+                if getattr(self, key_name) is None and getattr(self, file_name) is not None:
+                    path = getattr(self, file_name)
+                    try:
+                        secret = path.read_text(encoding="utf-8").strip()
+                    except OSError:
+                        secret = ""
+                    if secret:
+                        object.__setattr__(self, key_name, secret)
+                    elif self.app_env == "production":
+                        missing.append(env_name)
         if self.database_url is None:
             # 云端 Compose 使用 POSTGRES_* 与 password file 注入，避免把数据库密码
             # 写入普通环境变量；本地和测试仍可直接传 DATABASE_URL。

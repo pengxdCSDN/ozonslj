@@ -85,8 +85,8 @@ curl -fsS http://127.0.0.1/api/health/ready
 
 1. 代码推送后等待 ACR 完成目标镜像构建，记录镜像 tag/digest；服务器不在 2GB 节点本地构建镜像。
 2. 登录服务器后执行：`cd /opt/ozonslj/app/deploy`，再执行 `docker compose --env-file .env config --quiet` 和 `docker compose --env-file .env ps`。
-3. 只拉取并重建变更的 API/Worker：`docker compose --env-file .env pull api worker`，随后 `docker compose --env-file .env up -d --no-deps api worker`。未变更的 PostgreSQL、Redis、Nginx 不重建。
-4. 等待容器稳定后依次检查 `/api/health/live`、`/api/health/ready`，再查看脱敏日志：`docker compose logs --tail=100 api worker`。
+3. 只拉取并重建变更的 API/Worker/Scheduler：`docker compose --env-file .env pull api worker scheduler`，随后 `docker compose --env-file .env up -d --no-deps api worker scheduler`。未变更的 PostgreSQL、Redis、Nginx 不重建。
+4. 等待容器稳定后依次检查 `/api/health/live`、`/api/health/ready` 和 `/api/health/rag`，再查看脱敏日志：`docker compose logs --tail=100 api worker scheduler`。
 5. 若健康检查失败，先保留失败日志和镜像 digest，停止继续发布；按上一版已验证镜像回滚并重新执行健康检查，不直接删除数据库或卷。
 
 ### D. 发布后验收与回滚
@@ -95,3 +95,13 @@ curl -fsS http://127.0.0.1/api/health/ready
 - 后端：live/ready 均返回 `status=ok`，API/Worker 容器为 running，数据库迁移版本与代码兼容。
 - 联调：登录、配置模型、测试外部模型、刷新配置和模型额度页面至少各回归一次；真实外部凭据只在服务器安全配置中使用。
 - 回滚：恢复上一版 `index.html` 与 assets，后端恢复上一版镜像 tag/digest，重新执行 C/D 两节验收；不得使用 `git reset --hard` 覆盖开发工作树。
+
+### E. 2026-08-15 云端验收记录
+
+- API `live` 和 `ready`：HTTPS 访问均返回 `{"status":"ok"}`；HTTP 入口 301 到 HTTPS 属于当前网关策略。
+- Chroma：`/api/health/rag` 返回 `healthy`，容器健康检查通过，API 与 Chroma 位于可用的 Compose 网络。
+- PostgreSQL/Redis/API/Web/Worker：容器均运行；API、PostgreSQL、Redis 健康，Worker 进程为 `python -m backend.app.worker`。
+- 备份：最新备份 `ozonslj-20260811T073627Z.dump` 为 PostgreSQL CUSTOM 格式，`pg_restore --list` 成功；恢复到临时数据库成功后已删除临时数据库和临时副本。
+- 前端：线上入口已切换到最新 `index-DLCnFVSL.js`，JS 返回 HTTP 200 和 `application/javascript`。
+- 修复项：Compose 增加独立 `scheduler` 服务，避免只有 Worker 而没有到期任务投递进程；发布后必须核对 Scheduler 容器和日志。
+- 尚未具备的真实能力：当前云端同步处理器在 `stub` 模式；真实 Seller API 只读授权和供应商真实模型调用仍需单独授权与验收，不能标记为真实业务闭环完成。
