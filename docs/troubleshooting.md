@@ -257,3 +257,10 @@ OpenAI 兼容协议不代表所有供应商支持完全相同的可选字段。S
 ```
 
 目标地址为 `https://api.siliconflow.cn/v1/embeddings`，应以真实 HTTP 200 和合法向量响应作为连通性成功条件，不能只依据本地参数校验成功。
+
+## 2026-08-15：真实 Embedding 维度校验误用测试维度
+
+生产主备 Embedding 与同一 Chroma 索引必须统一使用 1024 维。运行时路由器不得从
+测试用 `DeterministicEmbedding` 继承 32 维作为真实供应商的期望维度；必须读取
+`RAG_EMBEDDING_DIMENSION`（默认 1024）进行响应校验。若模型或维度变更，必须新建
+索引版本并完整重建，禁止在同一 collection 混写不同维度向量。
