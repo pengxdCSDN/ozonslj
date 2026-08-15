@@ -72,6 +72,9 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
                     base_url=base_url,
                     model=model,
                     dimension=self.dimension,
+                    # SiliconFlow 等 OpenAI-compatible 网关不一定支持
+                    # dimensions 可选字段；响应解析仍会严格校验向量维度。
+                    send_dimensions=False,
                 )
                 vectors = await client.embed(texts)
                 await self._record_usage(provider_id, client.last_usage.total_tokens)
