@@ -68,6 +68,7 @@ RAG-3 可以在 RAG-2 schema 评审期间使用内存仓库开发，但不得绕
 - 已完成 404 模型不存在、429 额度/限流、4xx/5xx、网络错误和独立超时错误分类。
 - 已完成主模型/备用模型路由、预算门禁、usage 记账和安全降级；主备故障注入测试通过。
 - 已完成连接测试接口的 reachable、quota_exceeded、timeout、failed 状态；真实供应商凭据接入后只需执行真实调用验收。
+- 第五组代码门禁和云端验收已通过：应用镜像 `sha256:6663533ac2da95bdb36f658ad1241c9d485ea58bb09bf7047efaaafb2d951d0c`，容器内 `timeout-class=ok`、`pypdf=ok`，API `ready=200`。
 
 ## 4. RAG-1：领域对象与切片内核
 
