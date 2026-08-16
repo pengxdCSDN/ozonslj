@@ -9,6 +9,8 @@ import httpx
 class PerformanceTokenError(RuntimeError):
     """Performance Client Credentials 获取失败，错误信息不包含密钥内容。"""
 
+    code = "performance_token_request_failed"
+
 
 async def request_performance_token(
     *, client_id: str, client_secret: str, timeout_seconds: float = 20.0,
@@ -47,6 +49,10 @@ async def request_performance_token(
 class PerformanceApiError(RuntimeError):
     """Performance API 只读请求失败；异常信息不得包含令牌或密钥。"""
 
+    def __init__(self, message: str, *, code: str = "performance_api_failed") -> None:
+        super().__init__(message)
+        self.code = code
+
 
 async def fetch_performance_campaigns(
     *, access_token: str, timeout_seconds: float = 20.0,
@@ -62,8 +68,12 @@ async def fetch_performance_campaigns(
     except httpx.HTTPError as error:
         raise PerformanceApiError("Performance 广告活动查询请求失败") from error
     if response.status_code >= 400:
+        code = {
+            401: "performance_oauth_failed",
+            403: "performance_permission_denied",
+        }.get(response.status_code, "performance_api_failed")
         raise PerformanceApiError(
-            f"Performance 广告活动查询失败（HTTP {response.status_code}）"
+            f"Performance 广告活动查询失败（HTTP {response.status_code}）", code=code
         )
     try:
         body: Any = response.json()

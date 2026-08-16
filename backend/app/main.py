@@ -11,6 +11,7 @@ from backend.app.api.dependencies import (
     get_seller_account_verifier,
 )
 from backend.app.api.routes.advertising_analysis import router as advertising_analysis_router
+from backend.app.api.routes.advertising_budget import router as advertising_budget_router
 from backend.app.api.routes.advertising_calendar import router as advertising_calendar_router
 from backend.app.api.routes.advertising_campaigns import router as advertising_campaigns_router
 from backend.app.api.routes.advertising_keyword_diagnosis import (
@@ -220,6 +221,7 @@ def create_app(
     app.include_router(advertising_campaigns_router)
     app.include_router(advertising_calendar_router)
     app.include_router(advertising_analysis_router)
+    app.include_router(advertising_budget_router)
     app.include_router(advertising_reports_router)
     app.include_router(advertising_readonly_router)
     app.include_router(advertising_thresholds_router)

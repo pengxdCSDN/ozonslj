@@ -294,3 +294,11 @@ docker compose --env-file .env logs --tail=100 api worker
 - API、Worker、Scheduler 统一使用 `sha256:629976c612d2afd5bc057e531d55ac23aafde7fe60e8232554c5ae11db65f893`。
 - 外部通知仅完成配置校验与预览闭环，未配置真实渠道凭据，因此没有执行真实发送；Seller 实时数据分析和真实通知发送待外部授权后验收。
 - 后续发布必须继续遵守：先核对发布分支和源码提交，再核对镜像摘要/镜像内 revision，最后检查 API、Worker、Scheduler 一致性；摘要未变化不得宣称新版本发布。
+
+## 2026-08-16 第九组 Performance 广告 Stub/只读验收
+
+- 本地第九组后端回归 33 项通过；前端 TypeScript 检查通过，Vite Web 构建通过，入口为 `index-AseVkSlj.js`，样式为 `index-DxjgRheu.css`。
+- 已完成广告活动、关键词/否定词、指标导入、指标计算、异常诊断、30 天建议日历、阈值版本和只读边界。
+- 新增广告预算只读分析 API：按预算周期计算利用率、预计消耗和风险状态，禁止自动修改预算、出价或关键词。
+- Performance OAuth 错误已区分 `performance_oauth_failed` 与 `performance_permission_denied`；凭据状态保持与 Seller 凭据隔离，令牌和密钥不回显。
+- 本阶段需要代码镜像和 Web 静态资源更新；发布前必须使用 `codex/deployment-base-images` 触发 ACR，等待新摘要，核对镜像内源码提交、API/Worker/Scheduler 一致性和 Web 哈希资源后再验收。真实 Performance 授权仍待外部账号权限。

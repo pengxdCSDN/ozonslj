@@ -211,6 +211,6 @@ async def list_performance_campaigns(
         return await fetch_performance_campaigns(access_token=token)
     except PerformanceApiError as error:
         raise HTTPException(
-            status_code=502,
-            detail={"code": "performance_campaign_request_failed", "message": str(error)},
+            status_code=403 if error.code == "performance_permission_denied" else 502,
+            detail={"code": error.code, "message": str(error)},
         ) from error
