@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
 
 from backend.app.domain.knowledge_answer import (
     EvidenceDecision,
@@ -43,6 +44,16 @@ class KnowledgeSegmentAnswer:
     rewrite: RewriteResult
 
 
+class RerankerPort(Protocol):
+    async def rerank(self, query: str, hits: list[RetrievalHit]) -> list[RetrievalHit]: ...
+
+
+class AnswerGeneratorPort(Protocol):
+    async def generate(
+        self, question: str, evidence: tuple[KnowledgeCitation, ...]
+    ) -> str | None: ...
+
+
 class KnowledgeQueryEngine:
     """知识型混合 RAG 引擎。
 
@@ -56,10 +67,14 @@ class KnowledgeQueryEngine:
         embedding: EmbeddingPort,
         keyword_index: KeywordSearchPort,
         vector_index: VectorIndexPort,
+        reranker: RerankerPort | None = None,
+        answer_generator: AnswerGeneratorPort | None = None,
     ) -> None:
         self._embedding = embedding
         self._keyword_index = keyword_index
         self._vector_index = vector_index
+        self._reranker = reranker
+        self._answer_generator = answer_generator
 
     async def answer(self, question: str, *, limit: int = 5) -> tuple[KnowledgeSegmentAnswer, ...]:
         results: list[KnowledgeSegmentAnswer] = []
@@ -77,7 +92,28 @@ class KnowledgeQueryEngine:
                 else []
             )
             decision = gate_evidence(segment, hits)
-            results.append(_to_answer(segment, rewritten, decision))
+            if self._reranker is not None and hits:
+                try:
+                    hits = await self._reranker.rerank(rewritten.normalized, hits)
+                    decision = gate_evidence(segment, hits)
+                except (RuntimeError, TimeoutError, ValueError):
+                    # 重排只改善排序，失败时保留混合召回结果，不能让问答整体中断。
+                    pass
+            result = _to_answer(segment, rewritten, decision)
+            if self._answer_generator is not None and result.status == "answered":
+                try:
+                    generated = await self._answer_generator.generate(
+                        segment.text, result.citations
+                    )
+                except (RuntimeError, TimeoutError, ValueError):
+                    generated = None
+                if generated:
+                    result = KnowledgeSegmentAnswer(
+                        text=result.text, intent=result.intent, status=result.status,
+                        answer=generated, reason=result.reason, citations=result.citations,
+                        rewrite=result.rewrite,
+                    )
+            results.append(result)
         return tuple(results)
 
 

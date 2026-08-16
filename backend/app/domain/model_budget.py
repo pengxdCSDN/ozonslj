@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 BudgetState = Literal["normal", "warning", "exceeded"]
-BudgetPurpose = Literal["embedding", "intent_rewrite", "rerank", "answer_generation"]
+BudgetPurpose = Literal["embedding", "translation", "intent_rewrite", "rerank", "answer_generation"]
 
 
 @dataclass(frozen=True, slots=True)

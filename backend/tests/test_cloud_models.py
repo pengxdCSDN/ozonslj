@@ -12,6 +12,7 @@ from backend.app.infrastructure.cloud_models import (
     CloudModelQuotaError,
     DashScopeEmbeddingClient,
     OpenAICompatibleRerankClient,
+    OpenAICompatibleTextClient,
     OpenAICompatibleTranslationClient,
 )
 
@@ -226,3 +227,24 @@ async def test_rerank_and_text_clients_accept_complete_resource_urls() -> None:
         "https://example.test/v1/rerank",
         "https://example.test/v1/chat/completions",
     ]
+
+
+@pytest.mark.asyncio
+async def test_answer_text_client_records_usage_and_hides_secret() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.read().decode("utf-8"))
+        assert body["model"] == "answer-model"
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "仅基于证据的回答"}}],
+                "usage": {"prompt_tokens": 7, "completion_tokens": 3, "total_tokens": 10},
+            },
+        )
+
+    client = OpenAICompatibleTextClient(
+        api_key="top-secret", model="answer-model", base_url="https://example.test/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    assert await client.complete(system="受控回答", user="问题") == "仅基于证据的回答"
+    assert client.last_usage.total_tokens == 10

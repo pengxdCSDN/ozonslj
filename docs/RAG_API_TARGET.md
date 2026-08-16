@@ -328,14 +328,15 @@ PDF 目标流程：
 - `POST /v1/model-providers/{provider_id}/connection-tests`：使用固定非敏感载荷异步验证认证、网络、模型存在性与结构化输出，返回任务 ID；不得回显请求头、密钥或供应商原始错误正文。
 - `POST /v1/model-providers/{provider_id}/disable`：停止新调用，但保留配置版本和审计引用；已运行任务按用途级超时结束，不自动切换到未审核供应商。
 - `DELETE /v1/model-providers/{provider_id}`：仅在无用途绑定、无运行任务且满足审计保留规则时允许；否则返回稳定冲突错误并要求先停用/解绑。
-- `GET /v1/model-purpose-bindings` 与 `PUT /v1/model-purpose-bindings/{purpose}`：管理 `embedding`、`intent_rewrite`、`rerank`、`answer_generation` 的主模型和可选备用模型。绑定到 `pilot/internal` 前必须验证对应能力已通过 `shadow` 门禁。
+- `GET /v1/model-purpose-bindings` 与 `PUT /v1/model-purpose-bindings/{purpose}`：管理 `embedding`、`translation`、`intent_rewrite`、`rerank`、`answer_generation` 的主模型和可选备用模型。绑定到 `pilot/internal` 前必须验证对应能力已通过 `shadow` 门禁。
 - `GET /v1/model-budget-policies` 与 `PUT /v1/model-budget-policies/{provider_id}`：仅管理员查看/配置每日、每月 token 与估算费用预算，以及用途级单请求输入、输出和调用次数上限；写入要求敏感操作确认、乐观并发和审计。
 - `GET /v1/model-budget-usage?provider_id=&period=`：返回当前周期已结算、已预留、剩余比例、70%/90%/100% 状态和估算费用；不返回 API Key、完整提示词或用户问题正文。
 
 当前实现说明：额度管理页面已通过 `/v1/model-budgets` 读取持久化策略和用量，并通过
-`PUT /v1/model-budgets/{provider_id}` 保存策略；RAG Embedding 运行路径会在调用前执行预算门禁，
-成功响应中的 `usage.total_tokens` 和请求次数自动写入 PostgreSQL 台账。翻译与知识问答正式业务调用
-尚未接入该记账路径，供应商官方账单用量对账属于后续阶段。
+`PUT /v1/model-budgets/{provider_id}` 保存策略；正式 RAG 调用路径按用途执行预算门禁，
+成功响应中的 `usage.total_tokens` 和请求次数自动写入 PostgreSQL 台账。`POST /v1/knowledge-answers/query`
+在证据门禁通过后调用 `answer_generation` 文本模型，`POST /v1/knowledge-answers/translate` 调用
+`translation` 用途；供应商账单用量对账接口仅保留后续适配位。
 
 预算接口以 `Asia/Shanghai` 自然日/月展示周期，同时返回 UTC `period_start`/`period_end`、`billing_currency`、原币种金额和 token。可选 `display_cny` 必须携带参考汇率版本与“仅供展示”标记；客户端不得用折算值判断是否允许调用。时区、币种或预算变更只对下一周期生效。
 

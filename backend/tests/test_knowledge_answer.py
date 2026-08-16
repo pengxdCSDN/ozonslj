@@ -1,6 +1,13 @@
+import pytest
+
 from backend.app.domain.knowledge_answer import classify_intents, gate_evidence, rewrite_query
 from backend.app.domain.knowledge_chunking import ChunkMetadata, KnowledgeChunk
-from backend.app.domain.knowledge_retrieval import RetrievalHit
+from backend.app.domain.knowledge_query import KnowledgeQueryEngine
+from backend.app.domain.knowledge_retrieval import (
+    InMemoryKeywordIndex,
+    InMemoryVectorIndex,
+    RetrievalHit,
+)
 
 
 def _hit(status: str = "published") -> RetrievalHit:
@@ -39,3 +46,26 @@ def test_evidence_gate_rejects_unpublished_and_accepts_published() -> None:
     decision = gate_evidence(segment, [_hit()])
     assert decision.status == "answered"
     assert len(decision.supported_hits) == 1
+
+
+@pytest.mark.asyncio
+async def test_answer_generator_replaces_extractive_answer_only_after_evidence_gate() -> None:
+    embedding = type("Embedding", (), {"model_id": "test", "dimension": 2})()
+    async def embed(_: list[str]) -> list[list[float]]:
+        return [[1.0, 0.0]]
+    embedding.embed = embed
+    keyword = InMemoryKeywordIndex()
+    vector = InMemoryVectorIndex(dimension=2)
+    await keyword.replace([_hit().chunk])
+    await vector.upsert([_hit().chunk], [[1.0, 0.0]])
+
+    class Generator:
+        async def generate(self, question: str, evidence: object) -> str:
+            return "模型基于引用生成的回答"
+
+    engine = KnowledgeQueryEngine(
+        embedding=embedding, keyword_index=keyword, vector_index=vector,
+        answer_generator=Generator(),
+    )
+    result = await engine.answer("字段是什么意思")
+    assert result[0].answer == "模型基于引用生成的回答"

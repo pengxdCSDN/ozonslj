@@ -63,6 +63,7 @@ class OpenAICompatibleRerankClient:
         self._endpoint = _normalize_endpoint(base_url, "/rerank")
         self._timeout = httpx.Timeout(timeout_seconds)
         self._transport = transport
+        self.last_usage = CloudModelUsage()
 
     async def rerank(self, *, query: str, documents: list[str]) -> list[dict[str, Any]]:
         if not query.strip() or not documents or any(not item.strip() for item in documents):
@@ -110,7 +111,62 @@ class OpenAICompatibleRerankClient:
             results = body.get("data")
         if not isinstance(results, list):
             raise CloudModelError("重排序响应缺少 results 数组")
+        self.last_usage = _usage_from_response(body)
         return [item for item in results if isinstance(item, dict)]
+
+
+class OpenAICompatibleTextClient:
+    """回答文本模型适配器；只返回正文和脱敏 usage，不保存提示词或响应。"""
+
+    def __init__(self, *, api_key: str, model: str, base_url: str,
+                 timeout_seconds: float = 45.0,
+                 transport: httpx.AsyncBaseTransport | None = None) -> None:
+        if not api_key.strip() or not model.strip() or not base_url.strip():
+            raise ValueError("文本供应商必须配置 API Key、模型和 HTTPS 地址")
+        _validate_cloud_base_url(base_url)
+        self.model_id = model.strip()
+        self._api_key = api_key
+        self._endpoint = _normalize_endpoint(base_url, "/chat/completions")
+        self._timeout = httpx.Timeout(timeout_seconds)
+        self._transport = transport
+        self.last_usage = CloudModelUsage()
+
+    async def complete(self, *, system: str, user: str) -> str:
+        if not system.strip() or not user.strip():
+            raise ValueError("文本模型请求不能为空")
+        payload = {"model": self.model_id, "temperature": 0, "messages": [
+            {"role": "system", "content": system}, {"role": "user", "content": user}
+        ]}
+        try:
+            async with httpx.AsyncClient(
+                timeout=self._timeout, transport=self._transport
+            ) as client:
+                response = await client.post(
+                    self._endpoint,
+                    headers={"Authorization": f"Bearer {self._api_key}"}, json=payload,
+                )
+        except httpx.HTTPError as error:
+            raise CloudModelError("文本模型云端网络请求失败") from error
+        if response.status_code == 429:
+            raise CloudModelQuotaError("文本模型供应商额度或限流已触发", status_code=429)
+        if response.status_code == 404:
+            raise CloudModelNotFoundError(
+                _safe_upstream_error_message(response, "文本模型或接口不存在"), status_code=404
+            )
+        if response.is_error:
+            raise CloudModelError(
+                _safe_upstream_error_message(response, "文本模型云端请求失败"),
+                status_code=response.status_code,
+            )
+        try:
+            body = response.json()
+            self.last_usage = _usage_from_response(body)
+            content = body["choices"][0]["message"]["content"]
+        except (json.JSONDecodeError, KeyError, IndexError, TypeError) as error:
+            raise CloudModelError("文本模型响应结构无效") from error
+        if not isinstance(content, str) or not content.strip():
+            raise CloudModelError("文本模型响应为空")
+        return content.strip()
 
 
 class DashScopeEmbeddingClient(EmbeddingPort):

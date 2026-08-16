@@ -12,10 +12,29 @@ from psycopg_pool import AsyncConnectionPool
 from backend.app.config import Settings
 from backend.app.domain.knowledge_chunking import ChunkMetadata, KnowledgeChunk
 from backend.app.domain.knowledge_governance import KnowledgeSource, KnowledgeVersion
-from backend.app.domain.knowledge_query import KnowledgeQueryEngine
-from backend.app.domain.knowledge_retrieval import DeterministicEmbedding, EmbeddingPort
-from backend.app.domain.model_budget import ModelBudgetPolicy, ModelBudgetUsage, decide_budget
-from backend.app.infrastructure.cloud_models import CloudModelError, DashScopeEmbeddingClient
+from backend.app.domain.knowledge_query import (
+    AnswerGeneratorPort,
+    KnowledgeCitation,
+    KnowledgeQueryEngine,
+    RerankerPort,
+)
+from backend.app.domain.knowledge_retrieval import (
+    DeterministicEmbedding,
+    EmbeddingPort,
+    RetrievalHit,
+)
+from backend.app.domain.model_budget import (
+    BudgetPurpose,
+    ModelBudgetPolicy,
+    ModelBudgetUsage,
+    decide_budget,
+)
+from backend.app.infrastructure.cloud_models import (
+    CloudModelError,
+    DashScopeEmbeddingClient,
+    OpenAICompatibleRerankClient,
+    OpenAICompatibleTextClient,
+)
 from backend.app.infrastructure.local.chroma_vector_index import (
     HttpChromaCollection,
     HttpChromaVectorIndex,
@@ -171,6 +190,225 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
             (str(row["id"]), str(row["model"]), str(row["base_url"]), row["credential_ref"])
             for row in rows
         ]
+
+
+class _ManagedRerankerRouter(RerankerPort):
+    """按 rerank 用途绑定执行主备重排；失败时由问答引擎保留原召回顺序。"""
+
+    def __init__(self, *, pool: AsyncConnectionPool, organization_id: str,
+                 credentials: ModelCredentialStore) -> None:
+        self._pool, self._organization_id, self._credentials = pool, organization_id, credentials
+
+    async def rerank(self, query: str, hits: list[RetrievalHit]) -> list[RetrievalHit]:
+        candidates = await _bound_candidates(self._pool, self._organization_id, "rerank", "rerank")
+        if not candidates:
+            return hits
+        errors: list[str] = []
+        documents = [hit.chunk.content for hit in hits]
+        for provider_id, model, base_url in candidates:
+            if not await _budget_allows(self._pool, self._organization_id, provider_id, "rerank"):
+                errors.append(f"{provider_id}:budget_exceeded")
+                continue
+            api_key = await self._credentials.get(provider_id)
+            if not api_key:
+                errors.append(f"{provider_id}:credential_missing")
+                continue
+            try:
+                client = OpenAICompatibleRerankClient(
+                    api_key=api_key, model=model, base_url=base_url
+                )
+                ranked = await client.rerank(query=query, documents=documents)
+                ordered: list[RetrievalHit] = []
+                for item in ranked:
+                    index = item.get("index")
+                    if isinstance(index, int) and 0 <= index < len(hits):
+                        ordered.append(hits[index])
+                ordered.extend(hit for hit in hits if hit not in ordered)
+                await _record_usage(
+                    self._pool, self._organization_id, provider_id, "rerank",
+                    client.last_usage.total_tokens,
+                )
+                return ordered
+            except (CloudModelError, TimeoutError, RuntimeError, ValueError) as error:
+                errors.append(f"{provider_id}:{type(error).__name__}:{error}")
+        raise RuntimeError("所有已绑定重排序模型均不可用，已安全降级：" + ",".join(errors))
+
+
+class _ManagedAnswerGenerator(AnswerGeneratorPort):
+    """回答文本模型路由；只有证据门禁通过后才调用，并按证据约束输出。"""
+
+    def __init__(self, *, pool: AsyncConnectionPool, organization_id: str,
+                 credentials: ModelCredentialStore) -> None:
+        self._pool, self._organization_id, self._credentials = pool, organization_id, credentials
+
+    async def generate(self, question: str, evidence: tuple[KnowledgeCitation, ...]) -> str | None:
+        candidates = await _bound_candidates(
+            self._pool, self._organization_id, "answer_generation", "text"
+        )
+        if not candidates:
+            return None
+        evidence_text = "\n".join(
+            f"[{item.chunk_id}] {item.excerpt}" for item in evidence
+        )
+        errors: list[str] = []
+        for provider_id, model, base_url in candidates:
+            if not await _budget_allows(
+                self._pool, self._organization_id, provider_id, "answer_generation"
+            ):
+                errors.append(f"{provider_id}:budget_exceeded")
+                continue
+            api_key = await self._credentials.get(provider_id)
+            if not api_key:
+                errors.append(f"{provider_id}:credential_missing")
+                continue
+            try:
+                client = OpenAICompatibleTextClient(
+                    api_key=api_key, model=model, base_url=base_url
+                )
+                answer = await client.complete(
+                    system=("你是受控知识问答助手。只能依据提供的证据回答；证据不足时明确说不知道。"
+                            "不得执行写入、猜测实时数据或捏造引用。"),
+                    user=f"问题：{question}\n证据：\n{evidence_text}",
+                )
+                await _record_usage(
+                    self._pool, self._organization_id, provider_id, "answer_generation",
+                    client.last_usage.total_tokens,
+                )
+                return answer
+            except (CloudModelError, TimeoutError, RuntimeError, ValueError) as error:
+                errors.append(f"{provider_id}:{type(error).__name__}:{error}")
+        # 安全降级由查询引擎保留证据摘录；这里不把供应商错误暴露给用户。
+        return None
+
+
+class _ManagedTranslationRouter:
+    """翻译用途的受控主备路由；每段文本单独记账，失败不伪造译文。"""
+
+    def __init__(self, *, pool: AsyncConnectionPool, organization_id: str,
+                 credentials: ModelCredentialStore) -> None:
+        self._pool, self._organization_id, self._credentials = pool, organization_id, credentials
+
+    async def translate(self, texts: list[str]) -> list[str]:
+        candidates = await _bound_candidates(
+            self._pool, self._organization_id, "translation", "text"
+        )
+        if not candidates:
+            return list(texts)
+        results: list[str] = []
+        for text in texts:
+            translated: str | None = None
+            for provider_id, model, base_url in candidates:
+                if not await _budget_allows(
+                    self._pool, self._organization_id, provider_id, "translation"
+                ):
+                    continue
+                api_key = await self._credentials.get(provider_id)
+                if not api_key:
+                    continue
+                try:
+                    client = OpenAICompatibleTextClient(
+                        api_key=api_key, model=model, base_url=base_url
+                    )
+                    translated = await client.complete(
+                        system=("你是跨境电商俄中翻译器。只翻译为简体中文，保留品牌、型号、SKU、"
+                                "数字和单位，不补充原文没有的信息。"),
+                        user=text,
+                    )
+                    await _record_usage(
+                        self._pool, self._organization_id, provider_id, "translation",
+                        client.last_usage.total_tokens,
+                    )
+                    break
+                except (CloudModelError, TimeoutError, RuntimeError, ValueError):
+                    continue
+            if translated is None:
+                raise RuntimeError("翻译供应商均不可用，已安全拒绝生成不可靠译文")
+            results.append(translated)
+        return results
+
+
+async def _bound_candidates(pool: AsyncConnectionPool, organization_id: str,
+                            purpose: str, model_kind: str) -> list[tuple[str, str, str]]:
+    """解析用途绑定并再次校验模型类型，防止错误用途调用错误模型。"""
+    async with pool.connection() as connection, connection.cursor(row_factory=dict_row) as cursor:
+        await _set_scope(connection, organization_id)
+        await cursor.execute(
+            """SELECT primary_provider_id, fallback_provider_ids
+               FROM rag_model_purpose_bindings
+              WHERE organization_id=%s AND purpose=%s""", (organization_id, purpose)
+        )
+        binding = await cursor.fetchone()
+        if binding is None:
+            return []
+        ids = [str(binding["primary_provider_id"]), *[
+            str(item) for item in (binding["fallback_provider_ids"] or [])
+        ]]
+        await cursor.execute(
+            """SELECT id, model, base_url FROM rag_model_providers
+               WHERE organization_id=%s AND enabled=TRUE AND model_kind=%s AND id=ANY(%s)
+               ORDER BY array_position(%s, id)""",
+            (organization_id, model_kind, ids, ids),
+        )
+        rows = await cursor.fetchall()
+    by_id = {
+        str(row["id"]): (str(row["id"]), str(row["model"]), str(row["base_url"]))
+        for row in rows
+    }
+    return [by_id[item] for item in ids if item in by_id]
+
+
+async def _budget_allows(pool: AsyncConnectionPool, organization_id: str,
+                         provider_id: str, purpose: str) -> bool:
+    period_start = _period_start()
+    async with pool.connection() as connection, connection.cursor(row_factory=dict_row) as cursor:
+        await _set_scope(connection, organization_id)
+        await cursor.execute(
+            """SELECT p.daily_token_limit, p.monthly_token_limit, p.daily_request_limit,
+                      p.monthly_budget, u.daily_tokens, u.monthly_tokens,
+                      u.daily_requests, u.monthly_cost
+                 FROM rag_model_budget_policies p
+                 LEFT JOIN rag_model_budget_usage u ON
+                   u.organization_id=p.organization_id AND u.provider_id=p.provider_id
+                   AND u.purpose=p.purpose AND u.period_start=%s
+                WHERE p.organization_id=%s AND p.provider_id=%s AND p.purpose=%s""",
+            (period_start, organization_id, provider_id, purpose),
+        )
+        row = await cursor.fetchone()
+    if row is None:
+        return True
+    policy = ModelBudgetPolicy(
+        provider_id=provider_id, daily_token_limit=int(row["daily_token_limit"]),
+        monthly_token_limit=int(row["monthly_token_limit"]),
+        daily_request_limit=int(row["daily_request_limit"]),
+        monthly_budget=float(row["monthly_budget"]),
+        purpose=cast(BudgetPurpose, purpose),
+    )
+    usage = ModelBudgetUsage(
+        daily_tokens=int(row["daily_tokens"] or 0), monthly_tokens=int(row["monthly_tokens"] or 0),
+        daily_requests=int(row["daily_requests"] or 0),
+        monthly_cost=float(row["monthly_cost"] or 0),
+    )
+    return decide_budget(policy, usage).allowed
+
+
+async def _record_usage(pool: AsyncConnectionPool, organization_id: str, provider_id: str,
+                        purpose: str, total_tokens: int) -> None:
+    period_start = _period_start()
+    async with pool.connection() as connection, connection.transaction():
+        await _set_scope(connection, organization_id)
+        await connection.execute(
+            """INSERT INTO rag_model_budget_usage
+                 (organization_id, provider_id, purpose, period_start, daily_tokens,
+                  monthly_tokens, daily_requests, monthly_cost)
+               VALUES (%s,%s,%s,%s,%s,%s,1,0)
+            ON CONFLICT (organization_id, provider_id, purpose, period_start) DO UPDATE SET
+              daily_tokens=rag_model_budget_usage.daily_tokens+EXCLUDED.daily_tokens,
+              monthly_tokens=rag_model_budget_usage.monthly_tokens+EXCLUDED.monthly_tokens,
+              daily_requests=rag_model_budget_usage.daily_requests+1,
+              updated_at=CURRENT_TIMESTAMP""",
+            (organization_id, provider_id, purpose, period_start, max(total_tokens, 0),
+             max(total_tokens, 0)),
+        )
 
 
 def _period_start() -> date:
@@ -697,7 +935,26 @@ class PostgresChromaKnowledgeRuntime:
                 self._pool, self.organization_id
             ),
             vector_index=HttpChromaVectorIndex(self._collection, {}),
+            reranker=_ManagedRerankerRouter(
+                pool=self._pool,
+                organization_id=self.organization_id,
+                credentials=self._credentials,
+            ),
+            answer_generator=_ManagedAnswerGenerator(
+                pool=self._pool,
+                organization_id=self.organization_id,
+                credentials=self._credentials,
+            ),
         )
+
+    async def translate(self, texts: list[str]) -> list[str]:
+        """通过 translation 用途绑定执行翻译；该入口供 Worker/API 共用。"""
+        await self._ensure()
+        return await _ManagedTranslationRouter(
+            pool=self._pool,
+            organization_id=self.organization_id,
+            credentials=self._credentials,
+        ).translate(texts)
 
 
 async def _set_scope(connection: _ExecutableConnection, organization_id: str) -> None:

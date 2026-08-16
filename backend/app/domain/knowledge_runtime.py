@@ -67,6 +67,8 @@ class KnowledgeRuntimePort(Protocol):
 
     def engine(self) -> KnowledgeQueryEngine | Awaitable[KnowledgeQueryEngine]: ...
 
+    async def translate(self, texts: list[str]) -> list[str]: ...
+
     async def close(self) -> None: ...
 
 
@@ -193,6 +195,10 @@ class KnowledgeRuntimeIndex:
             keyword_index=self._keyword,
             vector_index=self._vector,
         )
+
+    async def translate(self, texts: list[str]) -> list[str]:
+        """离线环境不调用外部模型，仅返回原文，避免测试误触真实供应商。"""
+        return list(texts)
 
     async def close(self) -> None:
         """内存实现无资源需要释放；保持与生产运行时同一生命周期接口。"""

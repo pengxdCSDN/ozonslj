@@ -27,6 +27,14 @@ class KnowledgeQuestionPayload(BaseModel):
     question: str = Field(min_length=1, max_length=4000)
 
 
+class KnowledgeTranslationPayload(BaseModel):
+    texts: list[str] = Field(min_length=1, max_length=50)
+
+
+class KnowledgeTranslationResponse(BaseModel):
+    texts: list[str]
+
+
 class KnowledgeIntentResponse(BaseModel):
     text: str
     intent: str
@@ -213,6 +221,21 @@ async def answer_knowledge_question(payload: KnowledgeQuestionPayload) -> Knowle
         segments=response_segments,
         message="回答仅基于已发布知识片段，并附带引用；实时数据和写操作不会由知识 RAG 代替。",
     )
+
+
+@router.post("/translate", response_model=KnowledgeTranslationResponse)
+async def translate_knowledge_text(
+    payload: KnowledgeTranslationPayload,
+) -> KnowledgeTranslationResponse:
+    """调用 translation 用途绑定；生产环境失败时拒绝伪造译文。"""
+    if any(not text.strip() for text in payload.texts):
+        raise HTTPException(status_code=422, detail="翻译输入不能包含空文本")
+    runtime = get_knowledge_runtime()
+    try:
+        translated = await runtime.translate(payload.texts)
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return KnowledgeTranslationResponse(texts=translated)
 
 
 @router.get("/{answer_id}/trace", response_model=KnowledgeTraceResponse)
