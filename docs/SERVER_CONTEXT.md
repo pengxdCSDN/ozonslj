@@ -69,6 +69,12 @@ curl -fsS http://127.0.0.1/api/health/ready
 - ACR 自动构建必须核对构建规则的 source branch、source commit 和构建记录；服务器 `aliyun` CLI 为 Invalid 时不得猜测、不得在 2GB 节点本地构建。
 - 镜像拉取后 digest 仍为旧值 `c3a75f06bd6c...` 时，发布状态只能记录为“未发布”；必须等待新 digest，并核对镜像内 `OZONSLJ_RELEASE_REVISION` 与目标提交一致后才允许重建和验收。
 - Git HTTPS 的 Schannel/OpenSSL 临时切换必须成对执行并恢复原值；认证失败与 ACR 构建失败分开记录。
+
+## 2026-08-16：RAG 正式调用最终发布
+
+- ACR 规则确认绑定 `codex/deployment-base-images`，最新应用镜像摘要为 `c20547a493758ec7...`。
+- API/Worker 使用同一摘要并稳定运行，Scheduler 正常；`ready/live` 为 200，RAG health 为 healthy。
+- 数据库迁移最高版本为 `105`。此前 Worker 重启由重复迁移版本 `0100` 导致，已改为唯一的 `0102_rag_translation_budget.sql` 并重新构建验收。
 ## 2026-08-09 开发状态同步
 
 - 云端部署继续沿用现有 PostgreSQL + Redis Compose 基线，不引入第二套数据库或 SaaS 组织开发任务。

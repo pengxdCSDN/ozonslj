@@ -213,3 +213,11 @@ docker compose --env-file .env logs --tail=100 api worker
 4. 发布前后记录 `source_commit`、`image_digest`、`image_created_at`、API/Worker/Scheduler 状态；source commit 与镜像内 revision 不一致即失败关闭。
 5. Git HTTPS 后端切换只能作为一次性受控命令，并在命令结束恢复原配置；禁止把认证失败误判为 ACR 构建失败。
 6. 任何分支误推、旧摘要验收或未授权本地构建都视为严重发布事故，必须先恢复远端分支和服务，再更新本记录。
+
+## 2026-08-16 RAG 正式调用最终发布验收
+
+- ACR 应用镜像规则：`branches:codex/deployment-base-images` → `/Dockerfile` → `ozonslj-api-dev`。
+- 最新镜像摘要：`sha256:c20547a493758ec73baf5e7104012444802e63002e8153e579012060be63e01b`。
+- API、Worker、Scheduler 均运行；API/Worker 摘要一致，API healthy，Worker 不再重启。
+- `ready=200`、`live=200`；`/api/health/rag` 返回 `state=healthy`。
+- 数据库迁移最高版本 `105`；翻译预算迁移使用唯一源版本 `0102`，未修改历史迁移账本。
