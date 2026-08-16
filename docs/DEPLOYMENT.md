@@ -1,5 +1,7 @@
 # ozonslj Linux 部署说明
 
+稳定构建流程见 [`ACR_STABLE_BUILD_FLOW.md`](./ACR_STABLE_BUILD_FLOW.md)。本文件保留运行时部署细节；ACR 规则、源码一致性和失败门禁以稳定流程为准。
+
 ## 部署边界
 
 当前节点使用 Docker Compose 部署 PostgreSQL、Redis、API、Worker 与 Nginx/Web 骨架。
