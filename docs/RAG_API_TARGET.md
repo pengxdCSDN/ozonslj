@@ -291,7 +291,7 @@ PDF 目标流程：
 
 `GET /v1/rag-aggregate-metrics` 仅向 reviewer/admin 返回180天内无正文、无用户标识的时间桶指标；`GET /v1/rag-audit-archives` 仅向 admin 返回归档批次元数据、记录数和哈希验证状态，不直接返回宿主机路径。审计正文读取使用独立受控查询并记录二次审计。
 
-评测案例采用离线任务接口：`POST /v1/rag-evaluation/case-generation-jobs` 创建受控 AI 草稿生成任务，`GET /v1/rag-evaluation/cases` 查看脱敏草稿，`POST /v1/rag-evaluation/cases/{case_id}/confirm` 单条确认，`POST /v1/rag-evaluation/cases/confirm-batch` 批量确认，`POST /v1/rag-evaluation/runs` 启动分层评测。案例状态、确认人和确认时间持久化到 PostgreSQL；固定 400 例通过幂等种子写入，API 重启不得丢失确认状态。生成模型不能调用确认接口；高风险案例确认要求 reviewer/admin。
+评测案例采用离线任务接口：`POST /v1/rag-evaluation/case-generation-jobs` 创建受控 AI 草稿生成任务，`GET /v1/rag-evaluation/cases?page=1&page_size=20&q=...` 分页搜索脱敏案例，`POST /v1/rag-evaluation/cases/{case_id}/confirm` 单条确认，`POST /v1/rag-evaluation/cases/confirm-batch` 批量确认，`POST /v1/rag-evaluation/runs` 启动分层评测。列表返回 `items/total/total_pages/draft_count/confirmed_count`；案例状态、确认人和确认时间持久化到 PostgreSQL；固定 400 例通过幂等种子写入，历史版本只保留审计不混入当前列表。API 重启不得丢失确认状态。生成模型不能调用确认接口；高风险案例确认要求 reviewer/admin。Seller 店铺未验证不阻断 RAG 评测页面。
 
 创建评测运行时 `suite` 只允许 `quick`、`standard` 或 `full`，分别解析为冻结版本中的固定30、120、240例清单；客户端不能提交任意案例 ID 伪装成发布验收。服务端每批最多调度10例，响应返回 `passed/failed/error/skipped/not_run` 计数和游标。目标清单存在未执行、跳过或错误案例时，`gate_status` 不得为 `passed`。
 

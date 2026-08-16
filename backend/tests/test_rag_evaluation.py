@@ -113,5 +113,30 @@ def test_batch_confirmation_is_idempotent_and_persists_between_requests() -> Non
         json={"case_ids": case_ids, "reviewer": "qa-user"},
     )
     assert second.json()["confirmed_count"] == 2
-    cases = {item["case_id"]: item for item in client.get("/v1/rag-evaluation/cases").json()}
+    page = client.get("/v1/rag-evaluation/cases?page=2&page_size=100").json()
+    cases = {item["case_id"]: item for item in page["items"]}
     assert all(cases[case_id]["status"] == "confirmed" for case_id in case_ids)
+
+
+def test_case_list_hides_retired_fixed_corpus_versions() -> None:
+    app = make_app()
+    gateway = next(iter(app.dependency_overrides.values()))()
+    gateway.cases["fixed-rag-001"] = EvaluationCase(
+        case_id="fixed-rag-001", question="旧案例", expected_status="answered",
+        expected_sources=(), safety_tags=(), status="confirmed",
+    )
+    cases = TestClient(app).get("/v1/rag-evaluation/cases").json()["items"]
+    ids = {case["case_id"] for case in cases}
+    assert "fixed-rag-001" not in ids
+    assert "fixed-rag-v2-001" in ids
+
+
+def test_case_list_supports_search_and_pagination() -> None:
+    response = TestClient(make_app()).get(
+        "/v1/rag-evaluation/cases", params={"q": "Embedding", "page": 1, "page_size": 2}
+    )
+    body = response.json()
+    assert response.status_code == 200
+    assert body["total"] > 0
+    assert len(body["items"]) <= 2
+    assert all("Embedding" in item["question"] for item in body["items"])

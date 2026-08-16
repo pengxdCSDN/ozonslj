@@ -240,6 +240,12 @@ curl -fsS http://127.0.0.1/api/health/ready
 
 防复发措施：`deploy/scripts/post_release_gate.sh` 现在在每次发布门禁开始时强制重启 Web，并检查 `http://127.0.0.1/`；发布流程不得绕过该脚本，也不得只执行 `up -d --no-deps api worker scheduler` 后直接结束。
 
+## 2026-08-16：RAG 评测页面被 Seller 店铺门禁遮挡
+
+页面显示“RAG 评测确认暂不可用”，原因是前端通用店铺状态兜底把所有非店铺页面都要求为 Seller `active`。RAG 固定语料确认、质量指标和模型供应商验收不需要 Seller Key，店铺仍在审核时也应可用。
+
+修复：RAG 评测页面从 Seller 状态门禁中排除；API 列表只展示当前 `fixed-rag-v2`，历史固定语料保留在 PostgreSQL 供审计但不再与当前案例混显。Seller 商品、库存、订单和履约页面仍继续要求店铺验证。
+
 ## 2026-08-14：SiliconFlow BAAI/bge-m3 返回 HTTP 400 参数无效
 
 ### 根因

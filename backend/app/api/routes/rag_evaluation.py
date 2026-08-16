@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated, Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.app.api.dependencies import get_rag_evaluation_gateway
@@ -54,6 +54,16 @@ class BatchConfirmResponse(BaseModel):
     confirmed_case_ids: list[str]
 
 
+class EvaluationCasesPageResponse(BaseModel):
+    items: list[EvaluationCaseResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    draft_count: int
+    confirmed_count: int
+
+
 class EvaluationRunPayload(BaseModel):
     suite: str = Field(pattern="^(quick|standard|full)$")
 
@@ -96,12 +106,41 @@ async def generate_evaluation_cases(
     return generated
 
 
-@router.get("/cases", response_model=list[EvaluationCaseResponse])
+@router.get("/cases", response_model=EvaluationCasesPageResponse)
 async def list_evaluation_cases(
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
-) -> list[EvaluationCaseResponse]:
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    q: str = Query(default="", max_length=100),
+) -> EvaluationCasesPageResponse:
     await gateway.seed_fixed_cases(_fixed_cases())
-    return [_response(case) for case in await gateway.list_cases()]
+    current_fixed_ids = {case.case_id for case in _fixed_cases()}
+    # v2 固定语料替换 v1 后，历史案例仍需保留在 PostgreSQL 以便审计，
+    # 但页面和评测门禁只能展示当前版本；否则用户会看到 800 条重复案例，
+    # 误以为新评测集未加载。AI 生成的 UUID 案例不受此过滤影响。
+    visible = [
+        case for case in await gateway.list_cases()
+        if not case.case_id.startswith("fixed-rag-") or case.case_id in current_fixed_ids
+    ]
+    query = q.strip().casefold()
+    if query:
+        # 搜索只作用于当前组织已持久化的脱敏字段；不搜索凭据、原始模型响应或日志。
+        visible = [
+            case for case in visible
+            if query in case.case_id.casefold()
+            or query in case.question.casefold()
+            or query in case.expected_status.casefold()
+            or any(query in tag.casefold() for tag in case.safety_tags)
+        ]
+    total = len(visible)
+    start = (page - 1) * page_size
+    page_items = visible[start : start + page_size]
+    return EvaluationCasesPageResponse(
+        items=[_response(case) for case in page_items], total=total, page=page,
+        page_size=page_size, total_pages=max((total + page_size - 1) // page_size, 1),
+        draft_count=sum(case.status == "draft" for case in visible),
+        confirmed_count=sum(case.status == "confirmed" for case in visible),
+    )
 
 
 @router.post("/cases/confirm-batch", response_model=BatchConfirmResponse)

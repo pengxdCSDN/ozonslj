@@ -976,13 +976,23 @@ export interface RagEvaluationCase {
   safety_tags: string[];
   status: "draft" | "confirmed" | "rejected";
 }
+export interface RagEvaluationCasesPage {
+  items: RagEvaluationCase[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  draft_count: number;
+  confirmed_count: number;
+}
 export interface RagEvaluationBatchConfirmResult { confirmed_count: number; confirmed_case_ids: string[]; }
 export interface RagEvaluationRun {
   run_id: string; status: string; suite: "quick" | "standard" | "full";
   target_count: number; confirmed_count: number; case_ids: string[]; gate_status: "ready" | "blocked";
 }
-export function listRagEvaluationCases(): Promise<RagEvaluationCase[]> {
-  return requestJson("/v1/rag-evaluation/cases", { method: "GET" });
+export function listRagEvaluationCases(page = 1, pageSize = 20, query = ""): Promise<RagEvaluationCasesPage> {
+  const encodedQuery = encodeURIComponent(query.trim());
+  return requestJson(`/v1/rag-evaluation/cases?page=${page}&page_size=${pageSize}&q=${encodedQuery}`, { method: "GET" });
 }
 export function confirmRagEvaluationCase(caseId: string, reviewer: string): Promise<RagEvaluationCase> {
   return requestJson(`/v1/rag-evaluation/cases/${encodeURIComponent(caseId)}/confirm`, {

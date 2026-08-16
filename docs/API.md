@@ -246,10 +246,12 @@ Retry-After: 2
 | 方法 | 路径 | 用途 |
 |---|---|---|
 | POST | `/v1/rag-evaluation/case-generation-jobs` | 创建 AI 草稿案例 |
-| GET | `/v1/rag-evaluation/cases` | 查看当前组织的固定/草稿案例 |
+| GET | `/v1/rag-evaluation/cases?page=1&page_size=20&q=...` | 分页搜索当前组织的固定/草稿案例；`q` 匹配案例 ID、问题、状态和安全标签 |
 | POST | `/v1/rag-evaluation/cases/{case_id}/confirm` | 单条人工确认 |
 | POST | `/v1/rag-evaluation/cases/confirm-batch` | 批量人工确认，最多 240 个案例 |
 | POST | `/v1/rag-evaluation/runs` | 创建评测运行并计算确认门禁 |
+
+评测案例列表响应为 `{items, total, page, page_size, total_pages, draft_count, confirmed_count}`。历史 `fixed-rag-v1` 案例保留在 PostgreSQL 供审计，但列表只展示当前 `fixed-rag-v2`；Seller 店铺未验证不阻断 RAG 评测页面。
 
 固定 400 例通过 PostgreSQL 幂等种子写入；确认状态、确认人和确认时间不保存在 API 进程内存中，API 重启后必须保持。未确认案例不能通过运行门禁。
 
