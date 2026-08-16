@@ -63,6 +63,8 @@ class KnowledgeRuntimePort(Protocol):
 
     async def delete(self, version_id: str) -> int: ...
 
+    async def rebuild(self) -> int: ...
+
     def engine(self) -> KnowledgeQueryEngine | Awaitable[KnowledgeQueryEngine]: ...
 
     async def close(self) -> None: ...
@@ -179,6 +181,11 @@ class KnowledgeRuntimeIndex:
         removed += len(self._staged.pop(version_id, ()))
         await self._rebuild()
         return removed
+
+    async def rebuild(self) -> int:
+        """从 PostgreSQL/内存事实重新生成当前发布索引，供故障恢复任务使用。"""
+        await self._rebuild()
+        return len(self._indexed_chunk_ids)
 
     def engine(self) -> KnowledgeQueryEngine:
         return KnowledgeQueryEngine(

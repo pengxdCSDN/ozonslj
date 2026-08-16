@@ -48,6 +48,15 @@ class FakeRuntime:
         self.published.append(version_id)
         return 1
 
+    async def withdraw(self, version_id: str) -> int:
+        return 1
+
+    async def delete(self, version_id: str) -> int:
+        return 1
+
+    async def rebuild(self) -> int:
+        return 1
+
 
 @pytest.mark.asyncio
 async def test_worker_publishes_and_acknowledges_persistent_task() -> None:

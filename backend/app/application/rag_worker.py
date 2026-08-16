@@ -39,8 +39,10 @@ class RagWorker:
                 await runtime.publish(details[2])
             elif task.task_type == "withdraw":
                 await runtime.withdraw(details[2])
-            elif task.task_type in {"delete", "rebuild"}:
+            elif task.task_type == "delete":
                 await runtime.delete(details[2])
+            elif task.task_type == "rebuild":
+                await runtime.rebuild()
             else:
                 raise ValueError("rag_task_type_not_supported")
         except ValueError as error:

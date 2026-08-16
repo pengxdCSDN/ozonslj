@@ -535,6 +535,31 @@ class PostgresChromaKnowledgeRuntime:
                 rows = await cursor.fetchall()
         return [_chunk(row) for row in rows]
 
+    async def _chunks_by_status(self, status: str | None) -> list[KnowledgeChunk]:
+        """读取当前组织的全部 RAG 切片，重建时只把发布事实写入 Chroma。"""
+        query = """
+            SELECT c.id, c.content, c.content_hash, c.ordinal, c.document_version_id,
+                   c.source_locator, c.title_path, c.language, c.chunk_strategy,
+                   c.chunk_strategy_version, c.page_from, c.page_to, c.status,
+                   s.id AS source_id, s.business_domain, s.source_type,
+                   s.authority_level, s.sensitivity, s.status AS source_status
+            FROM rag_knowledge_chunks AS c
+            JOIN rag_document_versions AS v ON v.id = c.document_version_id
+            JOIN rag_knowledge_sources AS s ON s.id = v.source_id
+            WHERE c.organization_id = %s
+        """
+        params: list[object] = [self.organization_id]
+        if status is not None:
+            query += " AND c.status = %s"
+            params.append(status)
+        query += " ORDER BY c.document_version_id, c.ordinal, c.id"
+        async with self._pool.connection() as connection:
+            await _set_scope(connection, self.organization_id)
+            async with connection.cursor(row_factory=dict_row) as cursor:
+                await cursor.execute(query, params)
+                rows = await cursor.fetchall()
+        return [_chunk(row) for row in rows]
+
     async def publish(self, version_id: str) -> int:
         await self._ensure()
         version = await self.version(version_id)
@@ -644,6 +669,23 @@ class PostgresChromaKnowledgeRuntime:
             )
         assert self._collection is not None
         await self._collection.delete(ids=[chunk.chunk_id for chunk in chunks])
+        return len(chunks)
+
+    async def rebuild(self) -> int:
+        """按 PostgreSQL 当前发布事实重建 Chroma，避免索引成为唯一真相源。"""
+        await self._ensure()
+        chunks = await self._chunks_by_status("published")
+        all_chunks = await self._chunks_by_status(None)
+        assert self._collection is not None
+        if all_chunks:
+            await self._collection.delete(ids=[chunk.chunk_id for chunk in all_chunks])
+        if chunks:
+            await self._collection.upsert(
+                ids=[chunk.chunk_id for chunk in chunks],
+                documents=[chunk.content for chunk in chunks],
+                embeddings=await self._embedding.embed([chunk.content for chunk in chunks]),
+                metadatas=[_metadata_for_chunk(item) for item in chunks],
+            )
         return len(chunks)
 
     async def engine(self) -> KnowledgeQueryEngine:
