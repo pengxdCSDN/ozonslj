@@ -937,6 +937,18 @@ export function deleteKnowledgeSource(sourceId: string): Promise<KnowledgeSource
 export function previewKnowledgeIngestion(payload: Record<string, unknown>): Promise<KnowledgeIngestionResult> {
   return requestJson("/v1/knowledge-ingestion/run", { method: "POST", body: JSON.stringify(payload) });
 }
+export interface KnowledgePdfUploadResult {
+  upload_id: string;
+  status: string;
+  byte_size: number;
+  page_count: number | null;
+  structural_safety_status: string;
+  malware_scan_status: string;
+  blocked_reason: string | null;
+}
+export function uploadKnowledgePdf(payload: { filename: string; mime_type: string; content_base64: string }): Promise<KnowledgePdfUploadResult> {
+  return requestJson("/v1/knowledge-pdf-uploads", { method: "POST", body: JSON.stringify(payload) });
+}
 export interface KnowledgeTask { task_id: string; task_type: string; organization_id: string; status: "queued" | "running" | "succeeded" | "failed" | "cancelled"; attempt: number; error_code: string | null; }
 export function listKnowledgeTasks(): Promise<KnowledgeTask[]> { return requestJson("/v1/knowledge-tasks", { method: "GET" }); }
 export function cancelKnowledgeTask(taskId: string): Promise<KnowledgeTask> { return requestJson(`/v1/knowledge-tasks/${encodeURIComponent(taskId)}/cancel`, { method: "POST" }); }
