@@ -30,6 +30,7 @@ def _task_response(task: RagWorkerTask) -> dict[str, object]:
     return {
         "task_id": task.task_id, "task_type": task.task_type,
         "organization_id": task.organization_id, "status": task.status,
+        "source_id": task.source_id, "document_version_id": task.document_version_id,
         "attempt": task.attempt,
         "lease_until": task.lease_until.isoformat() if task.lease_until else None,
         "error_code": task.error_code,

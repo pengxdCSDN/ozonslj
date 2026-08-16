@@ -18,6 +18,8 @@ class RagWorkerTask:
     attempt: int = 0
     lease_until: datetime | None = None
     error_code: str | None = None
+    source_id: str | None = None
+    document_version_id: str | None = None
 
 
 class RagWorkerQueue:

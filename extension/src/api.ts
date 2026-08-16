@@ -951,7 +951,7 @@ export function uploadKnowledgePdf(payload: { filename: string; mime_type: strin
 }
 export interface KnowledgePdfExtractResult { upload_id: string; status: string; page_count: number; extracted_characters: number; text: string; blocked_reason: string | null; }
 export function extractKnowledgePdfText(uploadId: string): Promise<KnowledgePdfExtractResult> { return requestJson(`/v1/knowledge-pdf-uploads/${encodeURIComponent(uploadId)}/extract-text`, { method: "POST" }); }
-export interface KnowledgeTask { task_id: string; task_type: string; organization_id: string; status: "queued" | "running" | "succeeded" | "failed" | "cancelled"; attempt: number; error_code: string | null; }
+export interface KnowledgeTask { task_id: string; task_type: string; organization_id: string; source_id: string | null; document_version_id: string | null; status: "queued" | "running" | "succeeded" | "failed" | "cancelled"; attempt: number; error_code: string | null; }
 export function listKnowledgeTasks(): Promise<KnowledgeTask[]> { return requestJson("/v1/knowledge-tasks", { method: "GET" }); }
 export function cancelKnowledgeTask(taskId: string): Promise<KnowledgeTask> { return requestJson(`/v1/knowledge-tasks/${encodeURIComponent(taskId)}/cancel`, { method: "POST" }); }
 export function retryKnowledgeTask(taskId: string): Promise<KnowledgeTask> { return requestJson(`/v1/knowledge-tasks/${encodeURIComponent(taskId)}/retry`, { method: "POST" }); }

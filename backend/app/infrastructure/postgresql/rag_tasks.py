@@ -34,7 +34,7 @@ class PostgresRagTaskGateway:
                    ON CONFLICT (organization_id, idempotency_key)
                    DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
                    RETURNING id, job_type, organization_id, status, attempt_count,
-                             lease_expires_at, error_code""",
+                             lease_expires_at, error_code, source_id, document_version_id""",
                 (f"rag-{uuid4()}", self._context.organization_id, source_id,
                  document_version_id, task_type, idempotency_key),
             ).fetchone()
@@ -97,7 +97,7 @@ class PostgresRagTaskGateway:
                      AND (status = 'queued' OR
                           (status = 'running' AND lease_expires_at < CURRENT_TIMESTAMP))
                    RETURNING id, job_type, organization_id, status, attempt_count,
-                             lease_expires_at, error_code""",
+                             lease_expires_at, error_code, source_id, document_version_id""",
                 (timedelta(seconds=lease_seconds), self._context.organization_id, task_id),
             ).fetchone()
         return _task(row) if row is not None else None
@@ -120,7 +120,7 @@ class PostgresRagTaskGateway:
                    WHERE organization_id = %s AND id = %s
                      AND status IN ('queued', 'running')
                    RETURNING id, job_type, organization_id, status, attempt_count,
-                             lease_expires_at, error_code""",
+                             lease_expires_at, error_code, source_id, document_version_id""",
                 (self._context.organization_id, task_id),
             ).fetchone()
         return _task(row) if row is not None else None
@@ -138,7 +138,7 @@ class PostgresRagTaskGateway:
                    WHERE organization_id = %s AND id = %s
                      AND status IN ('failed', 'cancelled')
                    RETURNING id, job_type, organization_id, status, attempt_count,
-                             lease_expires_at, error_code""",
+                             lease_expires_at, error_code, source_id, document_version_id""",
                 (self._context.organization_id, task_id),
             ).fetchone()
         return _task(row) if row is not None else None
@@ -165,7 +165,7 @@ class PostgresRagTaskGateway:
                        lease_expires_at = NULL
                    WHERE organization_id = %s AND id = %s AND status = 'running'
                    RETURNING id, job_type, organization_id, status, attempt_count,
-                             lease_expires_at, error_code""",
+                             lease_expires_at, error_code, source_id, document_version_id""",
                 (status, error_code, self._context.organization_id, task_id),
             ).fetchone()
         return _task(row) if row is not None else None
@@ -174,7 +174,7 @@ class PostgresRagTaskGateway:
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT id, job_type, organization_id, status, attempt_count,
-                          lease_expires_at, error_code
+                          lease_expires_at, error_code, source_id, document_version_id
                    FROM rag_ingestion_jobs WHERE organization_id = %s
                    ORDER BY created_at DESC""", (self._context.organization_id,)
             ).fetchall()
@@ -185,6 +185,7 @@ def _task(row: dict[str, Any]) -> RagWorkerTask:
     return RagWorkerTask(
         task_id=row["id"], task_type=row["job_type"],
         organization_id=row["organization_id"], status=row["status"],
+        source_id=row.get("source_id"), document_version_id=row.get("document_version_id"),
         attempt=row["attempt_count"], lease_until=row["lease_expires_at"],
         error_code=row["error_code"],
     )
