@@ -122,6 +122,8 @@ AI-010 新增通知模板预览 API 和前端入口，仅允许 headline、summa
 
 真实 Performance OAuth 授权和广告读取仍需独立的账号权限与真实凭据；本阶段验收不将模拟数据或只读预览宣称为真实线上广告同步。
 
+云端发布门禁状态：第九组提交 `de90e07` 已推送到 `codex/deployment-base-images`，但当前 ACR 新摘要 `sha256:b0aee5f4…` 内仍缺少 `advertising_budget.py`，且镜像 revision 仍为 `development`，判定为旧源码构建，未完成第九组云端验收。不得用该摘要报告发布完成；必须重新触发正确 source commit 的 ACR 构建并核对镜像内关键文件后再部署。
+
 
 ## 2026-08-09 ??????
 

@@ -302,3 +302,10 @@ docker compose --env-file .env logs --tail=100 api worker
 - 新增广告预算只读分析 API：按预算周期计算利用率、预计消耗和风险状态，禁止自动修改预算、出价或关键词。
 - Performance OAuth 错误已区分 `performance_oauth_failed` 与 `performance_permission_denied`；凭据状态保持与 Seller 凭据隔离，令牌和密钥不回显。
 - 本阶段需要代码镜像和 Web 静态资源更新；发布前必须使用 `codex/deployment-base-images` 触发 ACR，等待新摘要，核对镜像内源码提交、API/Worker/Scheduler 一致性和 Web 哈希资源后再验收。真实 Performance 授权仍待外部账号权限。
+
+### 第九组当前发布阻塞记录
+
+- 目标提交：`de90e07`，已推送到 `codex/deployment-base-images`。
+- ACR 曾生成新摘要 `sha256:b0aee5f44831a62458339adb8fc5a070002ad82308becf4b42146399204eda4a`，但镜像内缺少 `backend/app/domain/advertising_budget.py`，`OZONSLJ_RELEASE_REVISION` 仍为 `development`，证明该构建未使用目标源码。
+- 服务器当前已确认源码远端提交为 `de90e07`，但不能用服务器源码同步替代 ACR 构建证据；API/Worker/Scheduler 未以该错误镜像作为第九组验收结果。
+- ACR 控制台读取超时、服务器 `aliyun` CLI 无有效权限；禁止在 2GB 服务器本地构建或继续重启旧摘要。下一步必须在 ACR 构建规则中手动确认 source branch=`codex/deployment-base-images`、source commit=`de90e07`，重新构建后再执行镜像内文件、revision、服务摘要和 API/Web 验收。
