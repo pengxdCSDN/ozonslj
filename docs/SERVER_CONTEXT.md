@@ -60,6 +60,7 @@ curl -fsS http://127.0.0.1/api/health/ready
 - 云端 PostgreSQL 实际写入固定 400 例，批量确认 2 例成功；API 重启后两例仍为 `confirmed`。
 - API/Worker 使用同一镜像，API、Worker、Scheduler 正常运行；`health/live` 与 `health/ready` 均返回 200。
 - 提交 `0b95f13` 修复 Seller 账户兼容依赖、路由注册、认证测试配置和迁移版本断言；本地完整 pytest、Ruff、mypy 通过。该提交尚未重新发布云端。
+- 提交 `0bf82d6` 的 RAG 正式模型调用代码已推送，但 2026-08-16 验收时 ACR 仍返回旧摘要 `c3a75f06bd6c...`；服务器 `aliyun` CLI 默认配置为 Invalid，需恢复 ACR 构建任务或凭据后再发布，禁止在服务器本地构建。
 ## 2026-08-09 开发状态同步
 
 - 云端部署继续沿用现有 PostgreSQL + Redis Compose 基线，不引入第二套数据库或 SaaS 组织开发任务。

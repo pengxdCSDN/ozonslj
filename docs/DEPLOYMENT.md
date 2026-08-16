@@ -192,3 +192,9 @@ docker compose --env-file .env logs --tail=100 api worker
 5. 发布后必须同时验证首页引用的 JS/CSS：状态码为 `200`，JS 为 `application/javascript`，CSS 为 `text/css`；任一资源返回 `text/html` 都视为发布失败并立即回滚。
 
 本次线上已恢复为当前构建版本，并保留上一版目录用于回滚。浏览器端如仍显示旧错误，使用 `Ctrl+F5` 清除旧的首页缓存后重新打开。
+
+## 2026-08-16 RAG 正式调用发布记录
+
+- 本地提交 `0bf82d6` 已推送到 `codex/deployment-base-images`；后端 501 项测试、前端类型检查和 Vite 构建通过。
+- 云端 API、Worker、Scheduler 运行正常，`ready/live` 均返回 200；但 ACR `ozonslj-api-dev` 多次拉取仍为旧摘要 `sha256:c3a75f06bd6c...`，未包含 `0bf82d6`。
+- 服务器上的 `aliyun` CLI 默认配置状态为 `Invalid`，当前无法从服务器触发 ACR 构建；禁止在 2GB 服务器本地构建替代。新功能的云端发布验收须在 ACR 构建任务恢复后，以新摘要重拉镜像并重新执行本节验收。
