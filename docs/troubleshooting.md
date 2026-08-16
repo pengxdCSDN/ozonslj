@@ -284,3 +284,45 @@ OpenAI 兼容协议不代表所有供应商支持完全相同的可选字段。S
 - **知识源页面显示暂无数据**：先确认页面是否仍处于“知识源加载中”；加载中、空数据和筛选无结果是不同状态，接口权限错误会显示在统一操作消息区域。
 - **模型连接测试显示 timeout**：这是独立的供应商超时状态，不等同于模型不存在或额度不足；主备路由会记录 timeout 并继续尝试备用模型。真实接口验收时再根据供应商延迟调整超时配置。
 - **镜像内没有新模型错误类型**：不要只看镜像标签或 API 健康状态；必须在容器内执行 `from backend.app.infrastructure.cloud_models import CloudModelTimeoutError`，并核对镜像摘要已经变化后才允许验收。
+
+## 2026-08-16：ACR 新摘要但镜像仍来自旧工作树
+
+### 根因
+
+本次第六组发布中，本地提交已经推送到 `codex/deployment-base-images`，但服务器工作树仍处于 detached 的旧 `origin/codex/deployment-base-images`，提交停留在第五组。发布过程只看到 ACR digest 发生变化，就误以为构建已使用最新源码；实际第一次 ACR 构建虽然生成了新摘要，镜像内部仍没有 `ExploreFilters` 和 `min_search_count`。
+
+根本问题是把三个不同事实混为一谈：
+
+1. GitHub 目标分支已收到新提交；
+2. 服务器工作树是否已同步目标提交；
+3. ACR 构建上下文实际使用的 source commit 是否等于目标提交。
+
+镜像 digest 变化只能证明“生成了另一个镜像”，不能证明“生成的是目标源码”。
+
+### 强制发布门禁
+
+每次发布必须记录并逐项相等核对：
+
+```text
+target_branch = codex/deployment-base-images
+target_commit = git rev-parse origin/codex/deployment-base-images
+server_commit = /opt/ozonslj/app 的 HEAD
+acr_source_commit = ACR 构建记录中的 source commit
+image_digest = 拉取后的镜像摘要
+image_code_marker = 镜像内关键文件/符号检查结果
+```
+
+标准顺序：
+
+1. 本地确认工作树、当前分支、目标提交，并推送目标分支。
+2. 服务器先只读检查工作树是否干净，再 `git fetch origin codex/deployment-base-images`，确认服务器 HEAD 等于目标提交；服务器同步只是部署基线，不是 ACR 构建证据。
+3. 在 ACR 构建规则/构建记录中确认 source branch、source commit、Dockerfile 和构建上下文；不能只看“构建成功”或可变 `dev` 标签。
+4. 拉取镜像后检查 digest、创建时间，并在临时容器内导入本次新增符号或检查关键代码标记；检查失败立即停止，不得重建 API/Worker。
+5. 只有 source commit、镜像内代码和目标提交全部一致，才允许 Compose 重建和云端验收。
+
+### 复发时处理
+
+- ACR 新摘要但镜像内代码旧：标记为“构建源错误”，不发布、不重启；回到 ACR 控制台重新触发正确分支构建。
+- 服务器工作树旧：只执行 `git fetch` 和 fast-forward/detached 同步，不在服务器本地构建镜像。
+- ACR CLI 或控制台无权限：停止并记录阻塞原因，禁止猜测构建结果、禁止 2GB 服务器本地构建、禁止用旧镜像冒充新发布。
+- 事故记录必须包含目标分支、目标提交、服务器 HEAD、ACR source commit、镜像 digest 和镜像内检查结果；不得记录凭据、Token、私钥或 `.env` 内容。

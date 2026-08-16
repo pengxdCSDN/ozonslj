@@ -70,6 +70,14 @@ curl -fsS http://127.0.0.1/api/health/ready
 - 镜像拉取后 digest 仍为旧值 `c3a75f06bd6c...` 时，发布状态只能记录为“未发布”；必须等待新 digest，并核对镜像内 `OZONSLJ_RELEASE_REVISION` 与目标提交一致后才允许重建和验收。
 - Git HTTPS 的 Schannel/OpenSSL 临时切换必须成对执行并恢复原值；认证失败与 ACR 构建失败分开记录。
 
+## 2026-08-16：旧工作树误作为 ACR 发布源的复盘
+
+- 事故表现：目标分支已有新提交，但服务器仍是 detached 的旧 `origin/codex/deployment-base-images`；第一次 ACR 生成了新 digest，却未包含目标代码。
+- 关键教训：服务器工作树同步、GitHub 分支状态、ACR source commit 和镜像 digest 是四个独立证据，不能用任意一个替代其他证据。
+- 固定流程：本地推送 `codex/deployment-base-images` → 服务器只读核对并同步同一 commit → ACR 构建规则核对 source branch/source commit → 拉取后检查 digest 和镜像内关键代码 → 最后才重建 API/Worker/Scheduler。
+- 旧工作树只能被视为“未同步”，不能被视为发布源；2GB 服务器只同步代码、拉取镜像和运行 Compose，禁止本地 Docker 构建。
+- 第一次构建若出现“digest 变化但镜像内代码旧”，状态必须是发布失败/未验收；重新触发正确 ACR 构建后，必须重新检查全部证据。
+
 ## 2026-08-16：RAG 正式调用最终发布
 
 - ACR 规则确认绑定 `codex/deployment-base-images`，最新应用镜像摘要为 `c20547a493758ec7...`。
