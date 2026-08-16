@@ -70,6 +70,7 @@ curl -fsS http://127.0.0.1/api/health/ready
 - ACR 自动构建必须核对构建规则的 source branch、source commit 和构建记录；服务器 `aliyun` CLI 为 Invalid 时不得猜测、不得在 2GB 节点本地构建。
 - 镜像拉取后 digest 仍为旧值 `c3a75f06bd6c...` 时，发布状态只能记录为“未发布”；必须等待新 digest，并核对镜像内 `OZONSLJ_RELEASE_REVISION` 与目标提交一致后才允许重建和验收。
 - Git HTTPS 的 Schannel/OpenSSL 临时切换必须成对执行并恢复原值；认证失败与 ACR 构建失败分开记录。
+- Web HTTPS 入口要求 Compose 同时映射 `80:80` 和 `443:443`，TLS 证书从 `deploy/secrets/tls` 只读挂载；安全组放行 443 不能替代宿主机端口监听。
 
 ## 2026-08-16：旧工作树误作为 ACR 发布源的复盘
 

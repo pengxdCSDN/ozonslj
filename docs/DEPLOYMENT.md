@@ -321,3 +321,11 @@ docker compose --env-file .env logs --tail=100 api worker
 - Web 已完整同步 `index.html` 与 `assets/`，入口为 `index-AseVkSlj.js`，样式为 `index-DxjgRheu.css`；`nginx -t` 通过，静态文件在容器内存在。
 - PostgreSQL、Redis 未重建；旧 Web 静态目录保留为 `web.rollback-group9-20260816`，可用于回滚。
 - 服务器本机 HTTP 按配置返回 HTTPS 301，公网 TLS 由外层入口负责；本机无 443 映射，不将本机 HTTPS 000 误判为应用容器故障。
+
+## 2026-08-16 HTTPS 入口修复验收
+
+- 根因：Nginx 配置已监听 443 并挂载服务器 TLS 证书，但 Compose 的 Web 服务长期只映射 `80:80`，导致 HTTP 301 跳转到没有宿主机监听的 HTTPS 端口。
+- 修复提交：`b53c027`，Web 服务增加宿主机 `443:443` 映射；PostgreSQL、Redis、API、Worker、Scheduler 和基础镜像未重建。
+- 云端已同步 `codex/deployment-base-images`，Web 容器已强制重建；宿主机 80/443 均监听，Nginx `-t` 通过。
+- 本机 TLS 验收：首页 `200 text/html`，新 JS `200 application/javascript`，新 CSS `200 text/css`；阿里云安全组已有 TCP 443 放行规则。
+- 历史上“HTTPS 可用”的前提是外层 TLS 入口或其他临时映射存在；当前 Compose 的明确配置现在与 Nginx TLS 配置一致，后续不得只检查安全组而忽略宿主机端口映射。
