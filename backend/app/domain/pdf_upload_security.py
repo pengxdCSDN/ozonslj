@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
+from uuid import uuid4
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,6 +17,35 @@ class PdfSafetyResult:
     blocked_reason: str | None
     structural_safety_status: str
     malware_scan_status: str
+
+
+@dataclass(frozen=True, slots=True)
+class QuarantinedPdf:
+    upload_id: str
+    storage_key: str
+
+
+def quarantine_pdf(content: bytes, *, root: Path | None = None) -> QuarantinedPdf:
+    """写入仅服务端可访问的隔离目录，不返回真实路径。"""
+
+    configured_root = os.environ.get(
+        "OZONSLJ_PDF_QUARANTINE_DIR", "/var/lib/ozonslj/pdf-quarantine"
+    )
+    quarantine_root = root or Path(configured_root)
+    quarantine_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    upload_id = str(uuid4())
+    target = quarantine_root / f"{upload_id}.pdf"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    descriptor = os.open(target, flags, 0o600)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(content)
+    except Exception:
+        try:
+            target.unlink(missing_ok=True)
+        finally:
+            raise
+    return QuarantinedPdf(upload_id=upload_id, storage_key=f"quarantine/{upload_id}.pdf")
 
 
 def validate_pdf_upload(

@@ -275,3 +275,4 @@ OpenAI 兼容协议不代表所有供应商支持完全相同的可选字段。S
 - **知识版本没有重建入口**：重建必须调用版本级 `/v1/knowledge-sources/versions/{version_id}/rebuild`，幂等键包含版本内容哈希，并通过 PostgreSQL 任务事实和 Redis 调度信号交给 Worker；不能在 API 进程内直接写 Chroma。
 - **Web 重建后 Nginx 找不到 TLS 证书并反复重启**：若日志出现 `cannot load certificate /etc/nginx/tls/server.crt`，说明 Compose 漏挂服务器 `deploy/secrets/tls`。证书只能从服务器密钥目录只读挂载到 `/etc/nginx/tls`，禁止提交、输出或重新生成临时证书；补齐挂载后再执行 Web 重建并验证 HTTPS。
 - **知识管理页面选择 PDF 后不能直接预览**：这是安全门禁的预期行为。页面会先调用 PDF 隔离上传接口；当杀毒服务未配置时状态为 `quarantined`，不会把二进制内容送入知识解析或标记为可检索。完成隔离扫描能力后，才能开放自动文本层提取。
+- **PDF 隔离文件权限异常**：隔离目录必须由服务创建为 `0700`，文件以 UUID 命名并使用 `0600` 独占创建；不要把隔离目录挂到 Web 静态目录，不要返回真实服务器路径。若扫描服务未配置，文件只能保持 `quarantined`，不能人工改状态绕过扫描。
