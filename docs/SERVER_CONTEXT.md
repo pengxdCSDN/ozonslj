@@ -53,6 +53,13 @@ curl -fsS http://127.0.0.1/api/health/ready
 - API/Worker 使用同一应用镜像；未修改 PostgreSQL、Redis、Nginx 时不得重建这些服务。
 
 当前仓库新增开发不得重复设计平行迁移账本、备份体系或凭据密钥方案。状态判断必须区分“代码/模板已存在”“服务器已安装”“实际执行已验证”；当前仅备份定时任务安装仍有缺口。
+
+## 2026-08-16：评测确认与测试基线验收
+
+- 提交 `84acc21` 的 RAG 评测确认页面、单条/批量确认接口和 PostgreSQL 持久化已部署；ACR 应用镜像摘要为 `c3a75f06bd6c...`。
+- 云端 PostgreSQL 实际写入固定 400 例，批量确认 2 例成功；API 重启后两例仍为 `confirmed`。
+- API/Worker 使用同一镜像，API、Worker、Scheduler 正常运行；`health/live` 与 `health/ready` 均返回 200。
+- 提交 `0b95f13` 修复 Seller 账户兼容依赖、路由注册、认证测试配置和迁移版本断言；本地完整 pytest、Ruff、mypy 通过。该提交尚未重新发布云端。
 ## 2026-08-09 开发状态同步
 
 - 云端部署继续沿用现有 PostgreSQL + Redis Compose 基线，不引入第二套数据库或 SaaS 组织开发任务。

@@ -241,7 +241,19 @@ Retry-After: 2
 
 批准接口必须重新校验权限、审核状态、预览版本和数据新鲜度，并使用幂等键。API 只创建命令；独立 `execution-worker` 执行写入。首个价格写入每批最多 20 件、涨跌不超过 10%、不得低于利润线。结果不确定时返回 `verification_required` 或 `manual_review`，不得盲目重试。
 
-## 11. Agent 与报告（V5.5，已定档待开发）
+## 11. RAG 评测案例确认（已实现）
+
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| POST | `/v1/rag-evaluation/case-generation-jobs` | 创建 AI 草稿案例 |
+| GET | `/v1/rag-evaluation/cases` | 查看当前组织的固定/草稿案例 |
+| POST | `/v1/rag-evaluation/cases/{case_id}/confirm` | 单条人工确认 |
+| POST | `/v1/rag-evaluation/cases/confirm-batch` | 批量人工确认，最多 240 个案例 |
+| POST | `/v1/rag-evaluation/runs` | 创建评测运行并计算确认门禁 |
+
+固定 400 例通过 PostgreSQL 幂等种子写入；确认状态、确认人和确认时间不保存在 API 进程内存中，API 重启后必须保持。未确认案例不能通过运行门禁。
+
+## 12. Agent 与报告（V5.5，已定档待开发）
 
 | 方法 | 路径 | 用途 |
 |---|---|---|
@@ -251,7 +263,7 @@ Retry-After: 2
 
 Agent 接口不接受任意 SQL、任意工具名、文件系统路径、模型地址或写适配器参数。服务端从版本化注册表选择工作流和只读工具，并记录事实、工作流、模型和提示词版本。
 
-## 12. 接口验收规则
+## 13. 接口验收规则
 
 - 当前实现与目标契约在文档和测试中明确区分。
 - API 与 RLS 均拒绝跨组织/工作区访问。
