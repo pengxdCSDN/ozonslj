@@ -337,3 +337,11 @@ docker compose --env-file .env logs --tail=100 api worker
 - 云端已同步 `codex/deployment-base-images`，Web 容器已强制重建；宿主机 80/443 均监听，Nginx `-t` 通过。
 - 本机 TLS 验收：首页 `200 text/html`，新 JS `200 application/javascript`，新 CSS `200 text/css`；阿里云安全组已有 TCP 443 放行规则。
 - 历史上“HTTPS 可用”的前提是外层 TLS 入口或其他临时映射存在；当前 Compose 的明确配置现在与 Nginx TLS 配置一致，后续不得只检查安全组而忽略宿主机端口映射。
+
+### 第十组云端最终验收
+
+- ACR 新应用镜像摘要：`sha256:e2cde1e36edbf00876f6bba367f40cf2bc5534694ca9e40e46f6915b68d5367b`，创建时间晚于提交 `0a7fc44`；镜像内可导入可观测性模块。
+- API、Worker、Scheduler 已统一该摘要并运行；API `live=200`、`ready=200`、`ops=200`。
+- `/metrics` 已返回请求计数、请求耗时、磁盘使用率和内存可用量；Worker/Scheduler 可导入可观测性模块。
+- 云端资源检查：磁盘使用率约 `45.15%`，内存和 Swap 可读，`ops.status=ok`；Nginx `-t` 通过，HTTPS 首页 `200 text/html`。
+- PostgreSQL、Redis、Chroma 和基础镜像未重建；服务器既有 Web 静态回滚目录/工作树变更已保留，未强制 checkout 或清理。

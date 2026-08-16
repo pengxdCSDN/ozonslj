@@ -128,7 +128,9 @@ AI-010 新增通知模板预览 API 和前端入口，仅允许 headline、summa
 
 ## 2026-08-16 第十组：可观测性和运维
 
-已完成代码与本地验收：API 指标出口、请求/模型调用耗时与错误率、Scheduler/Worker 任务计数、资源快照、发布后健康门禁和显式条件回滚脚本。详细接口与限制见 [OBSERVABILITY.md](./OBSERVABILITY.md)。云端最终状态须在新 ACR 应用镜像部署后以 `/health/ops`、`/metrics` 和 `deploy/scripts/post_release_gate.sh` 重新核对，不将本地测试替代云端验收。
+已完成代码与本地验收：API 指标出口、请求/模型调用耗时与错误率、Scheduler/Worker 任务计数、资源快照、发布后健康门禁和显式条件回滚脚本。详细接口与限制见 [OBSERVABILITY.md](./OBSERVABILITY.md)。
+
+云端验收已完成：ACR 应用摘要为 `sha256:e2cde1e36edbf00876f6bba367f40cf2bc5534694ca9e40e46f6915b68d5367b`，API/Worker/Scheduler 摘要一致；`live/ready/ops=200`，指标出口、资源状态、Nginx 和 HTTPS 首页均通过。服务器既有 Web 静态变更未清理。
 
 
 ## 2026-08-09 ??????

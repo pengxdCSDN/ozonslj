@@ -23,3 +23,7 @@ bash scripts/post_release_gate.sh
 ## 限制与后续
 
 指标首期是单进程内存聚合，重启后计数归零；当前部署规模为单 API/Worker/Scheduler 副本，满足内部运维验收。扩容前必须引入外部 Prometheus/日志归档并为实例增加 `instance` 标签，不能直接把用户输入写入标签。
+
+## 2026-08-16 云端最终验收
+
+ACR 应用摘要 `sha256:e2cde1e36edbf00876f6bba367f40cf2bc5534694ca9e40e46f6915b68d5367b` 已部署到 API、Worker、Scheduler。`live/ready/ops` 均为 200，`/metrics` 返回请求与资源指标，磁盘约 45.15%，Nginx 配置和 HTTPS 首页通过。
