@@ -1024,7 +1024,7 @@ export interface RagModelCatalog { embedding: Array<Record<string, string>>; tra
 export function getRagModelCatalog(): Promise<RagModelCatalog> { return requestJson("/v1/model-providers/managed/catalog", { method: "GET" }); }
 export function listRagModelProviders(): Promise<RagModelProvider[]> { return requestJson("/v1/model-providers/managed", { method: "GET" }); }
 export function createRagModelProvider(payload: Record<string, unknown>): Promise<RagModelProvider> { return requestJson("/v1/model-providers/managed", { method: "POST", body: JSON.stringify(payload) }); }
-export interface RagModelConnectivityResult { ok: boolean; status: "reachable" | "quota_exceeded" | "failed"; message: string; model: string; external_request_sent: boolean; endpoint_host: string; http_status: number | null; }
+export interface RagModelConnectivityResult { ok: boolean; status: "reachable" | "quota_exceeded" | "timeout" | "failed"; message: string; model: string; external_request_sent: boolean; endpoint_host: string; http_status: number | null; }
 export function testRagModelConnectivity(payload: Record<string, unknown>): Promise<RagModelConnectivityResult> { return requestJson("/v1/model-providers/managed/test", { method: "POST", body: JSON.stringify(payload) }); }
 export function updateRagModelProvider(providerId: string, payload: Record<string, unknown>): Promise<RagModelProvider> { return requestJson(`/v1/model-providers/managed/${encodeURIComponent(providerId)}`, { method: "PUT", body: JSON.stringify(payload) }); }
 export function disableRagModelProvider(providerId: string): Promise<RagModelProvider> { return requestJson(`/v1/model-providers/managed/${encodeURIComponent(providerId)}/disable`, { method: "POST" }); }

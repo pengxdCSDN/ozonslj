@@ -61,6 +61,14 @@ RAG-3 可以在 RAG-2 schema 评审期间使用内存仓库开发，但不得绕
 - 知识源目录增加明确的加载中状态；加载完成后再区分空数据、筛选无结果和接口错误。
 - 第四组已完成云端验收：ACR 应用镜像 `sha256:9670cfba1069f0ede6d2c59e0e1dcbb05547fd4370415cc78c3e3a72b575eedd`，Web 入口 `index-DvaBd6Db.js`，API/Worker/Scheduler 与健康检查通过。
 
+## 5. RAG 真实供应商能力（无真实凭据阶段）
+
+- 已完成 OpenAI-compatible Embedding、Reranker、文本模型和翻译客户端的请求/响应契约。
+- 已完成模型维度自动探测、固定维度校验、Chroma 写入前维度门禁和维度错误提示。
+- 已完成 404 模型不存在、429 额度/限流、4xx/5xx、网络错误和独立超时错误分类。
+- 已完成主模型/备用模型路由、预算门禁、usage 记账和安全降级；主备故障注入测试通过。
+- 已完成连接测试接口的 reachable、quota_exceeded、timeout、failed 状态；真实供应商凭据接入后只需执行真实调用验收。
+
 ## 4. RAG-1：领域对象与切片内核
 
 ### 实现任务

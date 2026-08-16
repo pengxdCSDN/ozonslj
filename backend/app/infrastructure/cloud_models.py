@@ -39,6 +39,10 @@ class CloudModelQuotaError(CloudModelError):
     """云端供应商额度、限流或余额不足，调用方应切换备用供应商。"""
 
 
+class CloudModelTimeoutError(CloudModelError):
+    """供应商请求超时，调用方应记录 timeout 并切换备用供应商。"""
+
+
 class CloudModelNotFoundError(CloudModelError):
     """供应商找不到模型或请求资源，通常需要修正模型 ID 或 Base URL。"""
 
@@ -86,6 +90,8 @@ class OpenAICompatibleRerankClient:
                     headers={"Authorization": f"Bearer {self._api_key}"},
                     json=payload,
                 )
+        except httpx.TimeoutException as error:
+            raise CloudModelTimeoutError("重排序供应商请求超时") from error
         except httpx.HTTPError as error:
             raise CloudModelError("重排序云端网络请求失败") from error
         if response.status_code == 429:
@@ -145,6 +151,8 @@ class OpenAICompatibleTextClient:
                     self._endpoint,
                     headers={"Authorization": f"Bearer {self._api_key}"}, json=payload,
                 )
+        except httpx.TimeoutException as error:
+            raise CloudModelTimeoutError("文本模型供应商请求超时") from error
         except httpx.HTTPError as error:
             raise CloudModelError("文本模型云端网络请求失败") from error
         if response.status_code == 429:
@@ -261,6 +269,8 @@ class DashScopeEmbeddingClient(EmbeddingPort):
                     headers={"Authorization": f"Bearer {self._api_key}"},
                     json=payload,
                 )
+        except httpx.TimeoutException as error:
+            raise CloudModelTimeoutError("Embedding 供应商请求超时") from error
         except httpx.HTTPError as error:
             raise CloudModelError("Embedding 云端网络请求失败") from error
         if response.status_code == 429:
@@ -337,6 +347,8 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
                     headers={"Authorization": f"Bearer {self._api_key}"},
                     json=payload,
                 )
+        except httpx.TimeoutException as error:
+            raise CloudModelTimeoutError("翻译供应商请求超时") from error
         except httpx.HTTPError as error:
             raise CloudModelError("翻译云端网络请求失败") from error
         if response.status_code == 429:

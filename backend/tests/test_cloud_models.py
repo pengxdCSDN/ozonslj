@@ -10,6 +10,7 @@ from backend.app.infrastructure.cloud_models import (
     CloudModelError,
     CloudModelNotFoundError,
     CloudModelQuotaError,
+    CloudModelTimeoutError,
     DashScopeEmbeddingClient,
     OpenAICompatibleRerankClient,
     OpenAICompatibleTextClient,
@@ -54,6 +55,18 @@ async def test_embedding_quota_error_is_classified_without_secret() -> None:
     with pytest.raises(CloudModelQuotaError, match="额度") as error:
         await client.embed(["商品"])
     assert "top-secret" not in str(error.value)
+
+
+@pytest.mark.asyncio
+async def test_embedding_timeout_is_classified_for_fallback() -> None:
+    async def handler(_: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("provider timeout")
+
+    client = DashScopeEmbeddingClient(
+        api_key="test-key", dimension=2, transport=httpx.MockTransport(handler)
+    )
+    with pytest.raises(CloudModelTimeoutError, match="超时"):
+        await client.embed(["测试"])
 
 
 @pytest.mark.asyncio

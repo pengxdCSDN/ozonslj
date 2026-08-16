@@ -21,6 +21,7 @@ from backend.app.api.dependencies import (
 from backend.app.infrastructure.cloud_models import (
     CloudModelError,
     CloudModelQuotaError,
+    CloudModelTimeoutError,
     DashScopeEmbeddingClient,
     OpenAICompatibleRerankClient,
     OpenAICompatibleTranslationClient,
@@ -90,7 +91,7 @@ class ConnectivityTestPayload(BaseModel):
 
 class ConnectivityTestResponse(BaseModel):
     ok: bool
-    status: Literal["reachable", "quota_exceeded", "failed"]
+    status: Literal["reachable", "quota_exceeded", "timeout", "failed"]
     message: str
     model: str
     external_request_sent: bool
@@ -197,6 +198,16 @@ async def test_model_provider_connectivity(
             endpoint_host=urlparse(normalized_base_url).hostname or "未知",
             http_status=429,
         )
+    except CloudModelTimeoutError as error:
+        return ConnectivityTestResponse(
+            ok=False,
+            status="timeout",
+            message="已调用外部模型接口，但请求超时；请检查供应商延迟、网络和超时配置。",
+            model=payload.model,
+            external_request_sent=True,
+            endpoint_host=urlparse(normalized_base_url).hostname or "未知",
+            http_status=error.status_code,
+        )
     except (CloudModelError, ValueError) as error:
         return ConnectivityTestResponse(
             ok=False,
@@ -237,7 +248,11 @@ def _normalize_model_base_url(base_url: str) -> str:
     # 百炼 Workspace 的 /api/v1 是原生接口路径；OpenAI 兼容模型调用必须使用
     # /compatible-mode/v1，否则 text-embedding-v4 会返回 404。仅对百炼域名做转换。
     parsed = urlparse(value)
-    if parsed.hostname and parsed.hostname.lower().endswith(".maas.aliyuncs.com") and parsed.path.lower() == "/api/v1":
+    if (
+        parsed.hostname
+        and parsed.hostname.lower().endswith(".maas.aliyuncs.com")
+        and parsed.path.lower() == "/api/v1"
+    ):
         value = f"{parsed.scheme}://{parsed.netloc}/compatible-mode/v1"
     # 兼容历史配置中误填的完整路径；Embedding 最终统一由客户端拼接为 /embeddings。
     supported_endpoint_suffixes = ("/chat/completions", "/embeddings", "/embedding", "/rerank")
