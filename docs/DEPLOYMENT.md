@@ -269,3 +269,11 @@ docker compose --env-file .env logs --tail=100 api worker
 - 受控发布仍是 Stub/审核链路：必须有审核状态和幂等键，只记录命令及回读；真实 Seller 写接口、字段契约和真实店铺发布验收不得在无店铺凭据时伪造。
 - 验证：第六组后端 API/领域回归 8 项通过；前端 TypeScript 检查通过；Vite Web 构建通过，入口为 `index-f8CZ4J6r.js`，样式为 `index-DxjgRheu.css`。
 - ACR 发布前门禁：提交并推送后必须等待 ACR 使用本分支生成新应用镜像，核对新 digest、镜像内 revision、API/Worker/Scheduler 一致性，再执行云端验收；digest 未变化时不得报告发布完成。
+
+## 2026-08-16 第六组最终云端验收
+
+- 目标提交：`d4416ed2f43a126913fcc2061904251b4adc821a`；服务器工作树已同步到 `origin/codex/deployment-base-images`。
+- ACR 第二次构建摘要：`sha256:9f02f4c007fffc74257dbf8904e1a96460da9e8461de3a9b6f3214e6a25f88ec`；第一次构建虽有新摘要但仍为旧源码，已按门禁拒绝验收。
+- 镜像内已确认 `ExploreFilters`、`min_search_count` 和 `filter_opportunities` 存在；容器内 `/v1/selection/explore/run` 实测按 `min_search_count=900` 与 `coverage_gap_only=true` 只返回覆盖缺口候选。
+- API、Worker、Scheduler 均运行且统一上述摘要；API health 为 `healthy`，容器内 `health/ready=200`；Web 已重建，入口为 `index-f8CZ4J6r.js`，资源在容器内存在，`nginx -t` 通过。
+- PostgreSQL、Redis、Chroma 等基础服务未重建。公网 HTTPS 由服务器外层入口负责，服务器本机无 443 映射，因此本机 HTTPS 回环状态为 000；这不是应用容器故障，公网入口需从浏览器侧确认。
