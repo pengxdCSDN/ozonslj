@@ -30,7 +30,7 @@ PostgreSQL 和 Redis 仅接入 Compose 内部网络。PostgreSQL 只把宿主机
 - Ozon Api-Key 已使用独立 Fernet 主密钥加密；密钥只读挂载到 API/Worker 的 `/run/secrets/ozon_credential_key`，不得与数据库密码复用。
 - 备份目录：`/opt/ozonslj/backups`。
 - 已有 `backup_postgres.sh`、`restore_postgres_drill.sh`、03:15 cron 模板和日志轮转模板；恢复演练创建隔离临时数据库，禁止覆盖运行库。
-- 2026-08-04 只读核验发现：脚本和模板存在、备份目录中有 2026-07-31 与 2026-08-03 两份备份、cron 服务运行，但 `/etc/cron.d` 和 root crontab 尚未安装 ozonslj 任务。因此“每日自动备份”当前不能标记为生效；应安装已有模板后再观察下一次执行和日志轮转。
+- 2026-08-16 已安装 `/etc/cron.d/ozonslj-backup` 与 `/etc/logrotate.d/ozonslj-backup`，并完成一次新备份及隔离库恢复演练；备份文件完整性、104 条迁移和 103 张表校验通过。
 
 ## 4. 只读检查顺序
 
