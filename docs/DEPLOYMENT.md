@@ -246,3 +246,10 @@ docker compose --env-file .env logs --tail=100 api worker
 - Web 入口已更新为 `index-BDRFAGDq.js`；Web 容器运行正常，Nginx 配置检查通过。
 - 页面现在会调用 PDF 隔离上传接口并展示结构检查、杀毒状态和阻断原因；未配置杀毒服务时保持 `quarantined`，禁止自动解析二进制 PDF。
 - 应用镜像新增 Python 依赖时，Dockerfile 必须在安装项目后执行关键依赖 import 校验；依赖缺失必须使 ACR 构建失败，禁止把“健康但功能缺依赖”的镜像部署到云端。
+
+## 2026-08-16 第四组知识管理功能最终验收
+
+- 应用提交：`1bf19d7`；ACR 应用镜像摘要：`sha256:9670cfba1069f0ede6d2c59e0e1dcbb05547fd4370415cc78c3e3a72b575eedd`。
+- API、Worker、Scheduler 已统一该摘要；容器内 `pypdf` 依赖验证通过，索引重建路由存在。
+- API `ready=200`、`live=200`；Web 入口为 `index-DvaBd6Db.js`；Nginx 配置检查通过。
+- 第四组功能已完成发布：来源筛选、版本详情、Markdown/SQL/TXT/PDF 文本层导入、解析切片预览、质量门禁、发布/撤回/删除/重建、任务轮询、取消/重试和版本内容一致性校验。
