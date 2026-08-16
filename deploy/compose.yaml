@@ -176,6 +176,8 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./web:/usr/share/nginx/html:ro
+      # TLS 证书属于服务器密钥材料，只从服务器 secrets 目录只读挂载，不能进入 Git 或镜像。
+      - ./secrets/tls:/etc/nginx/tls:ro
     ports:
       - "80:80"
     depends_on:
