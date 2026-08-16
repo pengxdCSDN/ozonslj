@@ -2,6 +2,8 @@
 
 稳定构建流程见 [`ACR_STABLE_BUILD_FLOW.md`](./ACR_STABLE_BUILD_FLOW.md)。本文件保留运行时部署细节；ACR 规则、源码一致性和失败门禁以稳定流程为准。
 
+基础镜像规则已准备独立 Git Tag：`base-postgres-v1`、`base-redis-v1`、`base-nginx-v1`、`base-python-v1`、`base-node-v1`、`base-chroma-v1`，均指向 `afd375a`；ACR 中分别使用 `tags:` 前缀引用。
+
 ## 部署边界
 
 当前节点使用 Docker Compose 部署 PostgreSQL、Redis、API、Worker 与 Nginx/Web 骨架。

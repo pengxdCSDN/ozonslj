@@ -13,6 +13,19 @@
 
 截图中多个基础镜像规则都绑定开发分支，导致一次应用提交触发整组构建。这会制造排队和误判，后续必须将基础镜像规则改为手动或独立引用；在规则未调整前，不要点击“立即构建”整页规则，只构建应用规则。
 
+2026-08-16 已在 GitHub 创建并推送以下基础镜像专用 Tag，均指向提交 `afd375a`：
+
+```text
+base-postgres-v1
+base-redis-v1
+base-nginx-v1
+base-python-v1
+base-node-v1
+base-chroma-v1
+```
+
+ACR 页面中分别填写为 `tags:base-postgres-v1`、`tags:base-redis-v1`、`tags:base-nginx-v1`、`tags:base-python-v1`、`tags:base-node-v1`、`tags:base-chroma-v1`。Tag 是基础镜像构建基线，不随应用分支后续提交变化。
+
 ## 二、发布前固定门禁
 
 在本地项目目录执行：
