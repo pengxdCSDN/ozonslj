@@ -238,3 +238,10 @@ docker compose --env-file .env logs --tail=100 api worker
 - API `ready=200`、`live=200`；API 状态 healthy；Web 静态入口引用 `index-DOqz1CRb.js`；Nginx `nginx -t` 通过。
 - 本次只更新应用代码镜像和已构建 Web 静态资源，没有重建 PostgreSQL、Redis、Chroma 等基础服务。
 - PDF 仍遵守安全门禁：当前支持隔离上传和结构校验；未配置杀毒服务时状态为 `quarantined`，不能宣称已完成二进制 PDF 自动解析。文本层 PDF 需先提取文本再进入知识解析流水线。
+
+## 2026-08-16 PDF 安全上传状态流程发布验收
+
+- 应用提交：`171c88d`；ACR 应用镜像摘要：`sha256:a182dc7ec8a10bc012d8202375d22a3f4bfd05a306e5798dcff4fc7e4ba93516`。
+- API、Worker、Scheduler 已统一使用新摘要；API healthy，`ready=200`、`live=200`。
+- Web 入口已更新为 `index-BDRFAGDq.js`；Web 容器运行正常，Nginx 配置检查通过。
+- 页面现在会调用 PDF 隔离上传接口并展示结构检查、杀毒状态和阻断原因；未配置杀毒服务时保持 `quarantined`，禁止自动解析二进制 PDF。
