@@ -48,6 +48,9 @@ export interface KnowledgeVersion {
   source_id: string;
   version_number: number;
   content_hash: string;
+  parser_name: string;
+  parser_version: string;
+  cleaner_version: string;
   status: string;
 }
 
