@@ -285,3 +285,12 @@ docker compose --env-file .env logs --tail=100 api worker
 - 云端镜像内 `validate_approval_request`、`build_diff_preview`、`summarize_execution` 和 `create_audit_event` 导入检查通过；API `ready=200`。
 - API、Worker、Scheduler 统一使用 `sha256:629976c612d2afd5bc057e531d55ac23aafde7fe60e8232554c5ae11db65f893`。
 - 真实 Seller 写入仍未执行；当前验收证明的是审批、门禁、幂等、审计和 Stub 命令闭环，不代表真实 Ozon 写入已完成。
+
+## 2026-08-16 第八组智能分析与 Agent 验收
+
+- 本阶段无新增应用代码，复用已验收应用镜像；不重复构建 PostgreSQL、Redis、Chroma 或应用镜像。
+- 本地第八组回归 44 项通过，覆盖只读运营分析、商品/库存/订单/广告联合分析、竞品/选品分析、汇总报告、RAG 引用与无证据拒答、Agent 编排、权限拒绝、高风险工具拒答、触发器和审计。
+- 云端容器内 Agent 编排、权限、触发和通知预览模块导入检查通过；API `ready=200`。
+- API、Worker、Scheduler 统一使用 `sha256:629976c612d2afd5bc057e531d55ac23aafde7fe60e8232554c5ae11db65f893`。
+- 外部通知仅完成配置校验与预览闭环，未配置真实渠道凭据，因此没有执行真实发送；Seller 实时数据分析和真实通知发送待外部授权后验收。
+- 后续发布必须继续遵守：先核对发布分支和源码提交，再核对镜像摘要/镜像内 revision，最后检查 API、Worker、Scheduler 一致性；摘要未变化不得宣称新版本发布。
