@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from backend.app.api.dependencies import get_rag_task_gateway, get_rag_task_queue
 from backend.app.domain.knowledge_governance import KnowledgeSource, KnowledgeVersion
 from backend.app.domain.knowledge_runtime import get_knowledge_runtime
+from backend.app.infrastructure.postgresql.rag_tasks import PostgresRagTaskGateway
+from backend.app.infrastructure.redis_rag_tasks import RedisRagTaskQueue
 
 router = APIRouter(prefix="/v1/knowledge-sources", tags=["knowledge-governance"])
 
@@ -214,3 +218,21 @@ async def withdraw_knowledge_version(version_id: str) -> KnowledgeVersionRespons
     withdrawn = await runtime.version(version_id)
     assert withdrawn is not None
     return _version_response(withdrawn)
+
+
+@router.post("/versions/{version_id}/rebuild", response_model=dict[str, object], status_code=202)
+async def rebuild_knowledge_version(
+    version_id: str,
+    gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
+    queue: Annotated[RedisRagTaskQueue, Depends(get_rag_task_queue)],
+) -> dict[str, object]:
+    """为指定版本创建幂等重建任务；真正索引写入由 Worker 执行。"""
+    runtime = get_knowledge_runtime()
+    version = await runtime.version(version_id)
+    if version is None or version.status not in {"draft", "published"}:
+        raise HTTPException(status_code=404, detail="知识版本不存在或状态不允许重建")
+    task = await gateway.create(
+        "rebuild", f"rebuild:{version_id}:{version.content_hash}", version.source_id, version_id
+    )
+    await queue.enqueue(task.task_id)
+    return {"task_id": task.task_id, "status": task.status, "document_version_id": version_id}

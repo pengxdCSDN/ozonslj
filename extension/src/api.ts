@@ -929,6 +929,7 @@ export function createKnowledgeVersion(sourceId: string, payload: { content_hash
 }
 export function publishKnowledgeVersion(versionId: string): Promise<KnowledgeVersion> { return requestJson(`/v1/knowledge-sources/versions/${encodeURIComponent(versionId)}/publish`, { method: "POST" }); }
 export function withdrawKnowledgeVersion(versionId: string): Promise<KnowledgeVersion> { return requestJson(`/v1/knowledge-sources/versions/${encodeURIComponent(versionId)}/withdraw`, { method: "POST" }); }
+export function rebuildKnowledgeVersion(versionId: string): Promise<{ task_id: string; status: string; document_version_id: string }> { return requestJson(`/v1/knowledge-sources/versions/${encodeURIComponent(versionId)}/rebuild`, { method: "POST" }); }
 export function withdrawKnowledgeSource(sourceId: string): Promise<KnowledgeSource> { return requestJson(`/v1/knowledge-sources/${encodeURIComponent(sourceId)}/withdraw`, { method: "POST" }); }
 export function pauseKnowledgeSource(sourceId: string): Promise<KnowledgeSource> { return requestJson(`/v1/knowledge-sources/${encodeURIComponent(sourceId)}/pause`, { method: "POST" }); }
 export function resumeKnowledgeSource(sourceId: string): Promise<KnowledgeSource> { return requestJson(`/v1/knowledge-sources/${encodeURIComponent(sourceId)}/resume`, { method: "POST" }); }
