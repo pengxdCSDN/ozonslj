@@ -180,6 +180,9 @@ services:
       - ./secrets/tls:/etc/nginx/tls:ro
     ports:
       - "80:80"
+      # 80 仅负责跳转；TLS 终止在同一 Nginx 容器的 443 端口。
+      # 宿主机必须同步映射 443，否则 HTTP 会跳转到无法建立连接的 HTTPS。
+      - "443:443"
     depends_on:
       api:
         condition: service_healthy
