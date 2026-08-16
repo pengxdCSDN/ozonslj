@@ -232,6 +232,14 @@ curl -fsS http://127.0.0.1/api/health/ready
 
 以后每次执行 `up -d --no-deps api worker` 后，必须同步重启 `web` 并验证登录/关键 API；发布脚本不得只更新 API/Worker 而跳过 Web upstream 刷新。若仍为 502，检查 `docker logs ozonslj-web-1` 中的 `connect() failed` 和 upstream 地址，再确认 API 容器监听 `8000` 且状态为 healthy。
 
+## 2026-08-16：发布后再次出现 HTTP 502
+
+本次现象为登录页显示“本地服务请求失败，状态码 502”。API 容器健康检查为 200，API 实际新地址为 `172.19.0.3`，但 Nginx 日志仍连接旧 upstream `172.19.0.5:8000` 并报 `connect() failed (111: Connection refused)`。因此根因仍是 API 容器重建后 Web/Nginx worker 缓存旧容器 IP，不是账号、密码、TLS 或 PostgreSQL 故障。
+
+恢复动作：在服务器 `/opt/ozonslj/app/deploy` 执行 `docker compose --env-file .env restart web`，随后执行 `docker exec ozonslj-web-1 nginx -t` 和本机首页 HTTP/HTTPS 检查。此次已恢复 HTTPS 200。
+
+防复发措施：`deploy/scripts/post_release_gate.sh` 现在在每次发布门禁开始时强制重启 Web，并检查 `http://127.0.0.1/`；发布流程不得绕过该脚本，也不得只执行 `up -d --no-deps api worker scheduler` 后直接结束。
+
 ## 2026-08-14：SiliconFlow BAAI/bge-m3 返回 HTTP 400 参数无效
 
 ### 根因

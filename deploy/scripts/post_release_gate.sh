@@ -20,6 +20,11 @@ rollback() {
 
 trap rollback ERR
 "${compose[@]}" config --quiet
+# API/Worker 重建后 Compose 可能为 API 分配新 IP；Nginx worker 会继续使用旧
+# upstream 地址，导致浏览器登录和所有 /api 请求返回 502。每次发布门禁先刷新
+# Web upstream，再执行 API 健康检查，避免把这个步骤依赖人工记忆。
+"${compose[@]}" restart web
+curl --fail --silent --show-error --output /dev/null http://127.0.0.1/
 api_get() {
   local path="$1"
   "${compose[@]}" exec -T api python -c \
