@@ -908,6 +908,36 @@ export function submitKnowledgeFeedback(answerId: string, reason: string, note?:
   });
 }
 
+export interface RagEvaluationCase {
+  case_id: string;
+  question: string;
+  expected_status: string;
+  expected_sources: string[];
+  safety_tags: string[];
+  status: "draft" | "confirmed" | "rejected";
+}
+export interface RagEvaluationBatchConfirmResult { confirmed_count: number; confirmed_case_ids: string[]; }
+export interface RagEvaluationRun {
+  run_id: string; status: string; suite: "quick" | "standard" | "full";
+  target_count: number; confirmed_count: number; case_ids: string[]; gate_status: "ready" | "blocked";
+}
+export function listRagEvaluationCases(): Promise<RagEvaluationCase[]> {
+  return requestJson("/v1/rag-evaluation/cases", { method: "GET" });
+}
+export function confirmRagEvaluationCase(caseId: string, reviewer: string): Promise<RagEvaluationCase> {
+  return requestJson(`/v1/rag-evaluation/cases/${encodeURIComponent(caseId)}/confirm`, {
+    method: "POST", body: JSON.stringify({ reviewer }),
+  });
+}
+export function confirmRagEvaluationCasesBatch(caseIds: string[], reviewer: string): Promise<RagEvaluationBatchConfirmResult> {
+  return requestJson("/v1/rag-evaluation/cases/confirm-batch", {
+    method: "POST", body: JSON.stringify({ case_ids: caseIds, reviewer }),
+  });
+}
+export function startRagEvaluation(suite: RagEvaluationRun["suite"]): Promise<RagEvaluationRun> {
+  return requestJson("/v1/rag-evaluation/runs", { method: "POST", body: JSON.stringify({ suite }) });
+}
+
 export function listModelBudgets(): Promise<ModelBudget[]> {
   return requestJson("/v1/model-budgets", { method: "GET" });
 }

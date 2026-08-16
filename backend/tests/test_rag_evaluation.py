@@ -3,14 +3,68 @@
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from backend.app.api.dependencies import get_rag_evaluation_gateway
 from backend.app.api.routes.rag_evaluation import router
-from backend.app.domain.rag_evaluation_corpus import fixed_suite_case_ids
+from backend.app.domain.rag_evaluation import EvaluationCase
+from backend.app.domain.rag_evaluation_corpus import fixed_evaluation_corpus, fixed_suite_case_ids
+
+
+class MemoryEvaluationGateway:
+    """路由测试替身；用同一个实例模拟 PostgreSQL 跨请求保留确认状态。"""
+
+    def __init__(self) -> None:
+        self.cases = {
+            item.case_id: EvaluationCase(
+                case_id=item.case_id, question=item.question, expected_status=item.expected_status,
+                expected_sources=item.expected_chunk_ids, safety_tags=item.safety_tags,
+            ) for item in fixed_evaluation_corpus()
+        }
+
+    async def seed_fixed_cases(self, cases: list[EvaluationCase]) -> None:
+        for case in cases:
+            self.cases.setdefault(case.case_id, case)
+
+    async def create_case(self, case: EvaluationCase) -> EvaluationCase:
+        self.cases[case.case_id] = case
+        return case
+
+    async def list_cases(self) -> list[EvaluationCase]:
+        return list(self.cases.values())
+
+    async def confirm_case(self, case_id: str, reviewer: str) -> EvaluationCase | None:
+        case = self.cases.get(case_id)
+        if case is None:
+            return None
+        confirmed = EvaluationCase(
+            case_id=case.case_id, question=case.question, expected_status=case.expected_status,
+            expected_sources=case.expected_sources, safety_tags=case.safety_tags,
+            status="confirmed",
+        )
+        self.cases[case_id] = confirmed
+        return confirmed
+
+    async def confirm_cases(self, case_ids: list[str], reviewer: str) -> list[EvaluationCase]:
+        result = []
+        for case_id in dict.fromkeys(case_ids):
+            case = await self.confirm_case(case_id, reviewer)
+            if case is not None:
+                result.append(case)
+        return result
+
+    async def create_run(self, suite: str, gate_status: str) -> str:
+        return f"test-run-{suite}"
+
+
+def make_app() -> FastAPI:
+    app = FastAPI()
+    app.include_router(router)
+    gateway = MemoryEvaluationGateway()
+    app.dependency_overrides[get_rag_evaluation_gateway] = lambda: gateway
+    return app
 
 
 def test_generate_confirm_and_run() -> None:
-    app = FastAPI()
-    app.include_router(router)
-    client = TestClient(app)
+    client = TestClient(make_app())
     generated = client.post(
         "/v1/rag-evaluation/case-generation-jobs", json={"topics": ["库存同步"]}
     )
@@ -33,9 +87,7 @@ def test_generate_confirm_and_run() -> None:
 
 
 def test_metrics_api_returns_quality_indicators() -> None:
-    app = FastAPI()
-    app.include_router(router)
-    response = TestClient(app).post(
+    response = TestClient(make_app()).post(
         "/v1/rag-evaluation/metrics",
         json=[{
             "expected_chunk_ids": ["c1"], "retrieved_chunk_ids": ["c1"],
@@ -45,3 +97,21 @@ def test_metrics_api_returns_quality_indicators() -> None:
     )
     assert response.json()["recall"] == 1
     assert response.json()["citation_support_rate"] == 1
+
+
+def test_batch_confirmation_is_idempotent_and_persists_between_requests() -> None:
+    client = TestClient(make_app())
+    case_ids = list(fixed_suite_case_ids("quick"))[:2]
+    first = client.post(
+        "/v1/rag-evaluation/cases/confirm-batch",
+        json={"case_ids": case_ids, "reviewer": "qa-user"},
+    )
+    assert first.status_code == 200
+    assert first.json()["confirmed_count"] == 2
+    second = client.post(
+        "/v1/rag-evaluation/cases/confirm-batch",
+        json={"case_ids": case_ids, "reviewer": "qa-user"},
+    )
+    assert second.json()["confirmed_count"] == 2
+    cases = {item["case_id"]: item for item in client.get("/v1/rag-evaluation/cases").json()}
+    assert all(cases[case_id]["status"] == "confirmed" for case_id in case_ids)

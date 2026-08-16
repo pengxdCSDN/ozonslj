@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
-from typing import Literal
+from typing import Literal, Protocol
 
 EvaluationStatus = Literal["draft", "confirmed", "rejected"]
 
@@ -16,6 +17,24 @@ class EvaluationCase:
     expected_sources: tuple[str, ...]
     safety_tags: tuple[str, ...]
     status: EvaluationStatus = "draft"
+
+
+class RagEvaluationGateway(Protocol):
+    """评测案例持久化端口；API 不直接依赖 PostgreSQL 驱动。"""
+
+    async def seed_fixed_cases(self, cases: Sequence[EvaluationCase]) -> None: ...
+
+    async def create_case(self, case: EvaluationCase) -> EvaluationCase: ...
+
+    async def list_cases(self) -> list[EvaluationCase]: ...
+
+    async def confirm_case(self, case_id: str, reviewer: str) -> EvaluationCase | None: ...
+
+    async def confirm_cases(
+        self, case_ids: Sequence[str], reviewer: str
+    ) -> list[EvaluationCase]: ...
+
+    async def create_run(self, suite: str, gate_status: Literal["ready", "blocked"]) -> str: ...
 
 
 def confirm_case(case: EvaluationCase, *, reviewer: str) -> EvaluationCase:

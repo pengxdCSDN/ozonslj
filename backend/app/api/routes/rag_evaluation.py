@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from typing import Annotated, Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.app.domain.rag_evaluation import EvaluationCase, confirm_case, suite_case_limit
+from backend.app.api.dependencies import get_rag_evaluation_gateway
+from backend.app.domain.rag_evaluation import EvaluationCase, RagEvaluationGateway, suite_case_limit
 from backend.app.domain.rag_evaluation_corpus import fixed_evaluation_corpus, fixed_suite_case_ids
 from backend.app.domain.rag_metrics import (
     EvaluationObservation,
@@ -16,13 +18,14 @@ from backend.app.domain.rag_metrics import (
 )
 
 router = APIRouter(prefix="/v1/rag-evaluation", tags=["rag-evaluation"])
-_cases: dict[str, EvaluationCase] = {}
-for _fixed in fixed_evaluation_corpus():
-    _cases[_fixed.case_id] = EvaluationCase(
-        case_id=_fixed.case_id, question=_fixed.question,
-        expected_status=_fixed.expected_status, expected_sources=_fixed.expected_chunk_ids,
-        safety_tags=_fixed.safety_tags,
-    )
+
+
+def _fixed_cases() -> list[EvaluationCase]:
+    """构造稳定的固定语料；网关负责幂等写入当前组织。"""
+    return [EvaluationCase(
+        case_id=item.case_id, question=item.question, expected_status=item.expected_status,
+        expected_sources=item.expected_chunk_ids, safety_tags=item.safety_tags,
+    ) for item in fixed_evaluation_corpus()]
 
 
 class CaseGenerationPayload(BaseModel):
@@ -40,6 +43,15 @@ class EvaluationCaseResponse(BaseModel):
 
 class ConfirmPayload(BaseModel):
     reviewer: str = Field(min_length=1, max_length=100)
+
+
+class BatchConfirmPayload(ConfirmPayload):
+    case_ids: list[str] = Field(min_length=1, max_length=240)
+
+
+class BatchConfirmResponse(BaseModel):
+    confirmed_count: int
+    confirmed_case_ids: list[str]
 
 
 class EvaluationRunPayload(BaseModel):
@@ -70,43 +82,72 @@ def _response(case: EvaluationCase) -> EvaluationCaseResponse:
 
 
 @router.post("/case-generation-jobs", response_model=list[EvaluationCaseResponse], status_code=201)
-async def generate_evaluation_cases(payload: CaseGenerationPayload) -> list[EvaluationCaseResponse]:
+async def generate_evaluation_cases(
+    payload: CaseGenerationPayload,
+    gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
+) -> list[EvaluationCaseResponse]:
     generated: list[EvaluationCaseResponse] = []
     for topic in payload.topics:
         case = EvaluationCase(
             case_id=str(uuid4()), question=f"请说明{topic}的处理规则", expected_status="answered",
             expected_sources=(), safety_tags=("generated_draft",),
         )
-        _cases[case.case_id] = case
-        generated.append(_response(case))
+        generated.append(_response(await gateway.create_case(case)))
     return generated
 
 
 @router.get("/cases", response_model=list[EvaluationCaseResponse])
-async def list_evaluation_cases() -> list[EvaluationCaseResponse]:
-    return [_response(case) for case in _cases.values()]
+async def list_evaluation_cases(
+    gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
+) -> list[EvaluationCaseResponse]:
+    await gateway.seed_fixed_cases(_fixed_cases())
+    return [_response(case) for case in await gateway.list_cases()]
+
+
+@router.post("/cases/confirm-batch", response_model=BatchConfirmResponse)
+async def confirm_evaluation_cases_batch(
+    payload: BatchConfirmPayload,
+    gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
+) -> BatchConfirmResponse:
+    """批量确认固定语料；未知或已拒绝案例不会被伪报为已确认。"""
+    confirmed = await gateway.confirm_cases(payload.case_ids, reviewer=payload.reviewer)
+    return BatchConfirmResponse(
+        confirmed_count=len(confirmed), confirmed_case_ids=[case.case_id for case in confirmed]
+    )
 
 
 @router.post("/cases/{case_id}/confirm", response_model=EvaluationCaseResponse)
-async def confirm_evaluation_case(case_id: str, payload: ConfirmPayload) -> EvaluationCaseResponse:
-    case = _cases.get(case_id)
+async def confirm_evaluation_case(
+    case_id: str,
+    payload: ConfirmPayload,
+    gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
+) -> EvaluationCaseResponse:
+    case = await gateway.confirm_case(case_id, reviewer=payload.reviewer)
     if case is None:
         raise HTTPException(status_code=404, detail="评测案例不存在")
-    confirmed = confirm_case(case, reviewer=payload.reviewer)
-    _cases[case_id] = confirmed
-    return _response(confirmed)
+    return _response(case)
 
 
 @router.post("/runs", response_model=dict[str, object], status_code=202)
-async def start_evaluation(payload: EvaluationRunPayload) -> dict[str, object]:
+async def start_evaluation(
+    payload: EvaluationRunPayload,
+    gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
+) -> dict[str, object]:
+    await gateway.seed_fixed_cases(_fixed_cases())
     limit = suite_case_limit(payload.suite)
     target_ids = fixed_suite_case_ids(payload.suite)
-    confirmed = [case_id for case_id in target_ids if _cases[case_id].status == "confirmed"]
+    cases = {case.case_id: case for case in await gateway.list_cases()}
+    confirmed = [case_id for case_id in target_ids
+                 if cases.get(case_id) is not None and cases[case_id].status == "confirmed"]
+    gate_status: Literal["ready", "blocked"] = (
+        "ready" if len(confirmed) == limit else "blocked"
+    )
     return {
-        "run_id": str(uuid4()), "status": "queued", "suite": payload.suite,
+        "run_id": await gateway.create_run(payload.suite, gate_status),
+        "status": "queued", "suite": payload.suite,
         "target_count": limit, "confirmed_count": len(confirmed),
         "case_ids": list(target_ids),
-        "gate_status": "ready" if len(confirmed) == limit else "blocked",
+        "gate_status": gate_status,
     }
 
 

@@ -71,9 +71,10 @@ import { KnowledgeQueryView } from "./KnowledgeQueryView";
 import { KnowledgeSourcesView } from "./KnowledgeSourcesView";
 import { ModelBudgetView } from "./ModelBudgetView";
 import { RagModelProvidersView } from "./RagModelProvidersView";
+import { RagEvaluationView } from "./RagEvaluationView";
 
 type LoadState = { status: "idle" | "loading" } | { status: "ready"; data: ProductOfferPage } | { status: "error"; message: string };
-type View = "overview" | "products" | "operations" | "tasks" | "quality" | "imports" | "competitors" | "sampling-policy" | "sampling" | "snapshots" | "sample-scope" | "parser-alerts" | "explore" | "validate" | "expand" | "decision-book" | "competition" | "profit" | "sensitivity" | "listing-keywords" | "listing-layering" | "listing-title" | "search-attributes" | "fabe" | "smart-search" | "listing-risk" | "listing-versions" | "listing-publish" | "performance-oauth" | "advertising-campaigns" | "advertising-reports" | "advertising-metrics" | "advertising-keywords" | "advertising-thresholds" | "advertising-calendar" | "advertising-readonly" | "model-adapter" | "model-providers" | "model-budget" | "readonly-tools" | "sales-analysis" | "inventory-analysis" | "advertising-analysis" | "competitor-selection-analysis" | "summary-report" | "agent-triggers" | "agent-permissions" | "external-notifications" | "performance-credentials" | "seller-product-sync" | "seller-stock-sync" | "seller-order-sync" | "seller-fulfillment-sync" | "sync-processor" | "data-source-labels" | "data-quality-schema" | "erp-import" | "knowledge-query" | "knowledge-sources" | "accounts";
+type View = "overview" | "products" | "operations" | "tasks" | "quality" | "imports" | "competitors" | "sampling-policy" | "sampling" | "snapshots" | "sample-scope" | "parser-alerts" | "explore" | "validate" | "expand" | "decision-book" | "competition" | "profit" | "sensitivity" | "listing-keywords" | "listing-layering" | "listing-title" | "search-attributes" | "fabe" | "smart-search" | "listing-risk" | "listing-versions" | "listing-publish" | "performance-oauth" | "advertising-campaigns" | "advertising-reports" | "advertising-metrics" | "advertising-keywords" | "advertising-thresholds" | "advertising-calendar" | "advertising-readonly" | "model-adapter" | "model-providers" | "model-budget" | "rag-evaluation" | "readonly-tools" | "sales-analysis" | "inventory-analysis" | "advertising-analysis" | "competitor-selection-analysis" | "summary-report" | "agent-triggers" | "agent-permissions" | "external-notifications" | "performance-credentials" | "seller-product-sync" | "seller-stock-sync" | "seller-order-sync" | "seller-fulfillment-sync" | "sync-processor" | "data-source-labels" | "data-quality-schema" | "erp-import" | "knowledge-query" | "knowledge-sources" | "accounts";
 type OperationLoadState = { status: "idle" | "loading" } | { status: "ready"; data: OperationData } | { status: "error"; message: string };
 type StockFilter = "all" | "available" | "risk" | "empty";
 type CurrentUser = AuthUser;
@@ -89,7 +90,7 @@ const NAV_GROUPS: { label: string; icon: React.ReactNode; items: { view: View; l
   { label: "选品研究", icon: <MagnifyingGlass size={17} />, items: [{ view: "explore", label: "探索选品" }, { view: "validate", label: "选品验证" }, { view: "competition", label: "竞争分析" }, { view: "profit", label: "利润模型" }] },
   { label: "内容增长", icon: <ClipboardText size={17} />, items: [{ view: "listing-keywords", label: "关键词策略" }, { view: "listing-title", label: "标题草稿" }, { view: "listing-risk", label: "内容风险" }, { view: "listing-publish", label: "受控发布" }] },
   { label: "广告分析", icon: <ChartLineUp size={17} />, items: [{ view: "advertising-campaigns", label: "广告活动" }, { view: "advertising-metrics", label: "广告指标" }, { view: "advertising-keywords", label: "关键词诊断" }, { view: "summary-report", label: "汇总报告" }] },
-  { label: "系统工具", icon: <Key size={17} />, items: [{ view: "performance-credentials", label: "Performance 凭据" }, { view: "model-providers", label: "模型供应商" }, { view: "model-budget", label: "模型额度" }, { view: "seller-product-sync", label: "Seller 数据同步" }, { view: "agent-permissions", label: "Agent 权限" }, { view: "external-notifications", label: "外部通知" }] },
+  { label: "系统工具", icon: <Key size={17} />, items: [{ view: "performance-credentials", label: "Performance 凭据" }, { view: "model-providers", label: "模型供应商" }, { view: "model-budget", label: "模型额度" }, { view: "rag-evaluation", label: "RAG 评测确认" }, { view: "seller-product-sync", label: "Seller 数据同步" }, { view: "agent-permissions", label: "Agent 权限" }, { view: "external-notifications", label: "外部通知" }] },
 ];
 
 const VIEW_LABELS: Partial<Record<View, string>> = {
@@ -353,6 +354,7 @@ export function App() {
     {view === "model-providers" ? <RagModelProvidersView /> : null}
     {/* 模型额度按供应商账号统计，不依赖当前店铺状态。 */}
     {view === "model-budget" ? <ModelBudgetView /> : null}
+    {view === "rag-evaluation" ? <RagEvaluationView /> : null}
     {view === "imports" && active && selectedWorkspaceId ? <KeywordImportView workspaceId={selectedWorkspaceId} /> : null}
     {view === "competitors" && active && selectedWorkspaceId ? <CompetitorSeedsView workspaceId={selectedWorkspaceId} /> : null}
     {view === "sampling-policy" && active ? <SamplingPolicyView workspaceId={selectedWorkspaceId} /> : null}

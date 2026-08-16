@@ -152,6 +152,9 @@ from backend.app.infrastructure.postgresql.product_offers import (
 )
 from backend.app.infrastructure.postgresql.profit_models import PostgresProfitModelGateway
 from backend.app.infrastructure.postgresql.public_snapshots import PostgresPublicSnapshotGateway
+from backend.app.infrastructure.postgresql.rag_evaluation import (
+    PostgresRagEvaluationGateway,
+)
 from backend.app.infrastructure.postgresql.rag_model_providers import (
     PostgresRagModelProviderGateway,
 )
@@ -476,6 +479,14 @@ def get_rag_task_gateway(
 ) -> PostgresRagTaskGateway:
     """RAG 任务状态统一从 PostgreSQL 读取，避免 API/Worker 各自持有内存队列。"""
     return PostgresRagTaskGateway(sessions, context)
+
+
+def get_rag_evaluation_gateway(
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+) -> PostgresRagEvaluationGateway:
+    """返回按组织隔离的评测案例与运行记录 PostgreSQL 网关。"""
+    return PostgresRagEvaluationGateway(sessions, context)
 
 
 def get_rag_task_queue(
