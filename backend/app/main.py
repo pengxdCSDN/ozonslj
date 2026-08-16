@@ -1,8 +1,12 @@
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.requests import Request
+from starlette.responses import Response
 
 from backend.app.api.dependencies import (
     close_postgres_sessions,
@@ -64,6 +68,7 @@ from backend.app.api.routes.listing_title_drafts import router as listing_title_
 from backend.app.api.routes.listing_versions import router as listing_versions_router
 from backend.app.api.routes.managed_model_providers import router as managed_model_providers_router
 from backend.app.api.routes.manual_approvals import router as manual_approvals_router
+from backend.app.api.routes.metrics import router as metrics_router
 from backend.app.api.routes.model_adapters import router as model_adapters_router
 from backend.app.api.routes.model_budgets import router as model_budgets_router
 from backend.app.api.routes.model_providers import router as model_providers_router
@@ -109,6 +114,49 @@ from backend.app.api.routes.sync_jobs import router as sync_jobs_router
 from backend.app.api.routes.sync_processor import router as sync_processor_router
 from backend.app.domain.knowledge_runtime import close_knowledge_runtime
 from backend.app.domain.store_workspace import CredentialProtector, SellerAccountVerifier
+from backend.app.infrastructure.observability import METRICS
+
+
+class ObservabilityMiddleware(BaseHTTPMiddleware):
+    """记录方法、受控路径、状态和耗时，不记录查询参数、请求体、Cookie 或响应正文。"""
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        started = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception:
+            METRICS.inc(
+                "ozonslj_http_requests_total",
+                labels={
+                    "method": request.method,
+                    "route": _route_label(request.url.path),
+                    "status": "500",
+                },
+            )
+            raise
+        route = _route_label(request.url.path)
+        status_code = str(response.status_code)
+        METRICS.inc(
+            "ozonslj_http_requests_total",
+            labels={"method": request.method, "route": route, "status": status_code},
+        )
+        METRICS.observe(
+            "ozonslj_http_request_duration_seconds",
+            time.perf_counter() - started,
+            labels={"method": request.method, "route": route},
+        )
+        return response
+
+
+def _route_label(path: str) -> str:
+    """将动态路径归并为固定标签，防止标签基数和敏感信息进入指标。"""
+    if path == "/metrics":
+        return "/metrics"
+    if path.startswith("/health/"):
+        return "/health/*"
+    if path.startswith("/v1/"):
+        return "/v1/*"
+    return "/other"
 
 
 @asynccontextmanager
@@ -144,7 +192,9 @@ def create_app(
             "X-Request-Id",
         ],
     )
+    app.add_middleware(ObservabilityMiddleware)
     app.include_router(health_router)
+    app.include_router(metrics_router)
     app.include_router(external_notifications_router)
     app.include_router(erp_imports_router)
     app.include_router(auth_router)

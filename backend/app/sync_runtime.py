@@ -12,6 +12,7 @@ from backend.app.application.sync_processes import run_scheduler_loop, run_worke
 from backend.app.application.sync_worker import SyncWorker
 from backend.app.config import Settings, get_settings
 from backend.app.domain.sync_job import SyncHandler, SyncResourceType
+from backend.app.infrastructure.observability import METRICS
 from backend.app.infrastructure.postgresql.rag_tasks import PostgresRagTaskGateway
 from backend.app.infrastructure.postgresql.session import PostgresSessionFactory, TenantContext
 from backend.app.infrastructure.postgresql.sync_jobs import PostgresSyncJobGateway
@@ -75,11 +76,23 @@ async def run_scheduler(settings: Settings) -> None:
 
         async def dispatch_once() -> int:
             count = await dispatcher.dispatch_due_jobs(limit=settings.sync_dispatch_batch_size)
+            METRICS.set_gauge("ozonslj_scheduler_dispatched_jobs", count)
+            METRICS.inc("ozonslj_scheduler_cycles_total")
+            METRICS.set_gauge(
+                "ozonslj_task_queue_stream_length",
+                float(await redis.xlen("sync_jobs")),
+                labels={"queue": "seller"},
+            )
             if count:
                 logger.info("同步调度本轮投递 %d 个任务", count)
             rag_ids = await rag_tasks.dispatchable_ids(settings.sync_dispatch_batch_size)
             for task_id in rag_ids:
                 await rag_queue.enqueue(task_id)
+            METRICS.set_gauge(
+                "ozonslj_task_queue_stream_length",
+                float(await redis.xlen("rag_tasks")),
+                labels={"queue": "rag"},
+            )
             return count + len(rag_ids)
 
         await run_scheduler_loop(
@@ -115,7 +128,13 @@ async def run_worker(settings: Settings) -> None:
         )
 
         async def process_one() -> bool:
-            return await worker.process_one(block_ms=settings.sync_worker_block_ms)
+            processed = await worker.process_one(block_ms=settings.sync_worker_block_ms)
+            METRICS.inc(
+                "ozonslj_worker_processed_jobs_total",
+                labels={"worker": "seller"},
+                value=int(processed),
+            )
+            return processed
 
         rag_tasks = PostgresRagTaskGateway(sessions, _service_context(settings))
         rag_consumer = RedisRagTaskConsumer(redis, consumer_name=f"rag-{worker_id}")
@@ -125,7 +144,13 @@ async def run_worker(settings: Settings) -> None:
         )
 
         async def process_rag_one() -> bool:
-            return await rag_worker.process_one(block_ms=settings.sync_worker_block_ms)
+            processed = await rag_worker.process_one(block_ms=settings.sync_worker_block_ms)
+            METRICS.inc(
+                "ozonslj_worker_processed_jobs_total",
+                labels={"worker": "rag"},
+                value=int(processed),
+            )
+            return processed
 
         await asyncio.gather(
             run_worker_loop(process_one, stop),

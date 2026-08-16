@@ -126,6 +126,10 @@ AI-010 新增通知模板预览 API 和前端入口，仅允许 headline、summa
 
 后续重建已完成：ACR 摘要 `sha256:bbfaeca85483d0689b22faf2a869c2c4eaa5ee6e7024bee4193de6494d6032c0` 内已包含第九组关键代码；API、Worker、Scheduler 已统一该摘要，API `live/ready=200`，Web 入口 `index-AseVkSlj.js` 和样式 `index-DxjgRheu.css` 已同步。旧 Web 目录保留为 `web.rollback-group9-20260816`。
 
+## 2026-08-16 第十组：可观测性和运维
+
+已完成代码与本地验收：API 指标出口、请求/模型调用耗时与错误率、Scheduler/Worker 任务计数、资源快照、发布后健康门禁和显式条件回滚脚本。详细接口与限制见 [OBSERVABILITY.md](./OBSERVABILITY.md)。云端最终状态须在新 ACR 应用镜像部署后以 `/health/ops`、`/metrics` 和 `deploy/scripts/post_release_gate.sh` 重新核对，不将本地测试替代云端验收。
+
 
 ## 2026-08-09 ??????
 

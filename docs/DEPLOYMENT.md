@@ -322,6 +322,14 @@ docker compose --env-file .env logs --tail=100 api worker
 - PostgreSQL、Redis 未重建；旧 Web 静态目录保留为 `web.rollback-group9-20260816`，可用于回滚。
 - 服务器本机 HTTP 按配置返回 HTTPS 301，公网 TLS 由外层入口负责；本机无 443 映射，不将本机 HTTPS 000 误判为应用容器故障。
 
+## 2026-08-16 第十组可观测性与运维验收
+
+- API 已提供聚合 `/metrics`，覆盖请求状态/耗时、模型调用错误/耗时、Scheduler 投递、Seller/RAG Worker 处理量和内存/Swap/磁盘资源。
+- `/health/ops` 作为资源检查端点；磁盘使用率达到 85% 只返回 `warning`，不阻断登录和只读运营页面。
+- 新增 `deploy/scripts/post_release_gate.sh`：发布后检查 Compose 配置、live/ready/ops 和指标出口；失败默认保留现场，显式提供上一版应用标签并设置 `ROLLBACK_ON_FAILURE=1` 才执行应用回滚。
+- 请求日志和指标只保留受控路由、状态和聚合数值，不记录查询参数、请求体、Cookie、令牌、模型提示词或响应正文。业务审计继续由 PostgreSQL 审计事件和归档流程负责。
+- 本地可观测性与健康回归通过；全量云端验收需在新 ACR 镜像发布后执行上述门禁脚本。
+
 ## 2026-08-16 HTTPS 入口修复验收
 
 - 根因：Nginx 配置已监听 443 并挂载服务器 TLS 证书，但 Compose 的 Web 服务长期只映射 `80:80`，导致 HTTP 301 跳转到没有宿主机监听的 HTTPS 端口。

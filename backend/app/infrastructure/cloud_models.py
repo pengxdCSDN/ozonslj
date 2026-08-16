@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -15,6 +16,7 @@ from urllib.parse import urlparse
 import httpx
 
 from backend.app.domain.knowledge_retrieval import EmbeddingPort
+from backend.app.infrastructure.observability import record_model_call
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +65,7 @@ class OpenAICompatibleRerankClient:
             raise ValueError("重排序供应商必须配置 API Key、模型和 HTTPS 地址")
         _validate_cloud_base_url(base_url)
         self.model_id = model.strip()
+        self._provider_label = urlparse(base_url).hostname or "cloud"
         self._api_key = api_key
         self._endpoint = _normalize_endpoint(base_url, "/rerank")
         self._timeout = httpx.Timeout(timeout_seconds)
@@ -81,6 +84,7 @@ class OpenAICompatibleRerankClient:
             "top_n": len(documents),
             "return_documents": False,
         }
+        started = time.perf_counter()
         try:
             async with httpx.AsyncClient(
                 timeout=self._timeout, transport=self._transport
@@ -91,9 +95,19 @@ class OpenAICompatibleRerankClient:
                     json=payload,
                 )
         except httpx.TimeoutException as error:
+            record_model_call(model_kind="rerank", provider=self._provider_label,
+                              duration_seconds=time.perf_counter() - started,
+                              success=False, status="timeout")
             raise CloudModelTimeoutError("重排序供应商请求超时") from error
         except httpx.HTTPError as error:
+            record_model_call(model_kind="rerank", provider=self._provider_label,
+                              duration_seconds=time.perf_counter() - started,
+                              success=False, status="network_error")
             raise CloudModelError("重排序云端网络请求失败") from error
+        record_model_call(model_kind="rerank", provider=self._provider_label,
+                          duration_seconds=time.perf_counter() - started,
+                          success=response.is_success,
+                          status=str(response.status_code))
         if response.status_code == 429:
             raise CloudModelQuotaError("重排序供应商额度或限流已触发", status_code=429)
         if response.status_code == 404:
@@ -131,6 +145,7 @@ class OpenAICompatibleTextClient:
             raise ValueError("文本供应商必须配置 API Key、模型和 HTTPS 地址")
         _validate_cloud_base_url(base_url)
         self.model_id = model.strip()
+        self._provider_label = urlparse(base_url).hostname or "cloud"
         self._api_key = api_key
         self._endpoint = _normalize_endpoint(base_url, "/chat/completions")
         self._timeout = httpx.Timeout(timeout_seconds)
@@ -143,6 +158,7 @@ class OpenAICompatibleTextClient:
         payload = {"model": self.model_id, "temperature": 0, "messages": [
             {"role": "system", "content": system}, {"role": "user", "content": user}
         ]}
+        started = time.perf_counter()
         try:
             async with httpx.AsyncClient(
                 timeout=self._timeout, transport=self._transport
@@ -152,9 +168,19 @@ class OpenAICompatibleTextClient:
                     headers={"Authorization": f"Bearer {self._api_key}"}, json=payload,
                 )
         except httpx.TimeoutException as error:
+            record_model_call(model_kind="text", provider=self._provider_label,
+                              duration_seconds=time.perf_counter() - started,
+                              success=False, status="timeout")
             raise CloudModelTimeoutError("文本模型供应商请求超时") from error
         except httpx.HTTPError as error:
+            record_model_call(model_kind="text", provider=self._provider_label,
+                              duration_seconds=time.perf_counter() - started,
+                              success=False, status="network_error")
             raise CloudModelError("文本模型云端网络请求失败") from error
+        record_model_call(model_kind="text", provider=self._provider_label,
+                          duration_seconds=time.perf_counter() - started,
+                          success=response.is_success,
+                          status=str(response.status_code))
         if response.status_code == 429:
             raise CloudModelQuotaError("文本模型供应商额度或限流已触发", status_code=429)
         if response.status_code == 404:
@@ -202,6 +228,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
             raise ValueError("Embedding 维度必须是正整数")
         _validate_cloud_base_url(base_url)
         self.model_id = model.strip()
+        self._provider_label = urlparse(base_url).hostname or "cloud"
         self.dimension = 0 if auto_detect_dimension else dimension
         self.auto_detect_dimension = auto_detect_dimension
         # 不同 OpenAI 兼容供应商对可选字段的支持并不一致；调用方可关闭该字段，避免把
@@ -260,6 +287,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         return vectors
 
     async def _post(self, payload: dict[str, object]) -> dict[str, Any]:
+        started = time.perf_counter()
         try:
             async with httpx.AsyncClient(
                 timeout=self._timeout, transport=self._transport
@@ -270,9 +298,19 @@ class DashScopeEmbeddingClient(EmbeddingPort):
                     json=payload,
                 )
         except httpx.TimeoutException as error:
+            record_model_call(model_kind="embedding", provider=self._provider_label,
+                              duration_seconds=time.perf_counter() - started,
+                              success=False, status="timeout")
             raise CloudModelTimeoutError("Embedding 供应商请求超时") from error
         except httpx.HTTPError as error:
+            record_model_call(model_kind="embedding", provider=self._provider_label,
+                              duration_seconds=time.perf_counter() - started,
+                              success=False, status="network_error")
             raise CloudModelError("Embedding 云端网络请求失败") from error
+        record_model_call(model_kind="embedding", provider=self._provider_label,
+                          duration_seconds=time.perf_counter() - started,
+                          success=response.is_success,
+                          status=str(response.status_code))
         if response.status_code == 429:
             raise CloudModelQuotaError("Embedding 供应商额度或限流已触发", status_code=429)
         if response.status_code == 404:
@@ -310,6 +348,7 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
             raise ValueError("翻译供应商必须配置 API Key、模型和 HTTPS 地址")
         _validate_cloud_base_url(base_url)
         self.model_id = model.strip()
+        self._provider_label = urlparse(base_url).hostname or "cloud"
         self._api_key = api_key
         self._endpoint = _normalize_endpoint(base_url, "/chat/completions")
         self._timeout = httpx.Timeout(timeout_seconds)
@@ -338,6 +377,7 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
                 {"role": "user", "content": text},
             ],
         }
+        started = time.perf_counter()
         try:
             async with httpx.AsyncClient(
                 timeout=self._timeout, transport=self._transport
@@ -348,9 +388,19 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
                     json=payload,
                 )
         except httpx.TimeoutException as error:
+            record_model_call(model_kind="translation", provider=self._provider_label,
+                              duration_seconds=time.perf_counter() - started,
+                              success=False, status="timeout")
             raise CloudModelTimeoutError("翻译供应商请求超时") from error
         except httpx.HTTPError as error:
+            record_model_call(model_kind="translation", provider=self._provider_label,
+                              duration_seconds=time.perf_counter() - started,
+                              success=False, status="network_error")
             raise CloudModelError("翻译云端网络请求失败") from error
+        record_model_call(model_kind="translation", provider=self._provider_label,
+                          duration_seconds=time.perf_counter() - started,
+                          success=response.is_success,
+                          status=str(response.status_code))
         if response.status_code == 429:
             raise CloudModelQuotaError("翻译供应商额度或限流已触发", status_code=429)
         if response.status_code == 404:

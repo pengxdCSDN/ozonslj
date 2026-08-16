@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from backend.app.api.dependencies import ReadinessProbe, get_readiness_probe
 from backend.app.infrastructure.local.chroma_health import ChromaHealthProbe
+from backend.app.infrastructure.observability import update_resource_metrics
 
 router = APIRouter(prefix="/health", tags=["health"])
 
@@ -18,6 +19,13 @@ class RagHealthResponse(BaseModel):
     state: Literal["healthy", "not_configured"]
     latency_ms: int | None
     detail: str | None
+
+
+class OpsHealthResponse(BaseModel):
+    status: Literal["ok", "warning"]
+    disk_used_ratio: float | None
+    memory_available_bytes: int | None
+    swap_free_bytes: int | None
 
 
 @router.get("/live", response_model=HealthResponse)
@@ -53,4 +61,17 @@ async def rag_health() -> RagHealthResponse:
         state=cast(Literal["healthy", "not_configured"], result.state),
         latency_ms=result.latency_ms,
         detail=result.detail,
+    )
+
+
+@router.get("/ops", response_model=OpsHealthResponse)
+async def operations_health() -> OpsHealthResponse:
+    """发布后资源门禁；阈值只用于告警，不阻断登录和业务只读页面。"""
+    snapshot = update_resource_metrics()
+    warning = snapshot.disk_used_ratio is not None and snapshot.disk_used_ratio >= 0.85
+    return OpsHealthResponse(
+        status="warning" if warning else "ok",
+        disk_used_ratio=snapshot.disk_used_ratio,
+        memory_available_bytes=snapshot.memory_bytes,
+        swap_free_bytes=snapshot.swap_bytes,
     )
