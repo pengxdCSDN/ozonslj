@@ -1,0 +1,52 @@
+/* RAG 评测页专属覆盖：必须在全局主题之后加载，保证长列表保持紧凑、可扫描。 */
+.rag-evaluation-view { gap: 16px; }
+.rag-evaluation-heading { max-width: 900px; padding-bottom: 4px; }
+.rag-evaluation-heading p:last-child { max-width: 62ch; line-height: 1.6; }
+.rag-evaluation-panel, .rag-evaluation-run-panel { overflow: hidden; }
+.rag-evaluation-panel .section-heading,
+.rag-evaluation-run-panel .section-heading { min-height: 0; padding: 20px 24px 16px; }
+.rag-evaluation-panel .section-heading h2,
+.rag-evaluation-run-panel .section-heading h2 { font-size: 18px; }
+.rag-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px 24px 18px; }
+.rag-metrics > div { display: grid; gap: 5px; min-height: 88px; align-content: center; padding: 15px 17px; border: 1px solid rgba(143,112,255,.14); border-radius: 13px; background: linear-gradient(145deg, rgba(30,27,55,.9), rgba(16,18,32,.92)); }
+.rag-metrics > div:nth-child(2) { border-color: rgba(255,171,108,.16); background: linear-gradient(145deg, rgba(47,30,42,.72), rgba(23,20,33,.92)); }
+.rag-metrics > div:nth-child(3) { border-color: rgba(92,224,186,.14); }
+.rag-metrics strong { margin: 0; color: #58d9eb; font-size: 27px; line-height: 1; }
+.rag-metrics > div:nth-child(2) strong { color: #ffb27d; }
+.rag-metrics > div:nth-child(3) strong { color: #77e3c3; }
+.rag-metrics span { color: var(--fd-muted); font-size: 8px; line-height: 1.35; }
+.rag-evaluation-search { padding: 0 24px 14px; }
+.rag-evaluation-search label { display: grid; grid-template-columns: 76px minmax(0,1fr); align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border: 1px solid rgba(143,112,255,.17); border-radius: 11px; color: var(--fd-text-soft); background: rgba(8,8,20,.4); font-size: 10px; font-weight: 700; }
+.rag-evaluation-search input { width: 100%; min-width: 0; padding: 12px 0; border: 0; outline: 0; color: var(--fd-text); background: transparent; font-size: 10px; }
+.rag-evaluation-search input::placeholder { color: #716b82; }
+.rag-evaluation-search label:focus-within { border-color: rgba(161,132,255,.56); box-shadow: 0 0 0 3px rgba(161,132,255,.1); }
+.rag-evaluation-controls { grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr); align-items: end; gap: 14px; padding: 0 24px 18px; }
+.rag-evaluation-controls label { gap: 7px; }
+.rag-case-actions { justify-content: flex-end; gap: 8px; padding: 0; }
+.rag-case-actions button { white-space: nowrap; }
+.rag-case-row { grid-template-columns: 22px minmax(0, 1fr) auto !important; align-items: center; gap: 14px; min-height: 64px; padding: 12px 24px; border-top: 1px solid rgba(143,112,255,.1); }
+.rag-case-row input { width: 16px; height: 16px; margin: 0; accent-color: #a98bff; }
+.rag-case-row > span { display: grid; min-width: 0; gap: 5px; }
+.rag-case-row strong { overflow: hidden; color: var(--fd-text); font-size: 11px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.rag-case-row small { overflow: hidden; color: var(--fd-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.rag-case-row em { grid-column: auto !important; min-width: 52px; padding: 5px 8px; border: 1px solid rgba(161,132,255,.2); border-radius: 99px; color: var(--fd-violet-hot); background: rgba(67,48,112,.25); font-size: 8px; text-align: center; }
+.rag-case-row em.is-confirmed { border-color: rgba(92,224,186,.22); color: #78e4c4; background: rgba(45,137,111,.14); }
+.rag-pagination { justify-content: space-between; align-items: center; min-height: 60px; padding: 12px 24px 16px; color: var(--fd-muted); font-size: 9px; }
+.rag-pagination > div { display: flex; gap: 7px; }
+.rag-pagination .secondary-button { min-height: 32px; padding-inline: 11px; }
+.rag-suite-actions { padding: 16px 24px 20px; }
+.rag-run-result { margin: 0 24px 20px; }
+@media (max-width: 720px) {
+  .rag-evaluation-panel .section-heading, .rag-evaluation-run-panel .section-heading,
+  .rag-metrics, .rag-evaluation-search, .rag-evaluation-controls, .rag-case-row,
+  .rag-pagination, .rag-suite-actions { padding-inline: 15px; }
+  .rag-metrics, .rag-evaluation-controls { grid-template-columns: 1fr; }
+  .rag-case-actions { justify-content: flex-start; }
+  .rag-case-row { grid-template-columns: 22px minmax(0,1fr) !important; gap: 10px; }
+  .rag-case-row em { grid-column: 2 !important; justify-self: start; }
+  .rag-pagination { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .rag-run-result { margin-inline: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rag-evaluation-search label { transition: none; }
+}

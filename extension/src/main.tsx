@@ -6,6 +6,7 @@ import "./styles.css";
 import "./operations.css";
 import "./desktop.css";
 import "./frontend-design.css";
+import "./rag-evaluation.css";
 
 const root = document.getElementById("root");
 
