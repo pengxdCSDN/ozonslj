@@ -198,3 +198,18 @@ docker compose --env-file .env logs --tail=100 api worker
 - 本地提交 `0bf82d6` 已推送到 `codex/deployment-base-images`；后端 501 项测试、前端类型检查和 Vite 构建通过。
 - 云端 API、Worker、Scheduler 运行正常，`ready/live` 均返回 200；但 ACR `ozonslj-api-dev` 多次拉取仍为旧摘要 `sha256:c3a75f06bd6c...`，未包含 `0bf82d6`。
 - 服务器上的 `aliyun` CLI 默认配置状态为 `Invalid`，当前无法从服务器触发 ACR 构建；禁止在 2GB 服务器本地构建替代。新功能的云端发布验收须在 ACR 构建任务恢复后，以新摘要重拉镜像并重新执行本节验收。
+
+## 2026-08-16 严重发布事故与防复发规则
+
+本次事故根因不是应用代码，而是发布控制面未锁定：开发提交只推送到
+`codex/deployment-base-images`，但未先确认 ACR 构建规则实际跟踪的 Git 分支；随后错误地将开发分支快进到
+`main`，并在未确认 ACR 摘要变化的情况下重复拉取旧镜像。该误操作已恢复，`main` 回到 `709b39d`，开发提交仍只保留在 `codex/deployment-base-images`。
+
+今后发布必须满足以下硬门禁：
+
+1. 发布前打印并人工核对 `git branch --show-current`、远端分支和 `git rev-parse HEAD`；本项目发布分支固定为 `codex/deployment-base-images`，禁止把它直接推到 `main`。
+2. ACR 构建触发必须使用该分支的构建规则；没有构建规则、有效 RAM 权限或构建记录时，立即停止，不把服务器 `git checkout` 当成镜像发布。
+3. 拉取后必须核对镜像 digest、创建时间和镜像内 release revision；digest 未变化时禁止 `up -d`、禁止验收、禁止报告“已发布”。
+4. 发布前后记录 `source_commit`、`image_digest`、`image_created_at`、API/Worker/Scheduler 状态；source commit 与镜像内 revision 不一致即失败关闭。
+5. Git HTTPS 后端切换只能作为一次性受控命令，并在命令结束恢复原配置；禁止把认证失败误判为 ACR 构建失败。
+6. 任何分支误推、旧摘要验收或未授权本地构建都视为严重发布事故，必须先恢复远端分支和服务，再更新本记录。

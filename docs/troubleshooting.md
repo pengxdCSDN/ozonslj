@@ -268,3 +268,4 @@ OpenAI 兼容协议不代表所有供应商支持完全相同的可选字段。S
 ## 2026-08-16：本地测试缺少数据库配置或旧依赖入口
 
 认证单元测试不得读取开发数据库和 Redis；通过依赖覆盖固定测试组织、限流器和 Cookie 策略。Seller 账户历史测试通过兼容依赖适配到当前 `store_workspaces` 聚合，生产代码仍只使用统一 PostgreSQL 网关。迁移计划测试必须引用仓库当前最新 `source_version`，不能继续写死旧版本号。若完整测试失败，先区分测试基线断言/依赖收集错误与真实业务失败，再决定是否需要云端只读验收。
+- **严重发布事故：ACR 仍为旧镜像或误推分支**：先停止重建和验收，核对 `git branch --show-current`、远端 source commit、ACR 构建规则、镜像 digest、创建时间和 `OZONSLJ_RELEASE_REVISION`。本项目固定使用 `codex/deployment-base-images`；禁止把开发分支直接推到 `main`，禁止在 2GB 服务器本地构建。若发生误推，使用已知远端旧提交和 `--force-with-lease` 恢复，并记录事故后再继续。

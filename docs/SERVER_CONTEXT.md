@@ -61,6 +61,14 @@ curl -fsS http://127.0.0.1/api/health/ready
 - API/Worker 使用同一镜像，API、Worker、Scheduler 正常运行；`health/live` 与 `health/ready` 均返回 200。
 - 提交 `0b95f13` 修复 Seller 账户兼容依赖、路由注册、认证测试配置和迁移版本断言；本地完整 pytest、Ruff、mypy 通过。该提交尚未重新发布云端。
 - 提交 `0bf82d6` 的 RAG 正式模型调用代码已推送，但 2026-08-16 验收时 ACR 仍返回旧摘要 `c3a75f06bd6c...`；服务器 `aliyun` CLI 默认配置为 Invalid，需恢复 ACR 构建任务或凭据后再发布，禁止在服务器本地构建。
+
+## 2026-08-16：严重发布事故与固定分支门禁
+
+- 发布分支固定为 `codex/deployment-base-images`；不得把该分支推送到 `main`，也不得把服务器工作树切换到某提交当作镜像已发布。
+- 本次曾发生开发分支误快进 `main` 的操作，随后已用 `--force-with-lease` 将 `main` 恢复到 `709b39d`；开发提交保留在 `codex/deployment-base-images`。
+- ACR 自动构建必须核对构建规则的 source branch、source commit 和构建记录；服务器 `aliyun` CLI 为 Invalid 时不得猜测、不得在 2GB 节点本地构建。
+- 镜像拉取后 digest 仍为旧值 `c3a75f06bd6c...` 时，发布状态只能记录为“未发布”；必须等待新 digest，并核对镜像内 `OZONSLJ_RELEASE_REVISION` 与目标提交一致后才允许重建和验收。
+- Git HTTPS 的 Schannel/OpenSSL 临时切换必须成对执行并恢复原值；认证失败与 ACR 构建失败分开记录。
 ## 2026-08-09 开发状态同步
 
 - 云端部署继续沿用现有 PostgreSQL + Redis Compose 基线，不引入第二套数据库或 SaaS 组织开发任务。
