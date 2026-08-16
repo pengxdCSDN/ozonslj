@@ -136,7 +136,9 @@ class PostgresModelBudgetGateway:
             daily_tokens=cast(int, row["daily_tokens"]),
             monthly_tokens=cast(int, row["monthly_tokens"]),
             daily_requests=cast(int, row["daily_requests"]),
-            monthly_cost=cast(float, row["monthly_cost"]),
+            # PostgreSQL NUMERIC 会由 psycopg 返回 Decimal；领域层预算计算统一使用 float，
+            # 这里是数据库边界的显式归一化，避免 Decimal 与 float 运算触发 500。
+            monthly_cost=float(row["monthly_cost"]),
         )
 
 
@@ -147,5 +149,6 @@ def _policy_from_row(row: object) -> ModelBudgetPolicy:
         daily_token_limit=cast(int, values["daily_token_limit"]),
         monthly_token_limit=cast(int, values["monthly_token_limit"]),
         daily_request_limit=cast(int, values["daily_request_limit"]),
-        monthly_budget=cast(float, values["monthly_budget"]),
+        # PostgreSQL NUMERIC 的预算金额同样可能是 Decimal；领域层统一按 float 计算比例。
+        monthly_budget=float(values["monthly_budget"]),
     )
