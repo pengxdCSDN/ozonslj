@@ -6,7 +6,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.app.api.routes.pdf_uploads import router
-from backend.app.domain.pdf_upload_security import quarantine_pdf, validate_pdf_upload
+from backend.app.domain.pdf_upload_security import (
+    quarantine_pdf,
+    quarantined_pdf_path,
+    validate_pdf_upload,
+)
 
 
 def test_pdf_requires_magic_and_blocks_active_content() -> None:
@@ -45,3 +49,12 @@ def test_quarantine_uses_unique_non_overwriting_keys(tmp_path: Path) -> None:
     second = quarantine_pdf(b"%PDF-1.7 second", root=tmp_path)
     assert first.upload_id != second.upload_id
     assert len(list(tmp_path.glob("*.pdf"))) == 2
+
+
+def test_quarantined_path_rejects_path_traversal(tmp_path: Path) -> None:
+    try:
+        quarantined_pdf_path("../escape", root=tmp_path)
+    except ValueError as error:
+        assert "无效" in str(error)
+    else:
+        raise AssertionError("路径穿越 ID 未被拒绝")

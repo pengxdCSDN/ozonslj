@@ -6,7 +6,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +23,23 @@ class PdfSafetyResult:
 class QuarantinedPdf:
     upload_id: str
     storage_key: str
+
+
+def quarantined_pdf_path(upload_id: str, *, root: Path | None = None) -> Path:
+    """解析隔离文件路径；只接受 UUID，避免路径穿越。"""
+
+    try:
+        safe_id = upload_id if upload_id else str(uuid4())
+        uuid = UUID(safe_id)
+    except (ValueError, AttributeError):
+        raise ValueError("无效的 PDF 隔离文件 ID") from None
+    configured_root = os.environ.get(
+        "OZONSLJ_PDF_QUARANTINE_DIR", "/var/lib/ozonslj/pdf-quarantine"
+    )
+    target = (root or Path(configured_root)) / f"{uuid}.pdf"
+    if not target.is_file():
+        raise FileNotFoundError("PDF 隔离文件不存在")
+    return target
 
 
 def quarantine_pdf(content: bytes, *, root: Path | None = None) -> QuarantinedPdf:

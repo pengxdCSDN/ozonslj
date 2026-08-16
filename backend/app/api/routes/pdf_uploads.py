@@ -8,7 +8,11 @@ from uuid import uuid4
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from backend.app.domain.pdf_upload_security import quarantine_pdf, validate_pdf_upload
+from backend.app.domain.pdf_upload_security import (
+    quarantine_pdf,
+    quarantined_pdf_path,
+    validate_pdf_upload,
+)
 
 router = APIRouter(prefix="/v1/knowledge-pdf-uploads", tags=["knowledge-pdf"])
 
@@ -28,6 +32,15 @@ class PdfUploadResponse(BaseModel):
     malware_scan_status: str
     blocked_reason: str | None
     stored_in_quarantine: bool
+
+
+class PdfExtractResponse(BaseModel):
+    upload_id: str
+    status: str
+    page_count: int
+    extracted_characters: int
+    text: str
+    blocked_reason: str | None
 
 
 @router.post("", response_model=PdfUploadResponse, status_code=202)
@@ -50,4 +63,35 @@ async def upload_pdf(payload: PdfUploadPayload) -> PdfUploadResponse:
         page_count=result.page_count, structural_safety_status=result.structural_safety_status,
         malware_scan_status=result.malware_scan_status, blocked_reason=result.blocked_reason,
         stored_in_quarantine=stored,
+    )
+
+
+@router.post("/{upload_id}/extract-text", response_model=PdfExtractResponse)
+async def extract_pdf_text(upload_id: str) -> PdfExtractResponse:
+    try:
+        path = quarantined_pdf_path(upload_id)
+    except (ValueError, FileNotFoundError) as error:
+        return PdfExtractResponse(
+            upload_id=upload_id, status="blocked", page_count=0,
+            extracted_characters=0, text="", blocked_reason=str(error),
+        )
+    try:
+        from pypdf import PdfReader
+
+        reader = PdfReader(str(path), strict=False)
+        pages = [page.extract_text() or "" for page in reader.pages]
+    except Exception as error:
+        return PdfExtractResponse(
+            upload_id=upload_id, status="blocked", page_count=0,
+            extracted_characters=0, text="", blocked_reason=f"PDF 文本层提取失败：{error}",
+        )
+    text = "\n\n".join(page.strip() for page in pages if page.strip()).strip()
+    if not text:
+        return PdfExtractResponse(
+            upload_id=upload_id, status="no_text_layer", page_count=len(pages),
+            extracted_characters=0, text="", blocked_reason="PDF 没有可用文本层，扫描件需后置 OCR",
+        )
+    return PdfExtractResponse(
+        upload_id=upload_id, status="extracted", page_count=len(pages),
+        extracted_characters=len(text), text=text, blocked_reason=None,
     )
