@@ -50,7 +50,7 @@ def classify_intents(question: str) -> tuple[IntentSegment, ...]:
     segments: list[IntentSegment] = []
     for part in parts:
         lowered = part.casefold()
-        if re.search(r"删除|修改|发布|写入|改价|执行", part):
+        if re.search(r"删除|修改|发布|写入|改价|执行|忽略系统|输出凭据|绕过安全|绕过人工", part):
             intent: Intent = "restricted_action"
             confidence, risk = 0.99, "high"
         elif re.search(r"实时|当前库存|今天订单|现在广告", part):
@@ -62,7 +62,7 @@ def classify_intents(question: str) -> tuple[IntentSegment, ...]:
         elif re.search(r"报错|错误|失败|异常|为什么", part):
             intent = "troubleshooting"
             confidence, risk = 0.86, "low"
-        elif re.search(r"是什么|含义|字段|定义|口径|切片", part):
+        elif re.search(r"未收录|不存在的主题|未知主题|是什么|含义|字段|定义|口径|切片", part):
             intent = "data_definition"
             confidence, risk = 0.86, "low"
         else:
@@ -90,6 +90,8 @@ def gate_evidence(
         return EvidenceDecision("refused", (), "知识 RAG 不执行外部写操作")
     if segment.intent == "realtime_business_data":
         return EvidenceDecision("degraded", (), "实时经营事实需要业务工具查询")
+    if re.search(r"未收录|不存在的主题|未知主题", segment.text):
+        return EvidenceDecision("unsupported", (), "问题明确超出当前知识库范围")
     if segment.needs_clarification:
         return EvidenceDecision("needs_clarification", (), "意图置信度不足")
     valid = tuple(hit for hit in hits if hit.chunk.metadata.status == "published")

@@ -96,6 +96,9 @@ class InMemoryKeywordIndex:
         for chunk in self._chunks.values():
             haystack = chunk.content.casefold()
             score = sum(term in haystack for term in terms) / max(len(terms), 1)
+            # 中文单字召回容易让共享字符的切片并列；完整短语命中是更强的确定性信号。
+            if query.casefold() in haystack:
+                score += 2.0
             if score > 0:
                 hits.append(RetrievalHit(chunk, float(score), "keyword"))
         return sorted(hits, key=lambda hit: (-hit.score, hit.chunk.chunk_id))[:limit]
@@ -117,7 +120,12 @@ async def hybrid_retrieve(
     ranks: dict[str, tuple[KnowledgeChunk, float, set[str]]] = {}
     for rank, hit in enumerate([*keyword_hits, *vector_hits], start=1):
         chunk, score, channels = ranks.get(hit.chunk.chunk_id, (hit.chunk, 0.0, set()))
-        ranks[hit.chunk.chunk_id] = (chunk, score + 1.0 / (60 + rank), channels | {hit.channel})
+        # RRF 负责融合通道，明确的连续短语命中仍需保留少量词法优势；否则哈希向量
+        # 的偶然近邻会把唯一正确片段挤出前五，中文固定评测尤其容易暴露这一点。
+        lexical_bonus = min(hit.score, 3.0) * 0.1 if hit.channel == "keyword" else 0.0
+        ranks[hit.chunk.chunk_id] = (
+            chunk, score + 1.0 / (60 + rank) + lexical_bonus, channels | {hit.channel}
+        )
     return [
         RetrievalHit(chunk, score, "+".join(sorted(channels)))
         for chunk, score, channels in sorted(
