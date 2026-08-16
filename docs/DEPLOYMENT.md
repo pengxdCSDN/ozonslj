@@ -229,3 +229,12 @@ docker compose --env-file .env logs --tail=100 api worker
 - API、Worker、Scheduler 均运行；API/Worker 摘要一致，API healthy，Worker 不再重启。
 - `ready=200`、`live=200`；`/api/health/rag` 返回 `state=healthy`。
 - 数据库迁移最高版本 `105`；翻译预算迁移使用唯一源版本 `0102`，未修改历史迁移账本。
+
+## 2026-08-16 知识管理页面增强发布验收
+
+- 发布分支：`codex/deployment-base-images`；应用提交：`71d608d`。
+- ACR 新应用镜像已生成并拉取，摘要：`sha256:c7550560d9f4c890f073c54e66f0644f9c1d99df00b5e07a9ce4d6ecbdca3608`。
+- API、Worker、Scheduler 均已重建并统一使用该摘要；API 容器已确认包含 `rebuild_knowledge_version` 路由。
+- API `ready=200`、`live=200`；API 状态 healthy；Web 静态入口引用 `index-DOqz1CRb.js`；Nginx `nginx -t` 通过。
+- 本次只更新应用代码镜像和已构建 Web 静态资源，没有重建 PostgreSQL、Redis、Chroma 等基础服务。
+- PDF 仍遵守安全门禁：当前支持隔离上传和结构校验；未配置杀毒服务时状态为 `quarantined`，不能宣称已完成二进制 PDF 自动解析。文本层 PDF 需先提取文本再进入知识解析流水线。
