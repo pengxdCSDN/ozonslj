@@ -277,3 +277,11 @@ docker compose --env-file .env logs --tail=100 api worker
 - 镜像内已确认 `ExploreFilters`、`min_search_count` 和 `filter_opportunities` 存在；容器内 `/v1/selection/explore/run` 实测按 `min_search_count=900` 与 `coverage_gap_only=true` 只返回覆盖缺口候选。
 - API、Worker、Scheduler 均运行且统一上述摘要；API health 为 `healthy`，容器内 `health/ready=200`；Web 已重建，入口为 `index-f8CZ4J6r.js`，资源在容器内存在，`nginx -t` 通过。
 - PostgreSQL、Redis、Chroma 等基础服务未重建。公网 HTTPS 由服务器外层入口负责，服务器本机无 443 映射，因此本机 HTTPS 回环状态为 000；这不是应用容器故障，公网入口需从浏览器侧确认。
+
+## 2026-08-16 第七组受控写入验收
+
+- 本阶段没有新增应用代码，复用已发布应用镜像完成验收；因此未重复构建基础镜像。
+- 本地第七组回归 32 项通过：差异预览、新鲜度、人工审批、权限、幂等、批量限制、涨跌幅、利润线、分项结果、回读和审计均通过。
+- 云端镜像内 `validate_approval_request`、`build_diff_preview`、`summarize_execution` 和 `create_audit_event` 导入检查通过；API `ready=200`。
+- API、Worker、Scheduler 统一使用 `sha256:629976c612d2afd5bc057e531d55ac23aafde7fe60e8232554c5ae11db65f893`。
+- 真实 Seller 写入仍未执行；当前验收证明的是审批、门禁、幂等、审计和 Stub 命令闭环，不代表真实 Ozon 写入已完成。
