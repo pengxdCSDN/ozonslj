@@ -8,10 +8,12 @@ from backend.app.api.dependencies import (
     get_store_workspace_gateway,
 )
 from backend.app.domain.selection_explore import (
+    ExploreFilters,
     ExploreInput,
     ExploreOpportunity,
     ExploreOpportunityGateway,
     explore_opportunities,
+    filter_opportunities,
 )
 from backend.app.domain.store_workspace import StoreWorkspaceGateway
 
@@ -30,11 +32,28 @@ class ExploreItemPayload(BaseModel):
 
 class ExplorePayload(BaseModel):
     items: list[ExploreItemPayload]
+    min_score: float = Field(default=0, ge=0, le=100)
+    min_search_count: int = Field(default=0, ge=0)
+    min_conversion_rate: float | None = Field(default=None, ge=0)
+    coverage_gap_only: bool = False
+
+
+def _run(payload: ExplorePayload) -> list[ExploreOpportunity]:
+    scored = explore_opportunities([ExploreInput(**item.model_dump()) for item in payload.items])
+    return filter_opportunities(
+        scored,
+        ExploreFilters(
+            min_score=payload.min_score,
+            min_search_count=payload.min_search_count,
+            min_conversion_rate=payload.min_conversion_rate,
+            coverage_gap_only=payload.coverage_gap_only,
+        ),
+    )
 
 
 @router.post("/run", response_model=list[ExploreOpportunity])
 async def run_explore(payload: ExplorePayload) -> list[ExploreOpportunity]:
-    return explore_opportunities([ExploreInput(**item.model_dump()) for item in payload.items])
+    return _run(payload)
 
 
 @router.post(
@@ -49,9 +68,7 @@ async def run_and_save_explore(
 ) -> list[ExploreOpportunity]:
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
-    opportunities = explore_opportunities(
-        [ExploreInput(**item.model_dump()) for item in payload.items]
-    )
+    opportunities = _run(payload)
     return await gateway.save_opportunities(workspace_id=workspace_id, opportunities=opportunities)
 
 

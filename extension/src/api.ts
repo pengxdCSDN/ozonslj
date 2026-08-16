@@ -662,12 +662,13 @@ export interface ExploreOpportunity {
   missing_inputs: string[];
 }
 
-export function runSelectionExplore(items: Record<string, unknown>[]): Promise<ExploreOpportunity[]> {
-  return requestJson("/v1/selection/explore/run", { method: "POST", body: JSON.stringify({ items }) });
+export interface ExploreFilters { min_score?: number; min_search_count?: number; min_conversion_rate?: number; coverage_gap_only?: boolean; }
+export function runSelectionExplore(items: Record<string, unknown>[], filters: ExploreFilters = {}): Promise<ExploreOpportunity[]> {
+  return requestJson("/v1/selection/explore/run", { method: "POST", body: JSON.stringify({ items, ...filters }) });
 }
 
-export function runAndSaveSelectionExplore(workspaceId: string, items: Record<string, unknown>[]): Promise<ExploreOpportunity[]> {
-  return requestJson(`/v1/selection/explore/store-workspaces/${encodeURIComponent(workspaceId)}/run-and-save`, { method: "POST", body: JSON.stringify({ items }) });
+export function runAndSaveSelectionExplore(workspaceId: string, items: Record<string, unknown>[], filters: ExploreFilters = {}): Promise<ExploreOpportunity[]> {
+  return requestJson(`/v1/selection/explore/store-workspaces/${encodeURIComponent(workspaceId)}/run-and-save`, { method: "POST", body: JSON.stringify({ items, ...filters }) });
 }
 export function listSelectionExploreOpportunities(workspaceId: string): Promise<ExploreOpportunity[]> { return requestJson(`/v1/selection/explore/store-workspaces/${encodeURIComponent(workspaceId)}/history`, { method: "GET" }); }
 

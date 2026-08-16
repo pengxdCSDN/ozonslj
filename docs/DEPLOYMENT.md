@@ -260,3 +260,12 @@ docker compose --env-file .env logs --tail=100 api worker
 - API、Worker、Scheduler 已统一该摘要；容器内 `pypdf` 依赖验证通过，索引重建路由存在。
 - API `ready=200`、`live=200`；Web 入口为 `index-DvaBd6Db.js`；Nginx 配置检查通过。
 - 第四组功能已完成发布：来源筛选、版本详情、Markdown/SQL/TXT/PDF 文本层导入、解析切片预览、质量门禁、发布/撤回/删除/重建、任务轮询、取消/重试和版本内容一致性校验。
+
+## 2026-08-16 第六组选品与 Listing 开发验收记录
+
+- 发布分支固定为 `codex/deployment-base-images`；本阶段只更新应用代码和 Web 静态资源，不重建 PostgreSQL、Redis、Chroma 等基础镜像。
+- 已完成可脱离真实 Seller 凭据开发的功能：商品机会评分与筛选条件、关键词库、Listing 草稿建议、风险检测、版本差异和人工确认门禁。
+- Explore 新增最低机会分、最低搜索量、最低转化率和自有覆盖缺口筛选；筛选发生在确定性评分之后，保存结果仍保留估算标记和理由。
+- 受控发布仍是 Stub/审核链路：必须有审核状态和幂等键，只记录命令及回读；真实 Seller 写接口、字段契约和真实店铺发布验收不得在无店铺凭据时伪造。
+- 验证：第六组后端 API/领域回归 8 项通过；前端 TypeScript 检查通过；Vite Web 构建通过，入口为 `index-f8CZ4J6r.js`，样式为 `index-DxjgRheu.css`。
+- ACR 发布前门禁：提交并推送后必须等待 ACR 使用本分支生成新应用镜像，核对新 digest、镜像内 revision、API/Worker/Scheduler 一致性，再执行云端验收；digest 未变化时不得报告发布完成。

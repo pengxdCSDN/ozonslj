@@ -32,6 +32,36 @@ class ExploreOpportunityGateway(Protocol):
         self, *, workspace_id: str, opportunities: list[ExploreOpportunity]
     ) -> list[ExploreOpportunity]: ...
 
+
+@dataclass(frozen=True, slots=True)
+class ExploreFilters:
+    """Operator-controlled candidate filters applied after a deterministic score."""
+
+    min_score: float = 0.0
+    min_search_count: int = 0
+    min_conversion_rate: float | None = None
+    coverage_gap_only: bool = False
+
+
+def filter_opportunities(
+    opportunities: list[ExploreOpportunity], filters: ExploreFilters
+) -> list[ExploreOpportunity]:
+    """Filter scored opportunities without changing the score or source facts."""
+    return [
+        item
+        for item in opportunities
+        if item.score >= filters.min_score
+        and item.search_count >= filters.min_search_count
+        and (
+            filters.min_conversion_rate is None
+            or (
+                item.conversion_rate is not None
+                and item.conversion_rate >= filters.min_conversion_rate
+            )
+        )
+        and (not filters.coverage_gap_only or item.own_coverage_gap)
+    ]
+
     async def list_opportunities(
         self, *, workspace_id: str, limit: int
     ) -> list[ExploreOpportunity]: ...
