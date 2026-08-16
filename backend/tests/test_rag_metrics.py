@@ -1,4 +1,8 @@
-from backend.app.domain.rag_metrics import EvaluationObservation, calculate_metrics
+from backend.app.domain.rag_metrics import (
+    EvaluationObservation,
+    calculate_metrics,
+    quality_gate_passed,
+)
 
 
 def test_metrics_are_bounded_and_refusal_is_counted() -> None:
@@ -18,3 +22,5 @@ def test_metrics_are_bounded_and_refusal_is_counted() -> None:
     assert metrics.citation_support_rate == 1.0
     assert metrics.correct_refusal_rate == 1.0
     assert metrics.average_latency_ms == 15
+    assert metrics.recall_at_5 == 1.0
+    assert not quality_gate_passed(metrics)

@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.app.api.routes.rag_evaluation import router
+from backend.app.domain.rag_evaluation_corpus import fixed_suite_case_ids
 
 
 def test_generate_confirm_and_run() -> None:
@@ -19,9 +20,16 @@ def test_generate_confirm_and_run() -> None:
         f"/v1/rag-evaluation/cases/{case_id}/confirm", json={"reviewer": "root"}
     )
     assert confirmed.json()["status"] == "confirmed"
+    fixed_id = fixed_suite_case_ids("quick")[0]
+    confirmed_fixed = client.post(
+        f"/v1/rag-evaluation/cases/{fixed_id}/confirm", json={"reviewer": "root"}
+    )
+    assert confirmed_fixed.json()["status"] == "confirmed"
     run = client.post("/v1/rag-evaluation/runs", json={"suite": "quick"})
     assert run.status_code == 202
-    assert run.json()["gate_status"] == "ready"
+    assert run.json()["gate_status"] == "blocked"
+    assert run.json()["target_count"] == 30
+    assert run.json()["confirmed_count"] == 1
 
 
 def test_metrics_api_returns_quality_indicators() -> None:
