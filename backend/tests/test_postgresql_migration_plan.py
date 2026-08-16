@@ -19,8 +19,8 @@ def test_new_database_uses_authoritative_schema_and_migrations() -> None:
     assert plan[0].name == "initial"
     assert plan[1].version == 2
     assert plan[1].name == "multi_tenant_saas"
-    # 当前 RAG 模型凭据迁移是权威迁移计划的最新版本。
-    assert plan[-1].source_version == 97
+    # 当前 Performance Client Credentials 迁移是权威迁移计划的最新版本。
+    assert plan[-1].source_version == 101
 
 
 def test_legacy_database_gets_explicit_compatibility_steps() -> None:
@@ -48,9 +48,9 @@ def test_upgraded_legacy_database_can_receive_later_migrations() -> None:
     remaining = build_migration_plan(applied)
 
     # 旧基线升级时应只剩最新凭据迁移，不能重复执行历史迁移。
-    assert [migration.source_version for migration in remaining] == [97]
-    # 旧库的物理迁移版本沿用历史编号，0097 对应权威计划版本 100。
-    assert [migration.version for migration in remaining] == [100]
+    assert [migration.source_version for migration in remaining] == [101]
+    # 旧库的物理迁移版本沿用历史编号，当前兼容偏移对应权威计划版本 104。
+    assert [migration.version for migration in remaining] == [104]
 
 
 def test_rag_governance_migration_has_relational_lifecycle_and_rls_guards() -> None:

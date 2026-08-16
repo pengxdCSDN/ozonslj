@@ -5,6 +5,7 @@ from fastapi import Cookie, Depends, Header, HTTPException, status
 from redis.asyncio import Redis
 
 from backend.app.application.identity import IdentityService
+from backend.app.application.seller_accounts import SellerAccountService
 from backend.app.config import get_settings
 from backend.app.domain.advertising_analysis import AdvertisingAnalysisGateway
 from backend.app.domain.advertising_calendar import AdvertisingCalendarGateway
@@ -53,6 +54,7 @@ from backend.app.domain.selection_decision_book import SelectionDecisionBookGate
 from backend.app.domain.selection_expand import ExpandResultGateway
 from backend.app.domain.selection_explore import ExploreOpportunityGateway
 from backend.app.domain.selection_validate import ValidateResultGateway
+from backend.app.domain.seller_account import CreatedSellerAccount
 from backend.app.domain.seller_fulfillment_snapshot import SellerFulfillmentSnapshotGateway
 from backend.app.domain.seller_operation import SellerOperationGateway
 from backend.app.domain.seller_order_snapshot import SellerOrderSnapshotGateway
@@ -62,6 +64,7 @@ from backend.app.domain.smart_search import SmartSearchGateway
 from backend.app.domain.stock_position import StockPositionGateway
 from backend.app.domain.store_workspace import (
     CredentialProtector,
+    OzonCredentials,
     SellerAccountVerifier,
     StoreWorkspaceGateway,
 )
@@ -213,6 +216,51 @@ class LoginRateLimiter(Protocol):
     async def record_failure(self, email: str, client_key: str) -> None: ...
 
     async def clear(self, email: str, client_key: str) -> None: ...
+
+
+class _LegacySellerCredentialProtector:
+    """兼容旧 SellerAccountService 测试端口，实际密文仍由统一保护器生成。"""
+
+    def __init__(self, protector: CredentialProtector) -> None:
+        self._protector = protector
+
+    @property
+    def key_version(self) -> int:
+        return self._protector.key_version
+
+    def encrypt(self, api_key: str) -> bytes:
+        return self._protector.protect(api_key)
+
+
+class _LegacySellerCredentialVerifier:
+    """将旧的分离参数校验端口转换为当前凭据对象端口。"""
+
+    def __init__(self, verifier: SellerAccountVerifier) -> None:
+        self._verifier = verifier
+
+    async def verify(self, *, client_id: str, api_key: str) -> None:
+        await self._verifier.verify(OzonCredentials(client_id=client_id, api_key=api_key))
+
+
+class _LegacySellerAccountGateway:
+    """将历史卖家账户服务适配到当前工作区聚合，避免重复维护凭据写入逻辑。"""
+
+    def __init__(self, gateway: StoreWorkspaceGateway) -> None:
+        self._gateway = gateway
+
+    async def create(self, **values: object) -> CreatedSellerAccount:
+        workspace = await self._gateway.create_workspace(
+            display_name=str(values["display_name"]),
+            client_id=str(values["client_id"]),
+            encrypted_api_key=cast(bytes, values["encrypted_api_key"]),
+            credential_version=cast(int, values["credential_version"]),
+        )
+        return CreatedSellerAccount(
+            seller_account_id=workspace.id,
+            workspace_id=workspace.id,
+            display_name=workspace.display_name,
+            workspace_name=workspace.display_name,
+        )
 
 
 class ReadinessProbe(Protocol):
@@ -799,3 +847,16 @@ def get_seller_account_verifier() -> SellerAccountVerifier:
     if settings.ozon_mode == "stub":
         return StubSellerAccountVerifier()
     return HttpOzonSellerAccountVerifier(str(settings.ozon_base_url))
+
+
+def get_seller_account_service(
+    gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
+    verifier: Annotated[SellerAccountVerifier, Depends(get_seller_account_verifier)],
+    protector: Annotated[CredentialProtector, Depends(get_credential_protector)],
+) -> SellerAccountService:
+    """保留旧 Seller 账户 API 的依赖入口，写入统一工作区聚合。"""
+    return SellerAccountService(
+        _LegacySellerAccountGateway(gateway),
+        _LegacySellerCredentialVerifier(verifier),
+        _LegacySellerCredentialProtector(protector),
+    )

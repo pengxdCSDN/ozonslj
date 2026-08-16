@@ -101,7 +101,7 @@ def test_admin_creates_verified_encrypted_seller_account() -> None:
 
 
 def test_non_admin_cannot_create_seller_account() -> None:
-    response = _create(_service(), replace(ADMIN, role="operator"))
+    response = _create(_service(), replace(ADMIN, organization_role="operator"))
 
     assert response.status_code == 403
 

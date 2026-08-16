@@ -93,6 +93,7 @@ from backend.app.api.routes.selection_decision_books import (
 from backend.app.api.routes.selection_expand import router as selection_expand_router
 from backend.app.api.routes.selection_explore import router as selection_explore_router
 from backend.app.api.routes.selection_validate import router as selection_validate_router
+from backend.app.api.routes.seller_accounts import router as seller_accounts_router
 from backend.app.api.routes.seller_fulfillment_sync import router as seller_fulfillment_sync_router
 from backend.app.api.routes.seller_operations import router as seller_operations_router
 from backend.app.api.routes.seller_order_sync import router as seller_order_sync_router
@@ -146,6 +147,7 @@ def create_app(
     app.include_router(external_notifications_router)
     app.include_router(erp_imports_router)
     app.include_router(auth_router)
+    app.include_router(seller_accounts_router)
     app.include_router(customer_orders_router)
     app.include_router(competitor_seeds_router)
     app.include_router(competitor_selection_analysis_router)

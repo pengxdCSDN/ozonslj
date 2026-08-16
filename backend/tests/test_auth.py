@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.api.dependencies import (
+    get_default_organization_id,
     get_identity_service,
     get_login_rate_limiter,
     get_session_cookie_secure,
@@ -70,6 +71,9 @@ class _LoginLimiter:
 @pytest.fixture(autouse=True)
 def _rate_limiter_override() -> None:
     app.dependency_overrides[get_login_rate_limiter] = _LoginLimiter
+    # 认证单测只验证会话行为；固定测试租户和 Cookie 策略，避免读取本地部署配置。
+    app.dependency_overrides[get_default_organization_id] = lambda: "test-organization"
+    app.dependency_overrides[get_session_cookie_secure] = lambda: False
     yield
     app.dependency_overrides.clear()
 
@@ -86,7 +90,7 @@ def test_login_sets_http_only_cookie_and_returns_user() -> None:
 
     assert response.status_code == 200
     assert response.json()["role"] == "admin"
-    assert response.json()["workspace_ids"] == ["workspace-1"]
+    assert response.json()["display_name"] == "Admin"
     assert response.json()["session_token"] == "raw-session-token"
     cookie = response.headers["set-cookie"].lower()
     assert "httponly" in cookie
@@ -121,7 +125,7 @@ def test_login_rate_limit_returns_retry_after() -> None:
 
     assert response.status_code == 429
     assert response.headers["retry-after"] == "42"
-    assert response.json()["detail"] == "登录尝试过多，请稍后重试"
+    assert response.json()["detail"]["message"] == "登录尝试过多，请稍后重试"
 
 
 def test_https_login_does_not_expose_session_token() -> None:
