@@ -245,3 +245,4 @@ docker compose --env-file .env logs --tail=100 api worker
 - API、Worker、Scheduler 已统一使用新摘要；API healthy，`ready=200`、`live=200`。
 - Web 入口已更新为 `index-BDRFAGDq.js`；Web 容器运行正常，Nginx 配置检查通过。
 - 页面现在会调用 PDF 隔离上传接口并展示结构检查、杀毒状态和阻断原因；未配置杀毒服务时保持 `quarantined`，禁止自动解析二进制 PDF。
+- 应用镜像新增 Python 依赖时，Dockerfile 必须在安装项目后执行关键依赖 import 校验；依赖缺失必须使 ACR 构建失败，禁止把“健康但功能缺依赖”的镜像部署到云端。

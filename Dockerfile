@@ -18,7 +18,8 @@ COPY database/migrations ./database/migrations
 COPY scripts/create_operator.py ./scripts/create_operator.py
 
 RUN python -m pip install --upgrade pip \
-    && python -m pip install .
+    && python -m pip install . \
+    && python -c "import pypdf; print('pypdf dependency installed')"
 
 RUN groupadd --system --gid 10001 appuser \
     && useradd --system --uid 10001 --gid 10001 --create-home appuser \
