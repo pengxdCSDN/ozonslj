@@ -313,3 +313,11 @@ docker compose --env-file .env logs --tail=100 api worker
 - ACR 曾生成新摘要 `sha256:b0aee5f44831a62458339adb8fc5a070002ad82308becf4b42146399204eda4a`，但镜像内缺少 `backend/app/domain/advertising_budget.py`，`OZONSLJ_RELEASE_REVISION` 仍为 `development`，证明该构建未使用目标源码。
 - 服务器当前已确认源码远端提交为 `de90e07`，但不能用服务器源码同步替代 ACR 构建证据；API/Worker/Scheduler 未以该错误镜像作为第九组验收结果。
 - ACR 控制台读取超时、服务器 `aliyun` CLI 无有效权限；禁止在 2GB 服务器本地构建或继续重启旧摘要。下一步必须在 ACR 构建规则中手动确认 source branch=`codex/deployment-base-images`、source commit=`de90e07`，重新构建后再执行镜像内文件、revision、服务摘要和 API/Web 验收。
+
+## 2026-08-16 第九组最终发布验收
+
+- ACR 最新应用镜像摘要：`sha256:bbfaeca85483d0689b22faf2a869c2c4eaa5ee6e7024bee4193de6494d6032c0`，镜像内已确认 `advertising_budget.py` 存在。
+- API、Worker、Scheduler 已统一切换到该摘要；API 容器内 `live=200`、`ready=200`，三项服务运行正常。
+- Web 已完整同步 `index.html` 与 `assets/`，入口为 `index-AseVkSlj.js`，样式为 `index-DxjgRheu.css`；`nginx -t` 通过，静态文件在容器内存在。
+- PostgreSQL、Redis 未重建；旧 Web 静态目录保留为 `web.rollback-group9-20260816`，可用于回滚。
+- 服务器本机 HTTP 按配置返回 HTTPS 301，公网 TLS 由外层入口负责；本机无 443 映射，不将本机 HTTPS 000 误判为应用容器故障。

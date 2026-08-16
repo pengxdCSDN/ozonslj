@@ -124,6 +124,8 @@ AI-010 新增通知模板预览 API 和前端入口，仅允许 headline、summa
 
 云端发布门禁状态：第九组提交 `de90e07` 已推送到 `codex/deployment-base-images`，但当前 ACR 新摘要 `sha256:b0aee5f4…` 内仍缺少 `advertising_budget.py`，且镜像 revision 仍为 `development`，判定为旧源码构建，未完成第九组云端验收。不得用该摘要报告发布完成；必须重新触发正确 source commit 的 ACR 构建并核对镜像内关键文件后再部署。
 
+后续重建已完成：ACR 摘要 `sha256:bbfaeca85483d0689b22faf2a869c2c4eaa5ee6e7024bee4193de6494d6032c0` 内已包含第九组关键代码；API、Worker、Scheduler 已统一该摘要，API `live/ready=200`，Web 入口 `index-AseVkSlj.js` 和样式 `index-DxjgRheu.css` 已同步。旧 Web 目录保留为 `web.rollback-group9-20260816`。
+
 
 ## 2026-08-09 ??????
 
