@@ -43,6 +43,25 @@ export interface KnowledgeSource {
   status: string;
 }
 
+export interface KnowledgeVersion {
+  id: string;
+  source_id: string;
+  version_number: number;
+  content_hash: string;
+  status: string;
+}
+
+export interface KnowledgeIngestionResult {
+  document_id: string;
+  document_version_id: string;
+  parser_name: string;
+  cleaner_version: string;
+  content_hash: string;
+  quality_passed: boolean;
+  blocked_reason: string | null;
+  chunks: Array<{ chunk_id: string; ordinal: number; source_locator: string; title_path: string[]; content: string }>;
+}
+
 export interface ModelBudget {
   provider_id: string;
   purpose: string;
@@ -901,6 +920,26 @@ export function createKnowledgeSource(payload: {
     method: "POST", body: JSON.stringify(payload),
   });
 }
+
+export function listKnowledgeVersions(sourceId: string): Promise<KnowledgeVersion[]> {
+  return requestJson(`/v1/knowledge-sources/${encodeURIComponent(sourceId)}/versions`, { method: "GET" });
+}
+export function createKnowledgeVersion(sourceId: string, payload: { content_hash: string; parser_name: string; parser_version: string; cleaner_version: string }): Promise<KnowledgeVersion> {
+  return requestJson(`/v1/knowledge-sources/${encodeURIComponent(sourceId)}/versions`, { method: "POST", body: JSON.stringify(payload) });
+}
+export function publishKnowledgeVersion(versionId: string): Promise<KnowledgeVersion> { return requestJson(`/v1/knowledge-sources/versions/${encodeURIComponent(versionId)}/publish`, { method: "POST" }); }
+export function withdrawKnowledgeVersion(versionId: string): Promise<KnowledgeVersion> { return requestJson(`/v1/knowledge-sources/versions/${encodeURIComponent(versionId)}/withdraw`, { method: "POST" }); }
+export function withdrawKnowledgeSource(sourceId: string): Promise<KnowledgeSource> { return requestJson(`/v1/knowledge-sources/${encodeURIComponent(sourceId)}/withdraw`, { method: "POST" }); }
+export function pauseKnowledgeSource(sourceId: string): Promise<KnowledgeSource> { return requestJson(`/v1/knowledge-sources/${encodeURIComponent(sourceId)}/pause`, { method: "POST" }); }
+export function resumeKnowledgeSource(sourceId: string): Promise<KnowledgeSource> { return requestJson(`/v1/knowledge-sources/${encodeURIComponent(sourceId)}/resume`, { method: "POST" }); }
+export function deleteKnowledgeSource(sourceId: string): Promise<KnowledgeSource> { return requestJson(`/v1/knowledge-sources/${encodeURIComponent(sourceId)}`, { method: "DELETE" }); }
+export function previewKnowledgeIngestion(payload: Record<string, unknown>): Promise<KnowledgeIngestionResult> {
+  return requestJson("/v1/knowledge-ingestion/run", { method: "POST", body: JSON.stringify(payload) });
+}
+export interface KnowledgeTask { task_id: string; task_type: string; organization_id: string; status: "queued" | "running" | "succeeded" | "failed" | "cancelled"; attempt: number; error_code: string | null; }
+export function listKnowledgeTasks(): Promise<KnowledgeTask[]> { return requestJson("/v1/knowledge-tasks", { method: "GET" }); }
+export function cancelKnowledgeTask(taskId: string): Promise<KnowledgeTask> { return requestJson(`/v1/knowledge-tasks/${encodeURIComponent(taskId)}/cancel`, { method: "POST" }); }
+export function retryKnowledgeTask(taskId: string): Promise<KnowledgeTask> { return requestJson(`/v1/knowledge-tasks/${encodeURIComponent(taskId)}/retry`, { method: "POST" }); }
 
 export function submitKnowledgeFeedback(answerId: string, reason: string, note?: string): Promise<{ feedback_id: string; status: string }> {
   return requestJson(`/v1/knowledge-answers/${encodeURIComponent(answerId)}/feedback`, {

@@ -40,6 +40,24 @@ class FakeRagGateway:
         self.tasks[task_id] = finished
         return finished
 
+    async def cancel(self, task_id: str) -> RagWorkerTask:
+        task = self.tasks[task_id]
+        cancelled = RagWorkerTask(
+            task.task_id, task.task_type, task.organization_id, "cancelled",
+            task.attempt, None, "cancelled_by_operator",
+        )
+        self.tasks[task_id] = cancelled
+        return cancelled
+
+    async def retry(self, task_id: str) -> RagWorkerTask:
+        task = self.tasks[task_id]
+        retried = RagWorkerTask(
+            task.task_id, task.task_type, task.organization_id, "queued",
+            task.attempt, None, None,
+        )
+        self.tasks[task_id] = retried
+        return retried
+
 
 class FakeRagQueue:
     async def enqueue(self, task_id: str) -> None:
@@ -70,3 +88,22 @@ def test_task_is_idempotent_claimed_and_finished() -> None:
         f"/v1/knowledge-tasks/{task_id}/finish", json={"status": "succeeded"}
     )
     assert finished.json()["status"] == "succeeded"
+
+
+def test_task_can_be_cancelled_and_retried() -> None:
+    app = FastAPI()
+    app.include_router(router)
+    fake_gateway = FakeRagGateway()
+    app.dependency_overrides[get_rag_task_gateway] = lambda: fake_gateway
+    app.dependency_overrides[get_rag_task_queue] = FakeRagQueue
+    client = TestClient(app)
+    created = client.post(
+        "/v1/knowledge-tasks",
+        json={
+            "task_type": "index", "organization_id": "org-1", "source_id": "s",
+            "document_version_id": "v", "idempotency_key": "task-cancel",
+        },
+    )
+    task_id = created.json()["task_id"]
+    assert client.post(f"/v1/knowledge-tasks/{task_id}/cancel").json()["status"] == "cancelled"
+    assert client.post(f"/v1/knowledge-tasks/{task_id}/retry").json()["status"] == "queued"

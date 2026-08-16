@@ -107,6 +107,42 @@ class PostgresRagTaskGateway:
     ) -> RagWorkerTask | None:
         return await asyncio.to_thread(self._finish, task_id, status, error_code)
 
+    async def cancel(self, task_id: str) -> RagWorkerTask | None:
+        """取消尚未完成的任务；数据库状态先落为 cancelled，避免只取消 Redis 信号。"""
+        return await asyncio.to_thread(self._cancel, task_id)
+
+    def _cancel(self, task_id: str) -> RagWorkerTask | None:
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
+                """UPDATE rag_ingestion_jobs
+                   SET status = 'cancelled', error_code = 'cancelled_by_operator',
+                       finished_at = CURRENT_TIMESTAMP, lease_expires_at = NULL
+                   WHERE organization_id = %s AND id = %s
+                     AND status IN ('queued', 'running')
+                   RETURNING id, job_type, organization_id, status, attempt_count,
+                             lease_expires_at, error_code""",
+                (self._context.organization_id, task_id),
+            ).fetchone()
+        return _task(row) if row is not None else None
+
+    async def retry(self, task_id: str) -> RagWorkerTask | None:
+        """把失败或已取消任务重新排队；保留原任务 ID 和尝试次数便于审计。"""
+        return await asyncio.to_thread(self._retry, task_id)
+
+    def _retry(self, task_id: str) -> RagWorkerTask | None:
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
+                """UPDATE rag_ingestion_jobs
+                   SET status = 'queued', error_code = NULL,
+                       finished_at = NULL, lease_expires_at = NULL
+                   WHERE organization_id = %s AND id = %s
+                     AND status IN ('failed', 'cancelled')
+                   RETURNING id, job_type, organization_id, status, attempt_count,
+                             lease_expires_at, error_code""",
+                (self._context.organization_id, task_id),
+            ).fetchone()
+        return _task(row) if row is not None else None
+
     async def heartbeat(self, task_id: str, worker_id: str, lease_seconds: int) -> bool:
         return await asyncio.to_thread(self._heartbeat, task_id, worker_id, lease_seconds)
 

@@ -88,3 +88,27 @@ async def finish_knowledge_task(
     if finished is None:
         raise HTTPException(status_code=409, detail="任务不存在或不在 running 状态")
     return _task_response(finished)
+
+
+@router.post("/{task_id}/cancel", response_model=dict[str, object])
+async def cancel_knowledge_task(
+    task_id: str,
+    gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
+) -> dict[str, object]:
+    task = await gateway.cancel(task_id)
+    if task is None:
+        raise HTTPException(status_code=409, detail="任务当前不可取消")
+    return _task_response(task)
+
+
+@router.post("/{task_id}/retry", response_model=dict[str, object], status_code=202)
+async def retry_knowledge_task(
+    task_id: str,
+    gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
+    queue: Annotated[RedisRagTaskQueue, Depends(get_rag_task_queue)],
+) -> dict[str, object]:
+    task = await gateway.retry(task_id)
+    if task is None:
+        raise HTTPException(status_code=409, detail="只有失败或已取消任务可以重试")
+    await queue.enqueue(task.task_id)
+    return _task_response(task)
