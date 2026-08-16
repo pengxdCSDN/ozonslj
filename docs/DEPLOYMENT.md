@@ -179,6 +179,14 @@ docker compose --env-file .env logs --tail=100 api worker
 ```
 
 其中 `$APP_IMAGE` 使用 `.env` 中的应用镜像完整地址；`release-marker.py` 替换为本次版本必然包含的关键文件。发布结束后还应请求公网首页，核对 HTML 引用的新 JS/CSS 哈希文件均返回 `200`。
+
+### 应用镜像与 Web 前端的分工
+
+- `ozonslj-api-dev` 只承载 API、Worker 和 Scheduler 的 Python 代码；后端代码变更只需要触发该应用镜像构建。
+- Web 服务通过 `./web:/usr/share/nginx/html:ro` 挂载 `deploy/web` 静态目录；前端页面不会因为 API 镜像更新而自动出现。
+- 前端页面或样式变更必须在 `extension` 执行 `vite build --mode web`，将生成的 `index.html` 与完整 `assets/` 目录同步到 `deploy/web`，提交并推送后在服务器执行 Web 静态目录更新和 `--force-recreate --no-deps web`。
+- ACR 基础镜像规则不应与应用代码提交绑定。应用分支自动构建只保留 `ozonslj-api-dev`；PostgreSQL、Redis、Nginx、Python、Node、Chroma 基础镜像改为独立分支/Tag 或手动构建。
+- 发布验收必须分别检查 API 镜像摘要和 Web 首页引用的 JS/CSS 哈希；只验证 API 健康不能证明新增前端页面已发布。
 ## Web 静态资源发布防复发规则
 
 2026-08-14 黑屏故障的直接原因是首页引用了新的哈希 JS 文件，但 Nginx 实际目录没有该文件；Nginx 的 `try_files` 将缺失的 JS 回退成 `index.html`，浏览器收到 `text/html` 后拒绝执行模块脚本。另一个易错点是 Docker Web 容器绑定了宿主机目录，普通 `restart` 不会修复错误的目录切换。

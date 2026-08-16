@@ -271,3 +271,4 @@ OpenAI 兼容协议不代表所有供应商支持完全相同的可选字段。S
 - **严重发布事故：ACR 仍为旧镜像或误推分支**：先停止重建和验收，核对 `git branch --show-current`、远端 source commit、ACR 构建规则、镜像 digest、创建时间和 `OZONSLJ_RELEASE_REVISION`。本项目固定使用 `codex/deployment-base-images`；禁止把开发分支直接推到 `main`，禁止在 2GB 服务器本地构建。若发生误推，使用已知远端旧提交和 `--force-with-lease` 恢复，并记录事故后再继续。
 - **Worker 因迁移账本冲突重启**：先查看 `PostgresMigrationError`，核对 `database/migrations` 是否存在重复四位版本号。不得修改数据库 `schema_migrations` 或跳过校验；新增迁移必须使用下一个未占用的源版本，并同步更新旧基线映射测试后重新构建。
 - **模型额度保存返回 500 且日志为 `Decimal` 与 `float` 运算错误**：PostgreSQL 的 `NUMERIC` 字段会由驱动返回 `Decimal`，策略金额和用量金额必须在 `PostgresModelBudgetGateway` 读取边界显式转换为 `float`；不得在领域预算计算中混用 `Decimal` 与 `float`。验证保存接口及 Decimal 回归测试后再重新构建镜像。
+- **新增前端页面线上不可见**：Web 容器挂载的是服务器 `deploy/web` 静态目录，不会读取 `ozonslj-api-dev` 镜像内的前端源码。必须执行 `vite build --mode web`，完整同步 `index.html` 和 `assets/`，再重建 Web 容器并用 `curl` 校验首页引用的哈希资源为 200；浏览器仍缓存旧入口时使用 `Ctrl+F5`。
