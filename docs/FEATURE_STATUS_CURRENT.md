@@ -156,3 +156,11 @@ RAG 评测页面已解除 Seller 店铺状态门禁，并完成当前语料分�
 知识中心的“知识问答”和“知识源管理”同样已解除 Seller 店铺状态门禁；店铺仍在审核时可以进入这两个页面，知识接口继续由登录态和服务端权限控制。
 
 2026-08-17 门禁矩阵已统一：Performance OAuth/广告闭环、模型适配器、RAG 配置与评测、Agent 权限、外部通知和知识中心页面均不再依赖 Seller 店铺 active 状态；依赖商品/库存/订单/履约事实的运营、选品、Listing、同步、数据质量和 Agent 触发器页面继续保留 Seller 门禁。解除 Seller 门禁不等于放开后端权限或独立 Performance OAuth，页面仍显示未配置/未授权/暂无数据状态。
+
+## 2026-08-17 OCR 扫描 PDF 分流
+
+已完成 OCR 适配器、扫描件检测、前端状态展示、脱敏错误处理、结构化页面正文到现有切片链路的接入，并同步 [RAG_OCR_PROCESSING](./RAG_OCR_PROCESSING.md) 与部署/故障流程文档。普通文本层 PDF 不调用 OCR；扫描 PDF 在 PaddleOCR 配置可用时返回 `ocr_extracted`，未配置时返回 `ocr_required` 并阻断发布。
+
+本地 OCR 契约及 PDF/知识切片回归通过；TypeScript 和 Vite Web 构建通过。完整后端回归有 2 项既有迁移版本断言失败（测试硬编码 102，当前仓库最新迁移为 103），与 OCR 改动无关，未修改无关基线。
+
+云端已按 `codex/deployment-base-images` 的提交 `6c762d9` 触发 ACR 并部署应用摘要 `sha256:a141826a0cfd2c0e53936fb960fc96446aa9c20a6741ae1fe3c7d791f6d7f37d`；API/Worker/Scheduler 摘要一致，`live/ready=200`，Web `index-zuTBS-d7.js` 与 `index-CEK5B8cQ.css` 均为 200。当前云端未配置 OCR Secret，真实供应商识别和真实扫描件质量指标仍待配置后补验。

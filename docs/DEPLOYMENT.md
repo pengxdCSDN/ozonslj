@@ -264,11 +264,12 @@ docker compose --env-file .env logs --tail=100 api worker
 
 ## 2026-08-17 OCR 扫描 PDF 分流与部署流程
 
-- 应用提交：本次 OCR 功能提交以 Git 记录为准；发布前必须确认分支为 `codex/deployment-base-images`。
+- 应用提交：`6c762d9a324fdcbdfb56ee396e67f0b2cae40653`，分支为 `codex/deployment-base-images`。
 - 普通文本层 PDF 不调用 OCR；扫描 PDF 仅在配置 PaddleOCR HTTPS 端点时调用 `paddleocr-doc-parsing` 适配器，未配置时返回 `ocr_required`。
 - OCR 供应商令牌只通过运行时 Secret 或 `PADDLEOCR_ACCESS_TOKEN_FILE` 注入；不得写入仓库、镜像、前端或日志。
-- ACR 构建完成后核对 source commit、镜像 digest、镜像内 `backend/app/infrastructure/ocr/paddleocr_document_parser.py` 和 API/Worker/Scheduler 摘要一致，再执行云端健康检查。
-- 云端验收至少覆盖：文本层 PDF 不调用 OCR、扫描 PDF 配置缺失阻断、OCR 成功/超时/429/403、切片预览和发布门禁。没有真实 OCR 凭据时，不能报告“真实 OCR 调用通过”，只能报告检测与安全阻断通过。
+- ACR 新应用镜像摘要：`sha256:a141826a0cfd2c0e53936fb960fc96446aa9c20a6741ae1fe3c7d791f6d7f37d`；镜像内 OCR 适配器文件存在，FastAPI 导入检查通过。
+- API、Worker、Scheduler 已统一该摘要；`live=200`、`ready=200`；Web 入口为 `index-zuTBS-d7.js`，样式为 `index-CEK5B8cQ.css`，首页和两项资源均返回 200。
+- 云端当前未注入 PaddleOCR URL/Secret，因此本次云端验收结论为“扫描件检测与 `ocr_required` 安全阻断通过”，不宣称真实 OCR 供应商调用通过。注入凭据后需补做 200、403、429、超时和真实扫描件切片验收。
 
 ## 2026-08-16 第五组 RAG 供应商能力验收
 
