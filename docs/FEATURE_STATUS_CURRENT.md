@@ -163,4 +163,4 @@ RAG 评测页面已解除 Seller 店铺状态门禁，并完成当前语料分�
 
 本地 OCR 契约及 PDF/知识切片回归通过；TypeScript 和 Vite Web 构建通过。完整后端回归有 2 项既有迁移版本断言失败（测试硬编码 102，当前仓库最新迁移为 103），与 OCR 改动无关，未修改无关基线。
 
-云端旧镜像已完成 PaddleOCR 分流验收；本次改为本地 Tesseract 后必须以新提交重新触发 ACR，确认镜像内 OCR 二进制、API/Worker/Scheduler 摘要和 Web 健康检查后，才能标记本地 OCR 云端验收完成。
+云端已完成本地 Tesseract OCR 验收：提交 `d3a6e9b` 通过 GitHub 绑定的 ACR 自动构建，镜像摘要为 `sha256:aa4f1b37f4dadd4d6abfdb93724319b59e40c8146d2cda6e4250af8a78e7c891`；API/Worker/Scheduler 摘要一致，镜像内 OCR 二进制与中英文语言包存在，HTTPS `live/ready=200`，首页 `200`。服务器 ACR CLI 凭据无效，但不影响 GitHub 自动构建流程；后续仍禁止在服务器本地构建。
