@@ -79,6 +79,34 @@ type OperationLoadState = { status: "idle" | "loading" } | { status: "ready"; da
 type StockFilter = "all" | "available" | "risk" | "empty";
 type CurrentUser = AuthUser;
 const LOW_STOCK_THRESHOLD = 15;
+/**
+ * 这些页面只管理账号级配置、RAG 评测或独立 Performance 数据，不读取 Seller 商品/订单事实。
+ * 因此店铺仍处于待验证、无 Seller Key 时也应允许进入；页面内部仍需展示各自的凭据/数据状态。
+ */
+const SELLER_GATE_EXEMPT_VIEWS = new Set<View>([
+  "knowledge-query",
+  "knowledge-sources",
+  "performance-oauth",
+  "advertising-campaigns",
+  "advertising-reports",
+  "advertising-metrics",
+  "advertising-keywords",
+  "advertising-thresholds",
+  "advertising-calendar",
+  "advertising-readonly",
+  "advertising-analysis",
+  "summary-report",
+  "model-adapter",
+  "model-providers",
+  "model-budget",
+  "rag-evaluation",
+  "agent-permissions",
+  "external-notifications",
+]);
+
+function isSellerGateExempt(view: View): boolean {
+  return SELLER_GATE_EXEMPT_VIEWS.has(view);
+}
 function ImportView({ workspaceId }: { workspaceId: string }) { const [content, setContent] = useState("term,volume,rate\n"); const [mapping, setMapping] = useState({ term: "term", volume: "volume", rate: "rate" }); const [preview, setPreview] = useState<import("./api").KeywordImportPreview | null>(null); const [message, setMessage] = useState(""); const previewImport = async () => { try { setPreview(await previewMappedKeywordImport(workspaceId, content, { [mapping.term]: "keyword", [mapping.volume]: "search_count", [mapping.rate]: "conversion_rate" })); setMessage(""); } catch (error) { setMessage(error instanceof Error ? error.message : "导入预览失败"); } }; const commitImport = async () => { if (!preview) return; try { const batch = await commitKeywordImport(workspaceId, preview.fingerprint, preview.rows); setMessage(batch.reused ? "检测到相同文件，已复用既有导入批次" : "导入批次及搜索词事实已保存"); } catch (error) { setMessage(error instanceof Error ? error.message : "导入批次保存失败"); } }; return <div className="view-content"><PageHeading label="数据导入 / RES-003" title="搜索词报告字段映射" note="先映射列、预览校验，再提交导入批次；重复文件自动复用" compact /><section className="panel import-panel"><div className="form-grid"><label>关键词列<input value={mapping.term} onChange={(event) => setMapping({ ...mapping, term: event.target.value })} /></label><label>搜索量列<input value={mapping.volume} onChange={(event) => setMapping({ ...mapping, volume: event.target.value })} /></label><label>转化率列<input value={mapping.rate} onChange={(event) => setMapping({ ...mapping, rate: event.target.value })} /></label></div><textarea value={content} onChange={(event) => setContent(event.target.value)} aria-label="CSV 内容" rows={8} /><div className="sync-actions"><button className="secondary-button" onClick={() => void previewImport()}>映射并预览</button><button className="secondary-button" disabled={!preview} onClick={() => void commitImport()}>提交导入</button></div>{message ? <p className="form-message">{message}</p> : null}{preview ? <div className="quality-result"><strong>{preview.total} 行，指纹 {preview.fingerprint.slice(0, 12)}…</strong>{preview.rows.slice(0, 5).map((row) => <div className="operation-row" key={row.source_row}><span><strong>{row.keyword}</strong><small>第 {row.source_row} 行</small></span><em>{row.search_count ?? "无搜索量"}</em></div>)}</div> : null}</section></div>; }
 function QualityQueue({ findings, onResolve }: { findings: import("./api").QualityFinding[]; onResolve: (id: string) => void }) { return <section className="panel quality-queue"><div className="list-summary"><span>待处理隔离记录</span><b>{findings.length}</b></div>{findings.length ? findings.map((finding) => <div className="operation-row" key={finding.id ?? `${finding.rule_code}-${finding.field_name}`}><span><strong>{finding.rule_code}</strong><small>{finding.field_name} · {finding.source} · {finding.status}</small></span><em>{finding.message}</em>{finding.id ? <button className="text-button" onClick={() => onResolve(finding.id!)}>标记已处理</button> : null}</div>) : <div className="empty-search"><strong>暂无待处理质量问题</strong><span>异常数据不会覆盖业务事实</span></div>}</section>; }
 function QualityView({ state, summary, onCheck }: { state: { status: "idle" | "loading" | "ready" | "error"; result?: import("./api").QualityCheckResult; message?: string }; summary?: import("./api").QualitySummary; onCheck: () => void }) { return <div className="view-content"><PageHeading label="数据质量" title="数据质量中心" note="异常结果只作为质量提示，不静默进入运营分析" compact /><section className="panel"><div className="section-heading"><div><p className="eyebrow">DQ-003 / DQ-004 / DQ-005 / DQ-008</p><h2>问题摘要与样本检查</h2></div><button className="secondary-button" onClick={onCheck} disabled={state.status === "loading"}>{state.status === "loading" ? "检查中…" : "开始检查"}</button></div>{summary ? <div className="metric-grid"><div><small>待处理问题</small><strong>{summary.total}</strong></div><div><small>错误</small><strong>{summary.by_severity.error ?? 0}</strong></div><div><small>警告</small><strong>{summary.by_severity.warning ?? 0}</strong></div></div> : null}{state.status === "error" ? <p className="form-message">{state.message}</p> : null}{state.status === "ready" ? <div className="quality-result"><strong>{state.result?.valid ? "样本通过检查" : `发现 ${state.result?.findings.length ?? 0} 个问题`}</strong>{state.result?.findings.map((finding) => <div className="operation-row" key={`${finding.rule_code}-${finding.field_name}`}><span><strong>{finding.rule_code}</strong><small>{finding.field_name}</small></span><em>{finding.message}</em></div>)}</div> : null}{state.status === "idle" ? <div className="empty-search"><strong>尚未执行检查</strong><span>检查会调用后端质量规则，不修改业务事实</span></div> : null}</section></div>; }
@@ -290,6 +318,7 @@ export function App() {
   const metrics = useMemo(() => offers.reduce((sum, offer) => { sum.stock += offer.available_stock; sum.value += Number(offer.price) * offer.available_stock; if (!offer.available_stock) sum.empty++; else if (offer.available_stock <= LOW_STOCK_THRESHOLD) sum.risk++; return sum; }, { stock: 0, risk: 0, empty: 0, value: 0 }), [offers]);
   const filteredOffers = useMemo(() => { const needle = deferredQuery.trim().toLocaleLowerCase(); return offers.filter((offer) => (!needle || offer.name.toLocaleLowerCase().includes(needle) || offer.offer_id.toLocaleLowerCase().includes(needle)) && (stockFilter === "all" || (stockFilter === "available" && offer.available_stock > LOW_STOCK_THRESHOLD) || (stockFilter === "risk" && offer.available_stock > 0 && offer.available_stock <= LOW_STOCK_THRESHOLD) || (stockFilter === "empty" && !offer.available_stock))); }, [deferredQuery, offers, stockFilter]);
   const active = selectedWorkspace?.status === "active";
+  const pageAccessible = Boolean(active) || isSellerGateExempt(view);
   const currentViewLabel = VIEW_LABELS[view] ?? "当前功能";
   if (authLoading) return <div className="auth-state">正在恢复登录状态…</div>;
   if (!authUser) return <LoginView busy={authLoading} error={authError} onLogin={async (email, password) => { setAuthLoading(true); setAuthError(""); try { setAuthUser(await login(email, password)); } catch (error) { setAuthError(error instanceof Error ? error.message : "登录失败"); } finally { setAuthLoading(false); } }} />;
@@ -378,24 +407,24 @@ export function App() {
     {view === "listing-risk" && active ? <ListingRiskView workspaceId={selectedWorkspaceId} /> : null}
     {view === "listing-versions" && active ? <ListingVersionView workspaceId={selectedWorkspaceId} /> : null}
     {view === "listing-publish" && active ? <><ListingPublishView workspaceId={selectedWorkspaceId} /><DiffPreviewView workspaceId={selectedWorkspaceId} /><DataFreshnessView workspaceId={selectedWorkspaceId} /><DataProvenanceView workspaceId={selectedWorkspaceId} /><RelationshipQualityView workspaceId={selectedWorkspaceId} /><MoneyInventoryQualityView workspaceId={selectedWorkspaceId} /><SourceConflictView workspaceId={selectedWorkspaceId} /><QualityIsolationView workspaceId={selectedWorkspaceId} /><PriceBatchView /><ExecutionResultsView workspaceId={selectedWorkspaceId} /><ReadbackVerificationView workspaceId={selectedWorkspaceId} /><AuditEventsView workspaceId={selectedWorkspaceId} /><ManualApprovalView workspaceId={selectedWorkspaceId} /></> : null}
-    {view === "performance-oauth" && active ? <PerformanceOAuthView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "advertising-campaigns" && active ? <AdvertisingCampaignsView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "advertising-reports" && active ? <AdvertisingReportsView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "advertising-metrics" && active ? <AdvertisingMetricsView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "advertising-keywords" && active ? <AdvertisingKeywordDiagnosisView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "advertising-thresholds" && active ? <AdvertisingThresholdsView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "advertising-calendar" && active ? <AdvertisingCalendarView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "advertising-readonly" && active ? <AdvertisingReadonlyView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "model-adapter" && active ? <ModelAdapterView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "performance-oauth" && pageAccessible ? <PerformanceOAuthView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "advertising-campaigns" && pageAccessible ? <AdvertisingCampaignsView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "advertising-reports" && pageAccessible ? <AdvertisingReportsView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "advertising-metrics" && pageAccessible ? <AdvertisingMetricsView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "advertising-keywords" && pageAccessible ? <AdvertisingKeywordDiagnosisView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "advertising-thresholds" && pageAccessible ? <AdvertisingThresholdsView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "advertising-calendar" && pageAccessible ? <AdvertisingCalendarView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "advertising-readonly" && pageAccessible ? <AdvertisingReadonlyView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "model-adapter" && pageAccessible ? <ModelAdapterView workspaceId={selectedWorkspaceId} /> : null}
     {view === "readonly-tools" && active ? <ReadonlyToolsView workspaceId={selectedWorkspaceId} /> : null}
     {view === "sales-analysis" && active ? <SalesAnalysisView workspaceId={selectedWorkspaceId} /> : null}
     {view === "inventory-analysis" && active ? <InventoryAnalysisView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "advertising-analysis" && active ? <AdvertisingAnalysisView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "advertising-analysis" && pageAccessible ? <AdvertisingAnalysisView workspaceId={selectedWorkspaceId} /> : null}
     {view === "competitor-selection-analysis" && active ? <CompetitorSelectionAnalysisView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "summary-report" && active ? <SummaryReportView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "summary-report" && pageAccessible ? <SummaryReportView workspaceId={selectedWorkspaceId} /> : null}
     {view === "agent-triggers" && active ? <AgentTriggersView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "agent-permissions" && active ? <AgentPermissionsView workspaceId={selectedWorkspaceId} /> : null}
-    {view === "external-notifications" && active ? <ExternalNotificationsView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "agent-permissions" && pageAccessible ? <AgentPermissionsView workspaceId={selectedWorkspaceId} /> : null}
+    {view === "external-notifications" && pageAccessible ? <ExternalNotificationsView workspaceId={selectedWorkspaceId} /> : null}
     {/* Performance 凭据属于独立凭据域，不与 Seller 店铺绑定。 */}
     {/* Performance 凭据是账号级配置，不应被当前店铺 active 状态阻断。 */}
     {view === "performance-credentials" ? <PerformanceOAuthView workspaceId={selectedWorkspaceId} /> : null}
@@ -409,7 +438,7 @@ export function App() {
     {view === "erp-import" && active ? <ErpImportView /> : null}
     {workspaceError ? <StatePanel icon={<WarningCircle size={27} />} title="本地服务未连接" body={workspaceError} action="重新连接" onAction={() => void refreshWorkspaces()} /> : null}
     {/* 店铺状态兜底不得覆盖账号级 RAG 供应商配置页面。 */}
-    {!workspaceError && view !== "accounts" && view !== "model-providers" && view !== "model-budget" && view !== "performance-credentials" && view !== "rag-evaluation" && view !== "knowledge-query" && view !== "knowledge-sources" && !active ? <StatePanel icon={<Key size={27} />} title={selectedWorkspace ? `${currentViewLabel}暂不可用` : "还没有店铺"} body={selectedWorkspace ? `当前店铺状态为“${STATUS_LABELS[selectedWorkspace.status]}”。请先完成 Ozon Seller 凭据验证，再使用${currentViewLabel}。` : "请先连接并验证 Ozon Seller 店铺，再使用运营功能。"} action="管理店铺连接" onAction={() => setView("accounts")} /> : null}
+    {!workspaceError && view !== "accounts" && !pageAccessible ? <StatePanel icon={<Key size={27} />} title={selectedWorkspace ? `${currentViewLabel}暂不可用` : "还没有店铺"} body={selectedWorkspace ? `当前店铺状态为“${STATUS_LABELS[selectedWorkspace.status]}”。请先完成 Ozon Seller 凭据验证，再使用${currentViewLabel}。` : "请先连接并验证 Ozon Seller 店铺，再使用运营功能。"} action="管理店铺连接" onAction={() => setView("accounts")} /> : null}
     {view !== "accounts" && active && state.status === "loading" ? <div className="loading-grid"><div /><div /><div /></div> : null}
     {view !== "accounts" && active && state.status === "error" ? <StatePanel icon={<WarningCircle size={27} />} title="商品读取失败" body={state.message} action="重新加载" onAction={() => void loadOffers()} /> : null}
     {state.status === "ready" && view === "overview" ? <div className="view-content"><PageHeading label="运营总览" title="晚上好，运营人" note={`${selectedWorkspace?.display_name} · ${lastSyncedAt?.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })} 更新`} /><section className="hero-metric"><div><span>在库商品总量</span><strong>{metrics.stock.toLocaleString()}</strong><small><b>↑ 已同步</b> Ozon 实时库存</small></div><Cube size={34} weight="duotone" /></section><section className="metric-grid"><article><span>库存货值</span><strong>{Math.round(metrics.value / 1000).toLocaleString()}k</strong><small>按当前售价估算</small></article><article className="risk"><span>风险 SKU</span><strong>{metrics.risk + metrics.empty}</strong><small>{metrics.empty} 项已缺货</small></article></section><section className="panel"><div className="section-heading"><div><p className="eyebrow">库存信号</p><h2>优先处理</h2></div><button className="text-button" onClick={() => setView("products")}>查看全部 <ArrowRight size={14} /></button></div>{offers.filter((o) => o.available_stock <= LOW_STOCK_THRESHOLD).slice(0, 4).map((o) => <ProductRow offer={o} key={o.offer_id} />)}{!metrics.risk && !metrics.empty ? <div className="healthy-state"><CheckCircle size={22} />当前库存状态健康</div> : null}</section></div> : null}
