@@ -184,6 +184,17 @@ docker compose --env-file .env logs --tail=100 api worker
 
 其中 `$APP_IMAGE` 使用 `.env` 中的应用镜像完整地址；`release-marker.py` 替换为本次版本必然包含的关键文件。发布结束后还应请求公网首页，核对 HTML 引用的新 JS/CSS 哈希文件均返回 `200`。
 
+## 2026-08-17：RAG 评测结果页发布记录
+
+- 目标分支：`codex/deployment-base-images`
+- 应用提交：`15ffee8`
+- ACR 应用镜像摘要：`sha256:c90d073561c9fc6c4c8691f9952abde586724d1080b38618a479900943b95860`
+- API、Worker、Scheduler 已统一该摘要并处于运行状态。
+- Web 静态资源：`index-UodWbXQk.js`、`index-CBpUfkUt.css`，HTTPS 资源均返回 200。
+- `/api/health/live`、`/api/health/ready` 返回 200；应用导入检查通过；结果 API 未登录时正确返回 401。
+- 本次包含 PostgreSQL 迁移 `0103_rag_evaluation_results.sql`，用于保存评测运行进度和脱敏指标快照。
+- 服务器 ACR CLI 曾返回无效 AccessKey；本次由 GitHub 分支自动构建生成新摘要，未在云服务器本地构建镜像。
+
 ### 应用镜像与 Web 前端的分工
 
 - `ozonslj-api-dev` 只承载 API、Worker 和 Scheduler 的 Python 代码；后端代码变更只需要触发该应用镜像构建。

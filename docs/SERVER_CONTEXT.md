@@ -77,6 +77,13 @@ curl -fsS http://127.0.0.1/api/health/ready
 - 事故表现：目标分支已有新提交，但服务器仍是 detached 的旧 `origin/codex/deployment-base-images`；第一次 ACR 生成了新 digest，却未包含目标代码。
 - 关键教训：服务器工作树同步、GitHub 分支状态、ACR source commit 和镜像 digest 是四个独立证据，不能用任意一个替代其他证据。
 - 固定流程：本地推送 `codex/deployment-base-images` → 服务器只读核对并同步同一 commit → ACR 构建规则核对 source branch/source commit → 拉取后检查 digest 和镜像内关键代码 → 最后才重建 API/Worker/Scheduler。
+
+## 2026-08-17：RAG 评测结果页发布
+
+- 提交 `15ffee8` 已推送到 `codex/deployment-base-images`。
+- ACR 新应用摘要为 `sha256:c90d073561c9fc6c4c8691f9952abde586724d1080b38618a479900943b95860`；API、Worker、Scheduler 三者一致。
+- Web 必须单独同步到 `/opt/ozonslj/app/deploy/web/assets/`；本次 `index-UodWbXQk.js`、`index-CBpUfkUt.css` 均通过 HTTPS 200 验收。
+- 结果 API 未登录返回 401 属于认证门禁预期，不代表接口故障；登录后才读取当前组织评测运行历史。
 - 旧工作树只能被视为“未同步”，不能被视为发布源；2GB 服务器只同步代码、拉取镜像和运行 Compose，禁止本地 Docker 构建。
 - 第一次构建若出现“digest 变化但镜像内代码旧”，状态必须是发布失败/未验收；重新触发正确 ACR 构建后，必须重新检查全部证据。
 
