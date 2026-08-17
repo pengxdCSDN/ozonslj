@@ -21,6 +21,7 @@
 .rag-evaluation-search input::placeholder { color: #716b82; }
 .rag-evaluation-search label:focus-within { border-color: rgba(161,132,255,.56); box-shadow: 0 0 0 3px rgba(161,132,255,.1); }
 .rag-evaluation-controls { grid-template-columns: var(--rag-control-width) auto; align-items: end; gap: 14px; padding: 0 24px 18px; }
+.rag-evaluation-panel > .rag-evaluation-controls { grid-template-columns: var(--rag-control-width) auto !important; }
 .rag-evaluation-controls > label, .rag-case-action-field { grid-template-rows: 20px 64px; gap: 7px; font-size: 10px; }
 .rag-evaluation-controls > label > input { height: 64px; min-height: 64px; font-size: 10px; }
 .rag-case-action-field { display: grid; width: calc(var(--rag-control-width) * 3 + 16px); align-content: end; color: var(--fd-text-soft); font-size: 10px; font-weight: 700; }
