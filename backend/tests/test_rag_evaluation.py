@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from backend.app.api.dependencies import get_rag_evaluation_gateway
 from backend.app.api.routes.rag_evaluation import router
-from backend.app.domain.rag_evaluation import EvaluationCase
+from backend.app.domain.rag_evaluation import EvaluationCase, EvaluationRun
 from backend.app.domain.rag_evaluation_corpus import fixed_evaluation_corpus, fixed_suite_case_ids
 
 
@@ -53,6 +53,18 @@ class MemoryEvaluationGateway:
 
     async def create_run(self, suite: str, gate_status: str) -> str:
         return f"test-run-{suite}"
+
+    async def list_runs(self, limit: int = 20) -> list[EvaluationRun]:
+        return []
+
+    async def get_run(self, run_id: str) -> EvaluationRun | None:
+        return None
+
+    async def save_run_metrics(
+        self, run_id: str, metrics: dict[str, float | str], executed_count: int,
+        passed_count: int, failed_count: int, error_count: int,
+    ) -> EvaluationRun | None:
+        return None
 
 
 def make_app() -> FastAPI:
@@ -140,3 +152,9 @@ def test_case_list_supports_search_and_pagination() -> None:
     assert body["total"] > 0
     assert len(body["items"]) <= 2
     assert all("Embedding" in item["question"] for item in body["items"])
+
+
+def test_results_page_api_exposes_run_history_without_source_content() -> None:
+    response = TestClient(make_app()).get("/v1/rag-evaluation/runs")
+    assert response.status_code == 200
+    assert response.json() == []

@@ -47,6 +47,27 @@
 .rag-suite-actions { padding: 16px 24px 20px; }
 .rag-suite-actions .secondary-button { width: var(--rag-control-width); min-width: var(--rag-control-width); height: var(--rag-control-height); min-height: var(--rag-control-height); padding-block: 0; }
 .rag-run-result { margin: 0 24px 20px; }
+.rag-results-panel { overflow: hidden; }
+.rag-results-panel .section-heading { min-height: 0; padding: 20px 24px 16px; }
+.rag-results-refresh { min-height: 34px; padding: 0 14px; font-size: 10px; }
+.rag-run-history { display: grid; gap: 1px; background: rgba(143,112,255,.1); }
+.rag-run-card { display: grid; gap: 14px; padding: 18px 24px 20px; background: rgba(18,17,38,.82); }
+.rag-run-card-heading, .rag-run-progress { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.rag-run-card-heading > div { display: grid; gap: 5px; min-width: 0; }
+.rag-run-card-heading strong { color: var(--fd-text); font-size: 12px; }
+.rag-run-card-heading small, .rag-run-progress, .rag-result-pending { color: var(--fd-muted); font-size: 9px; }
+.rag-run-card-heading em { flex: 0 0 auto; padding: 5px 10px; border: 1px solid rgba(161,132,255,.2); border-radius: 99px; color: var(--fd-violet-hot); font-size: 9px; font-style: normal; }
+.rag-run-card-heading em.is-passed { border-color: rgba(92,224,186,.3); color: #78e4c4; background: rgba(45,137,111,.14); }
+.rag-run-card-heading em.is-failed { border-color: rgba(255,120,145,.3); color: #ff8da8; background: rgba(160,53,81,.14); }
+.rag-run-progress { justify-content: flex-start; padding: 9px 11px; border: 1px solid rgba(143,112,255,.12); border-radius: 9px; background: rgba(8,8,20,.32); }
+.rag-run-progress strong { color: var(--fd-text); font-size: 11px; }
+.rag-result-metrics { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.rag-result-metrics > div { display: grid; gap: 4px; min-width: 0; padding: 10px; border: 1px solid rgba(161,132,255,.18); border-radius: 9px; background: rgba(30,27,55,.58); }
+.rag-result-metrics span, .rag-result-metrics small { color: var(--fd-muted); font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rag-result-metrics strong { color: #ffb27d; font-size: 15px; }
+.rag-result-metrics .metric-passed { border-color: rgba(92,224,186,.25); }
+.rag-result-metrics .metric-passed strong { color: #78e4c4; }
+.rag-result-pending { padding: 13px 14px; border-left: 2px solid var(--fd-violet); background: rgba(67,48,112,.16); }
 @media (max-width: 720px) {
   .rag-evaluation-panel .section-heading, .rag-evaluation-run-panel .section-heading,
   .rag-metrics, .rag-evaluation-search, .rag-evaluation-controls, .rag-case-row,
@@ -65,6 +86,8 @@
   .rag-pagination { align-items: flex-start; flex-direction: column; gap: 10px; }
   .rag-page-controls { justify-content: flex-start; }
   .rag-run-result { margin-inline: 15px; }
+  .rag-results-panel .section-heading, .rag-run-card { padding-inline: 15px; }
+  .rag-result-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .rag-evaluation-search label { transition: none; }

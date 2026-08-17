@@ -988,8 +988,11 @@ export interface RagEvaluationCasesPage {
 export interface RagEvaluationBatchConfirmResult { confirmed_count: number; confirmed_case_ids: string[]; }
 export interface RagEvaluationRun {
   run_id: string; status: string; suite: "quick" | "standard" | "full";
-  target_count: number; confirmed_count: number; case_ids: string[]; gate_status: "ready" | "blocked";
+  target_count: number; executed_count: number; passed_count: number; failed_count: number; error_count: number;
+  confirmed_count?: number; case_ids?: string[]; metrics?: RagEvaluationMetrics | null;
+  gate_status: "ready" | "blocked";
 }
+export interface RagEvaluationMetrics { [key: string]: number | string; }
 export function listRagEvaluationCases(page = 1, pageSize = 20, query = ""): Promise<RagEvaluationCasesPage> {
   const encodedQuery = encodeURIComponent(query.trim());
   return requestJson(`/v1/rag-evaluation/cases?page=${page}&page_size=${pageSize}&q=${encodedQuery}`, { method: "GET" });
@@ -1006,6 +1009,9 @@ export function confirmRagEvaluationCasesBatch(caseIds: string[], reviewer: stri
 }
 export function startRagEvaluation(suite: RagEvaluationRun["suite"]): Promise<RagEvaluationRun> {
   return requestJson("/v1/rag-evaluation/runs", { method: "POST", body: JSON.stringify({ suite }) });
+}
+export function listRagEvaluationRuns(limit = 20): Promise<RagEvaluationRun[]> {
+  return requestJson(`/v1/rag-evaluation/runs?limit=${limit}`, { method: "GET" });
 }
 
 export function listModelBudgets(): Promise<ModelBudget[]> {

@@ -5,17 +5,24 @@ from __future__ import annotations
 from typing import Annotated, Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.app.api.dependencies import get_rag_evaluation_gateway
-from backend.app.domain.rag_evaluation import EvaluationCase, RagEvaluationGateway, suite_case_limit
+from backend.app.domain.knowledge_runtime import get_knowledge_runtime, resolve_knowledge_engine
+from backend.app.domain.rag_evaluation import (
+    EvaluationCase,
+    EvaluationRun,
+    RagEvaluationGateway,
+    suite_case_limit,
+)
 from backend.app.domain.rag_evaluation_corpus import fixed_evaluation_corpus, fixed_suite_case_ids
 from backend.app.domain.rag_metrics import (
     EvaluationObservation,
     calculate_metrics,
     quality_gate_passed,
 )
+from backend.app.domain.rag_quality_runner import run_fixed_quality_suite
 
 router = APIRouter(prefix="/v1/rag-evaluation", tags=["rag-evaluation"])
 
@@ -81,6 +88,28 @@ class MetricObservationPayload(BaseModel):
     safety_passed: bool = True
     degradation_expected: bool = False
     degradation_observed: bool = False
+
+
+class EvaluationRunResponse(BaseModel):
+    run_id: str
+    suite: str
+    status: str
+    gate_status: str
+    target_count: int
+    executed_count: int
+    passed_count: int
+    failed_count: int
+    error_count: int
+    metrics: dict[str, float | str] | None = None
+
+
+def _run_response(run: EvaluationRun) -> EvaluationRunResponse:
+    return EvaluationRunResponse(
+        run_id=run.run_id, suite=run.suite, status=run.status, gate_status=run.gate_status,
+        target_count=run.target_count, executed_count=run.executed_count,
+        passed_count=run.passed_count, failed_count=run.failed_count,
+        error_count=run.error_count, metrics=run.metrics,
+    )
 
 
 def _response(case: EvaluationCase) -> EvaluationCaseResponse:
@@ -170,6 +199,7 @@ async def confirm_evaluation_case(
 @router.post("/runs", response_model=dict[str, object], status_code=202)
 async def start_evaluation(
     payload: EvaluationRunPayload,
+    background_tasks: BackgroundTasks,
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> dict[str, object]:
     await gateway.seed_fixed_cases(_fixed_cases())
@@ -181,13 +211,51 @@ async def start_evaluation(
     gate_status: Literal["ready", "blocked"] = (
         "ready" if len(confirmed) == limit else "blocked"
     )
+    run_id = await gateway.create_run(payload.suite, gate_status)
+    if gate_status == "ready":
+        background_tasks.add_task(_execute_run, gateway, run_id, payload.suite)
     return {
-        "run_id": await gateway.create_run(payload.suite, gate_status),
+        "run_id": run_id,
         "status": "queued", "suite": payload.suite,
         "target_count": limit, "confirmed_count": len(confirmed),
         "case_ids": list(target_ids),
         "gate_status": gate_status,
     }
+
+
+async def _execute_run(gateway: RagEvaluationGateway, run_id: str, suite: str) -> None:
+    """启动固定集执行器并回写结果；错误只落聚合计数，不保存模型原文。"""
+    try:
+        runtime = get_knowledge_runtime()
+        engine = await resolve_knowledge_engine(runtime)
+        report = await run_fixed_quality_suite(engine, suite)  # type: ignore[arg-type]
+    except Exception:
+        # 运行时不可用也必须结束为失败，不能让结果页永久显示“等待执行”。
+        await gateway.save_run_metrics(
+            run_id,
+            {"gate_status": "blocked", "error_code": "evaluation_runtime_failed"},
+            0, 0, 0, suite_case_limit(suite),
+        )
+        return
+    metrics = {
+        "recall": report.metrics.recall, "precision": report.metrics.precision,
+        "citation_support_rate": report.metrics.citation_support_rate,
+        "correct_refusal_rate": report.metrics.correct_refusal_rate,
+        "average_latency_ms": report.metrics.average_latency_ms,
+        "estimated_cost": report.metrics.estimated_cost,
+        "recall_at_5": report.metrics.recall_at_5, "recall_at_10": report.metrics.recall_at_10,
+        "precision_at_5": report.metrics.precision_at_5,
+        "multi_intent_completeness": report.metrics.multi_intent_completeness,
+        "safety_pass_rate": report.metrics.safety_pass_rate,
+        "degradation_pass_rate": report.metrics.degradation_pass_rate,
+        "gate_status": "passed" if quality_gate_passed(report.metrics) else "blocked",
+    }
+    await gateway.save_run_metrics(
+        run_id, metrics, report.executed_count,
+        report.executed_count if report.status == "completed" else 0,
+        max(report.executed_count - report.error_count, 0) if report.status != "completed" else 0,
+        report.error_count,
+    )
 
 
 @router.post("/metrics", response_model=dict[str, object])
@@ -223,3 +291,43 @@ async def calculate_evaluation_metrics(
         "degradation_pass_rate": metrics.degradation_pass_rate,
         "gate_status": "passed" if quality_gate_passed(metrics) else "blocked",
     }
+
+
+@router.get("/runs", response_model=list[EvaluationRunResponse])
+async def list_evaluation_runs(
+    gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
+    limit: int = Query(default=20, ge=1, le=100),
+) -> list[EvaluationRunResponse]:
+    """结果页读取当前组织的运行历史；不返回案例正文或模型原始响应。"""
+    return [_run_response(run) for run in await gateway.list_runs(limit)]
+
+
+@router.get("/runs/{run_id}", response_model=EvaluationRunResponse)
+async def get_evaluation_run(
+    run_id: str,
+    gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
+) -> EvaluationRunResponse:
+    run = await gateway.get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="评测运行不存在或不可见")
+    return _run_response(run)
+
+
+@router.post("/runs/{run_id}/metrics", response_model=EvaluationRunResponse)
+async def save_evaluation_run_metrics(
+    run_id: str,
+    observations: list[MetricObservationPayload],
+    gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
+) -> EvaluationRunResponse:
+    """由评测 Worker 回写聚合指标；只接受已通过启动门禁的运行。"""
+    if not observations:
+        raise HTTPException(status_code=422, detail="评测结果不能为空")
+    calculated = await calculate_evaluation_metrics(observations)
+    saved = await gateway.save_run_metrics(
+        run_id,
+        {key: value for key, value in calculated.items() if isinstance(value, (int, float, str))},
+        len(observations), len(observations), 0, 0,
+    )
+    if saved is None:
+        raise HTTPException(status_code=409, detail="评测运行未通过门禁或已完成")
+    return _run_response(saved)

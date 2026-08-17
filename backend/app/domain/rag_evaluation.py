@@ -19,6 +19,21 @@ class EvaluationCase:
     status: EvaluationStatus = "draft"
 
 
+@dataclass(frozen=True, slots=True)
+class EvaluationRun:
+    """一次评测运行的脱敏汇总；指标由运行器完成后回写。"""
+    run_id: str
+    suite: str
+    status: str
+    gate_status: str
+    target_count: int
+    executed_count: int = 0
+    passed_count: int = 0
+    failed_count: int = 0
+    error_count: int = 0
+    metrics: dict[str, float | str] | None = None
+
+
 class RagEvaluationGateway(Protocol):
     """评测案例持久化端口；API 不直接依赖 PostgreSQL 驱动。"""
 
@@ -35,6 +50,12 @@ class RagEvaluationGateway(Protocol):
     ) -> list[EvaluationCase]: ...
 
     async def create_run(self, suite: str, gate_status: Literal["ready", "blocked"]) -> str: ...
+    async def list_runs(self, limit: int = 20) -> list[EvaluationRun]: ...
+    async def get_run(self, run_id: str) -> EvaluationRun | None: ...
+    async def save_run_metrics(
+        self, run_id: str, metrics: dict[str, float | str], executed_count: int,
+        passed_count: int, failed_count: int, error_count: int,
+    ) -> EvaluationRun | None: ...
 
 
 def confirm_case(case: EvaluationCase, *, reviewer: str) -> EvaluationCase:

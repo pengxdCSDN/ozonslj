@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import uuid4
 
-from backend.app.domain.rag_evaluation import EvaluationCase, RagEvaluationGateway
+from backend.app.domain.rag_evaluation import EvaluationCase, EvaluationRun, RagEvaluationGateway
 from backend.app.infrastructure.postgresql.session import PostgresSessionFactory, TenantContext
 
 
@@ -115,6 +115,66 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
             )
         return run_id
 
+    async def list_runs(self, limit: int = 20) -> list[EvaluationRun]:
+        return await asyncio.to_thread(self._list_runs, min(max(limit, 1), 100))
+
+    def _list_runs(self, limit: int) -> list[EvaluationRun]:
+        with self._sessions.transaction(self._context) as connection:
+            rows = connection.execute(
+                """SELECT id, suite, status, gate_status, executed_count, passed_count,
+                          failed_count, error_count, metrics
+                     FROM rag_evaluation_runs WHERE organization_id = %s
+                     ORDER BY created_at DESC, id DESC LIMIT %s""",
+                (self._context.organization_id, limit),
+            ).fetchall()
+        return [_run(row) for row in rows]
+
+    async def get_run(self, run_id: str) -> EvaluationRun | None:
+        return await asyncio.to_thread(self._get_run, run_id)
+
+    def _get_run(self, run_id: str) -> EvaluationRun | None:
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
+                """SELECT id, suite, status, gate_status, executed_count, passed_count,
+                          failed_count, error_count, metrics
+                     FROM rag_evaluation_runs
+                     WHERE organization_id = %s AND id = %s""",
+                (self._context.organization_id, run_id),
+            ).fetchone()
+        return _run(row) if row is not None else None
+
+    async def save_run_metrics(
+        self, run_id: str, metrics: dict[str, float | str], executed_count: int,
+        passed_count: int, failed_count: int, error_count: int,
+    ) -> EvaluationRun | None:
+        return await asyncio.to_thread(
+            self._save_run_metrics, run_id, metrics, executed_count,
+            passed_count, failed_count, error_count,
+        )
+
+    def _save_run_metrics(
+        self, run_id: str, metrics: dict[str, float | str], executed_count: int,
+        passed_count: int, failed_count: int, error_count: int,
+    ) -> EvaluationRun | None:
+        import json
+        status = "succeeded" if metrics.get("gate_status") == "passed" else "failed"
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
+                """UPDATE rag_evaluation_runs
+                   SET status = %s, executed_count = %s, passed_count = %s,
+                       failed_count = %s, error_count = %s, metrics = %s::jsonb,
+                       completed_at = CURRENT_TIMESTAMP
+                   WHERE organization_id = %s AND id = %s AND gate_status = 'ready'
+                   RETURNING id, suite, status, gate_status, executed_count, passed_count,
+                             failed_count, error_count, metrics""",
+                (
+                    status, executed_count, passed_count, failed_count, error_count,
+                    json.dumps(metrics),
+                    self._context.organization_id, run_id,
+                ),
+            ).fetchone()
+        return _run(row) if row is not None else None
+
 
 def _case(row: dict[str, Any]) -> EvaluationCase:
     """将数据库数组字段还原为不可变领域值，避免 API 层携带驱动对象。"""
@@ -122,4 +182,16 @@ def _case(row: dict[str, Any]) -> EvaluationCase:
         case_id=row["id"], question=row["question"], expected_status=row["expected_status"],
         expected_sources=tuple(row["expected_sources"] or []),
         safety_tags=tuple(row["safety_tags"] or []), status=row["status"],
+    )
+
+
+def _run(row: dict[str, Any]) -> EvaluationRun:
+    """将 JSONB 聚合结果转换为前端可安全展示的脱敏摘要。"""
+    return EvaluationRun(
+        run_id=row["id"], suite=row["suite"], status=row["status"],
+        gate_status=row["gate_status"],
+        target_count={"quick": 30, "standard": 120, "full": 240}[row["suite"]],
+        executed_count=row.get("executed_count", 0), passed_count=row.get("passed_count", 0),
+        failed_count=row.get("failed_count", 0), error_count=row.get("error_count", 0),
+        metrics=row.get("metrics") or None,
     )

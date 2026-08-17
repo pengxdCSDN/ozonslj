@@ -250,8 +250,13 @@ Retry-After: 2
 | POST | `/v1/rag-evaluation/cases/{case_id}/confirm` | 单条人工确认 |
 | POST | `/v1/rag-evaluation/cases/confirm-batch` | 批量人工确认，最多 240 个案例 |
 | POST | `/v1/rag-evaluation/runs` | 创建评测运行并计算确认门禁 |
+| GET | `/v1/rag-evaluation/runs?limit=20` | 查看当前组织的评测运行历史与脱敏指标 |
+| GET | `/v1/rag-evaluation/runs/{run_id}` | 查看单次评测运行结果 |
+| POST | `/v1/rag-evaluation/runs/{run_id}/metrics` | 由评测 Worker 回写单次运行的聚合指标 |
 
 评测案例列表响应为 `{items, total, page, page_size, total_pages, draft_count, confirmed_count}`。历史 `fixed-rag-v1` 案例保留在 PostgreSQL 供审计，但列表只展示当前 `fixed-rag-v2`；Seller 店铺未验证不阻断 RAG 评测页面。
+
+评测结果页读取运行历史中的 `status`、`executed_count`、错误数量和指标快照。指标快照只保存 Recall、Precision、引用支持率、正确拒答率、多意图、安全和主备降级等聚合结果，不保存问题正文、提示词、凭据或模型原始响应。`gate_status=ready` 仅表示案例确认门禁通过；只有运行完成并且指标达到 [RAG 质量运行手册](./RAG_QUALITY_RUNBOOK.md) 的硬门槛时，结果状态才显示为质量通过。
 
 固定 400 例通过 PostgreSQL 幂等种子写入；确认状态、确认人和确认时间不保存在 API 进程内存中，API 重启后必须保持。未确认案例不能通过运行门禁。
 
