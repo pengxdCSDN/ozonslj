@@ -22,6 +22,7 @@
 .rag-evaluation-search label:focus-within { border-color: rgba(161,132,255,.56); box-shadow: 0 0 0 3px rgba(161,132,255,.1); }
 .rag-evaluation-controls { grid-template-columns: minmax(320px, 1fr) auto; align-items: end; gap: 14px; padding: 0 24px 18px; }
 .rag-evaluation-controls label { gap: 7px; }
+.rag-case-action-field { display: grid; gap: 7px; align-content: end; color: var(--fd-text-soft); font-size: 10px; font-weight: 700; }
 .rag-case-actions { justify-content: flex-start; gap: 8px; padding: 0; }
 .rag-case-actions .primary-button, .rag-case-actions .secondary-button { min-height: 42px; }
 .rag-case-actions button { white-space: nowrap; }
@@ -48,6 +49,7 @@
   .rag-metrics, .rag-evaluation-search, .rag-evaluation-controls, .rag-case-row,
   .rag-pagination, .rag-suite-actions { padding-inline: 15px; }
   .rag-metrics, .rag-evaluation-controls { grid-template-columns: 1fr; }
+  .rag-case-action-field { width: 100%; }
   .rag-case-actions { justify-content: flex-start; }
   .rag-case-row { grid-template-columns: 22px minmax(0,1fr) !important; gap: 10px; }
   .rag-case-row em { grid-column: 2 !important; justify-self: start; }
