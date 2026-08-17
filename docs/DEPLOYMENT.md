@@ -262,6 +262,14 @@ docker compose --env-file .env logs --tail=100 api worker
 - 页面现在会调用 PDF 隔离上传接口并展示结构检查、杀毒状态和阻断原因；未配置杀毒服务时保持 `quarantined`，禁止自动解析二进制 PDF。
 - 应用镜像新增 Python 依赖时，Dockerfile 必须在安装项目后执行关键依赖 import 校验；依赖缺失必须使 ACR 构建失败，禁止把“健康但功能缺依赖”的镜像部署到云端。
 
+## 2026-08-17 OCR 扫描 PDF 分流与部署流程
+
+- 应用提交：本次 OCR 功能提交以 Git 记录为准；发布前必须确认分支为 `codex/deployment-base-images`。
+- 普通文本层 PDF 不调用 OCR；扫描 PDF 仅在配置 PaddleOCR HTTPS 端点时调用 `paddleocr-doc-parsing` 适配器，未配置时返回 `ocr_required`。
+- OCR 供应商令牌只通过运行时 Secret 或 `PADDLEOCR_ACCESS_TOKEN_FILE` 注入；不得写入仓库、镜像、前端或日志。
+- ACR 构建完成后核对 source commit、镜像 digest、镜像内 `backend/app/infrastructure/ocr/paddleocr_document_parser.py` 和 API/Worker/Scheduler 摘要一致，再执行云端健康检查。
+- 云端验收至少覆盖：文本层 PDF 不调用 OCR、扫描 PDF 配置缺失阻断、OCR 成功/超时/429/403、切片预览和发布门禁。没有真实 OCR 凭据时，不能报告“真实 OCR 调用通过”，只能报告检测与安全阻断通过。
+
 ## 2026-08-16 第五组 RAG 供应商能力验收
 
 - 应用提交：`59588c5`；ACR 应用镜像摘要：`sha256:6663533ac2da95bdb36f658ad1241c9d485ea58bb09bf7047efaaafb2d951d0c`。

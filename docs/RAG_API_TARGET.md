@@ -365,7 +365,7 @@ API 层只接收一次明文 `api_key` 并立即交给 `HostFileModelCredentialS
 | `knowledge_version_not_ready` | 409 | 前置阶段未完成 |
 | `knowledge_quality_gate_failed` | 422 | 质量报告存在阻断项 |
 | `knowledge_parser_unsupported` | 422 | 文件或解析配置不支持 |
-| `knowledge_ocr_review_required` | 422 | 检测到扫描型 PDF；首期不运行 OCR，需人工复核或提供带文本层版本 |
+| `knowledge_ocr_review_required` | 422 | OCR 未配置、失败或质量门禁要求复核；不能把空正文送入切片 |
 | `knowledge_file_dangerous_feature` | 422 | PDF 包含脚本、启动动作、附件、外部资源或其他首期禁止特性 |
 | `knowledge_file_resource_bomb` | 422 | 对象数、解压大小、嵌套深度或沙箱资源超过限制 |
 | `knowledge_parser_sandbox_failed` | 503 | 解析沙箱超时、资源终止或异常退出，失败关闭 |

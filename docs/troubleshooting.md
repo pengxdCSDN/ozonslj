@@ -292,7 +292,8 @@ OpenAI 兼容协议不代表所有供应商支持完全相同的可选字段。S
 - **Web 重建后 Nginx 找不到 TLS 证书并反复重启**：若日志出现 `cannot load certificate /etc/nginx/tls/server.crt`，说明 Compose 漏挂服务器 `deploy/secrets/tls`。证书只能从服务器密钥目录只读挂载到 `/etc/nginx/tls`，禁止提交、输出或重新生成临时证书；补齐挂载后再执行 Web 重建并验证 HTTPS。
 - **知识管理页面选择 PDF 后不能直接预览**：这是安全门禁的预期行为。页面会先调用 PDF 隔离上传接口；当杀毒服务未配置时状态为 `quarantined`，不会把二进制内容送入知识解析或标记为可检索。完成隔离扫描能力后，才能开放自动文本层提取。
 - **PDF 隔离文件权限异常**：隔离目录必须由服务创建为 `0700`，文件以 UUID 命名并使用 `0600` 独占创建；不要把隔离目录挂到 Web 静态目录，不要返回真实服务器路径。当前内部环境允许从隔离文件提取文本层；真实店铺接入前必须增加扫描通过门禁。
-- **PDF 上传成功但没有正文**：调用文本层提取接口后若返回 `no_text_layer`，说明文件是扫描件或提取器无法识别文字，不能把空内容送入切片；后续接入 OCR 后再处理。
+- **PDF 上传成功但没有正文**：返回 `ocr_required` 表示检测到扫描件但未配置 PaddleOCR；返回 `ocr_failed` 表示 OCR 服务超时、限流、认证失败或返回无效正文。两种状态都不能把空内容送入切片；先检查 `PADDLEOCR_DOC_PARSING_API_URL`、Secret 文件和服务配额，再重试。
+- **OCR 调用后切片异常**：复杂 PDF 优先使用 `pdf_layout_blocks`，确认 OCR 返回页面 Markdown 和版面块；不要把 OCR 原始 JSON 直接送入切片器。完整流程见 [`RAG_OCR_PROCESSING.md`](./RAG_OCR_PROCESSING.md)。
 - **版本发布提示尚未完成切片**：检查前端是否在创建正式版本后再次调用解析接口，并传入正式 `document_version_id`；不能使用预览阶段的临时版本 ID 作为正式草稿的切片归属。
 - **任务中心状态不更新**：确认页面仍在挂载状态且请求 `/v1/knowledge-tasks` 返回成功；页面默认每 5 秒刷新一次，网络失败会显示任务状态加载错误，不应凭旧页面状态判断任务结果。
 - **任务无法确认对应版本**：检查任务接口是否返回 `source_id` 和 `document_version_id`；这两个字段来自 PostgreSQL 任务事实，不应由前端推断或使用当前选中行替代。
