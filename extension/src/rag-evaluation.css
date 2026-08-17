@@ -1,5 +1,5 @@
 /* RAG 评测页专属覆盖：必须在全局主题之后加载，保证长列表保持紧凑、可扫描。 */
-.rag-evaluation-view { --rag-control-width: 150px; gap: 16px; }
+.rag-evaluation-view { --rag-control-width: 150px; --rag-control-height: 42px; gap: 16px; }
 .rag-evaluation-heading { max-width: 900px; padding-bottom: 4px; }
 .rag-evaluation-heading p:last-child { max-width: 62ch; line-height: 1.6; }
 .rag-evaluation-panel, .rag-evaluation-run-panel { overflow: hidden; }
@@ -22,11 +22,11 @@
 .rag-evaluation-search label:focus-within { border-color: rgba(161,132,255,.56); box-shadow: 0 0 0 3px rgba(161,132,255,.1); }
 .rag-evaluation-controls { grid-template-columns: var(--rag-control-width) auto; align-items: end; gap: 14px; padding: 0 24px 18px; }
 .rag-evaluation-panel > .rag-evaluation-controls { grid-template-columns: var(--rag-control-width) auto !important; }
-.rag-evaluation-controls > label, .rag-case-action-field { grid-template-rows: 20px 64px; gap: 7px; font-size: 10px; }
-.rag-evaluation-controls > label > input { height: 64px; min-height: 64px; font-size: 10px; }
+.rag-evaluation-controls > label, .rag-case-action-field { grid-template-rows: 20px var(--rag-control-height); gap: 7px; font-size: 10px; }
+.rag-evaluation-controls > label > input { height: var(--rag-control-height); min-height: var(--rag-control-height); font-size: 10px; }
 .rag-case-action-field { display: grid; width: calc(var(--rag-control-width) * 3 + 16px); align-content: end; color: var(--fd-text-soft); font-size: 10px; font-weight: 700; }
-.rag-case-actions { height: 64px; align-items: stretch; justify-content: flex-start; gap: 8px; padding: 0; }
-.rag-case-actions .primary-button, .rag-case-actions .secondary-button { width: var(--rag-control-width); height: 64px; min-height: 64px; flex: 0 0 var(--rag-control-width); margin: 0; padding-inline: 8px; padding-block: 0; font-size: 10px; letter-spacing: -.015em; }
+.rag-case-actions { height: var(--rag-control-height); align-items: stretch; justify-content: flex-start; gap: 8px; padding: 0; }
+.rag-case-actions .primary-button, .rag-case-actions .secondary-button { width: var(--rag-control-width); height: var(--rag-control-height); min-height: var(--rag-control-height); flex: 0 0 var(--rag-control-width); margin: 0; padding-inline: 8px; padding-block: 0; font-size: 10px; letter-spacing: -.015em; }
 .rag-case-actions button { white-space: nowrap; }
 .rag-case-row { grid-template-columns: 22px minmax(0, 1fr) auto !important; align-items: center; gap: 14px; min-height: 64px; padding: 12px 24px; border-top: 1px solid rgba(143,112,255,.1); }
 .rag-case-row input { width: 16px; height: 16px; margin: 0; accent-color: #a98bff; }
@@ -45,7 +45,7 @@
 .rag-page-jump input::-webkit-inner-spin-button, .rag-page-jump input::-webkit-outer-spin-button { margin: 0; }
 .rag-page-jump .secondary-button { min-height: 32px; }
 .rag-suite-actions { padding: 16px 24px 20px; }
-.rag-suite-actions .secondary-button { width: var(--rag-control-width); min-width: var(--rag-control-width); }
+.rag-suite-actions .secondary-button { width: var(--rag-control-width); min-width: var(--rag-control-width); height: var(--rag-control-height); min-height: var(--rag-control-height); padding-block: 0; }
 .rag-run-result { margin: 0 24px 20px; }
 @media (max-width: 720px) {
   .rag-evaluation-panel .section-heading, .rag-evaluation-run-panel .section-heading,
@@ -57,7 +57,7 @@
   .rag-suite-actions .secondary-button { width: auto; min-width: 0; flex: 1 1 auto; }
   .rag-evaluation-controls > label, .rag-case-action-field { grid-template-rows: auto auto; }
   .rag-case-actions { height: auto; align-items: center; }
-  .rag-case-actions .primary-button, .rag-case-actions .secondary-button { height: 42px; min-height: 42px; }
+  .rag-case-actions .primary-button, .rag-case-actions .secondary-button { height: var(--rag-control-height); min-height: var(--rag-control-height); }
   .rag-case-action-field { width: 100%; }
   .rag-case-actions { justify-content: flex-start; }
   .rag-case-row { grid-template-columns: 22px minmax(0,1fr) !important; gap: 10px; }
