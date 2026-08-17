@@ -402,6 +402,44 @@ body { font-size: 12px; }
 .state-panel p, .quality-result, .quality-result span { font-size: 13px; }
 .workspace-main small, .workspace-menu small { font-size: 10px; }
 
+/* 知识源接入区使用同一条操作基线：文件选择、预览和创建按钮高度一致，降低原生控件的突兀感。 */
+.knowledge-source-create .knowledge-file-field { grid-column: 1 / -1; max-width: 640px; }
+.knowledge-source-create .knowledge-file-input {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  padding: 4px 8px;
+  color: var(--fd-text-soft);
+  cursor: pointer;
+}
+.knowledge-source-create .knowledge-file-input::file-selector-button {
+  margin-right: 10px;
+  padding: 7px 11px;
+  border: 1px solid rgba(161, 132, 255, 0.25);
+  border-radius: 8px;
+  color: var(--fd-text-soft);
+  background: rgba(65, 49, 105, 0.72);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.knowledge-source-create .knowledge-file-input:hover::file-selector-button { border-color: rgba(161, 132, 255, 0.5); background: rgba(82, 63, 129, 0.82); }
+.knowledge-source-create > textarea { width: calc(100% - 36px); margin: 0 18px 16px; }
+.knowledge-source-actions { align-items: stretch; margin: 0 18px 16px; gap: 10px; }
+.knowledge-source-actions .knowledge-action-button { min-width: 148px; min-height: 40px; margin: 0; border-radius: 11px; box-shadow: none; }
+.knowledge-source-actions .primary-button { border-color: rgba(196, 174, 255, 0.2); background: linear-gradient(120deg, rgba(151, 102, 225, 0.92), rgba(111, 99, 218, 0.92)); }
+.knowledge-source-actions .secondary-button { background: rgba(57, 45, 93, 0.68); }
+.knowledge-source-filter { width: min(100%, 320px); min-height: 40px; padding: 0 13px; border: 1px solid rgba(143, 112, 255, 0.18); border-radius: 10px; color: var(--fd-text); background: rgba(8, 8, 20, 0.58); box-shadow: inset 0 1px rgba(255, 255, 255, 0.025); }
+.knowledge-source-filter::placeholder { color: var(--fd-muted); }
+.knowledge-source-filter:focus-visible { border-color: var(--fd-violet); outline: 0; box-shadow: 0 0 0 3px rgba(161, 132, 255, 0.12); }
+@media (max-width: 700px) {
+  .knowledge-source-create .knowledge-file-field { max-width: none; }
+  .knowledge-source-actions .knowledge-action-button { flex: 1 1 148px; }
+  .knowledge-source-filter { width: 100%; }
+  .knowledge-source-create .section-heading { align-items: stretch; flex-direction: column; gap: 10px; }
+}
+
 @keyframes feedback-toast-in {
   from { opacity: 0; transform: translate3d(0, -8px, 0); }
   to { opacity: 1; transform: translate3d(0, 0, 0); }
