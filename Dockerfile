@@ -11,6 +11,15 @@ ENV OZONSLJ_RELEASE_REVISION=${RELEASE_REVISION}
 
 WORKDIR /app
 
+# 本地 OCR 只安装轻量运行依赖；不引入云端服务和访问令牌，中文/英文识别按页串行执行。
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        poppler-utils \
+        tesseract-ocr \
+        tesseract-ocr-chi-sim \
+        tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY pyproject.toml ./
 COPY backend ./backend
 COPY database/postgresql_schema.sql ./database/postgresql_schema.sql
@@ -19,7 +28,9 @@ COPY scripts/create_operator.py ./scripts/create_operator.py
 
 RUN python -m pip install --upgrade pip \
     && python -m pip install . \
-    && python -c "import pypdf; print('pypdf dependency installed')"
+    && python -c "import pypdf; print('pypdf dependency installed')" \
+    && tesseract --version >/dev/null \
+    && pdftoppm -v >/dev/null 2>&1
 
 RUN groupadd --system --gid 10001 appuser \
     && useradd --system --uid 10001 --gid 10001 --create-home appuser \

@@ -159,8 +159,8 @@ RAG 评测页面已解除 Seller 店铺状态门禁，并完成当前语料分�
 
 ## 2026-08-17 OCR 扫描 PDF 分流
 
-已完成 OCR 适配器、扫描件检测、前端状态展示、脱敏错误处理、结构化页面正文到现有切片链路的接入，并同步 [RAG_OCR_PROCESSING](./RAG_OCR_PROCESSING.md) 与部署/故障流程文档。普通文本层 PDF 不调用 OCR；扫描 PDF 在 PaddleOCR 配置可用时返回 `ocr_extracted`，未配置时返回 `ocr_required` 并阻断发布。
+已完成 OCR 适配器、扫描件检测、前端状态展示、脱敏错误处理、页级正文到现有切片链路的接入，并同步 [RAG_OCR_PROCESSING](./RAG_OCR_PROCESSING.md) 与部署/故障流程文档。普通文本层 PDF 不调用 OCR；扫描 PDF 使用本地 Tesseract 返回 `ocr_extracted`，本地依赖缺失时返回 `ocr_required` 并阻断发布。
 
 本地 OCR 契约及 PDF/知识切片回归通过；TypeScript 和 Vite Web 构建通过。完整后端回归有 2 项既有迁移版本断言失败（测试硬编码 102，当前仓库最新迁移为 103），与 OCR 改动无关，未修改无关基线。
 
-云端已按 `codex/deployment-base-images` 的提交 `6c762d9` 触发 ACR 并部署应用摘要 `sha256:a141826a0cfd2c0e53936fb960fc96446aa9c20a6741ae1fe3c7d791f6d7f37d`；API/Worker/Scheduler 摘要一致，`live/ready=200`，Web `index-zuTBS-d7.js` 与 `index-CEK5B8cQ.css` 均为 200。当前云端未配置 OCR Secret，真实供应商识别和真实扫描件质量指标仍待配置后补验。
+云端旧镜像已完成 PaddleOCR 分流验收；本次改为本地 Tesseract 后必须以新提交重新触发 ACR，确认镜像内 OCR 二进制、API/Worker/Scheduler 摘要和 Web 健康检查后，才能标记本地 OCR 云端验收完成。

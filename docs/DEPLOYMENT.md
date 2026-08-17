@@ -265,11 +265,10 @@ docker compose --env-file .env logs --tail=100 api worker
 ## 2026-08-17 OCR 扫描 PDF 分流与部署流程
 
 - 应用提交：`6c762d9a324fdcbdfb56ee396e67f0b2cae40653`，分支为 `codex/deployment-base-images`。
-- 普通文本层 PDF 不调用 OCR；扫描 PDF 仅在配置 PaddleOCR HTTPS 端点时调用 `paddleocr-doc-parsing` 适配器，未配置时返回 `ocr_required`。
-- OCR 供应商令牌只通过运行时 Secret 或 `PADDLEOCR_ACCESS_TOKEN_FILE` 注入；不得写入仓库、镜像、前端或日志。
-- ACR 新应用镜像摘要：`sha256:a141826a0cfd2c0e53936fb960fc96446aa9c20a6741ae1fe3c7d791f6d7f37d`；镜像内 OCR 适配器文件存在，FastAPI 导入检查通过。
-- API、Worker、Scheduler 已统一该摘要；`live=200`、`ready=200`；Web 入口为 `index-zuTBS-d7.js`，样式为 `index-CEK5B8cQ.css`，首页和两项资源均返回 200。
-- 云端当前未注入 PaddleOCR URL/Secret，因此本次云端验收结论为“扫描件检测与 `ocr_required` 安全阻断通过”，不宣称真实 OCR 供应商调用通过。注入凭据后需补做 200、403、429、超时和真实扫描件切片验收。
+- 普通文本层 PDF 不调用 OCR；扫描 PDF 使用镜像内 `ocr-document-processor`/Tesseract 本地运行时，不需要 Secret。
+- ACR 构建必须包含 `tesseract-ocr`、中文/英文语言包和 `poppler-utils`，镜像内执行版本检查后才能发布。
+- OCR 任务按页串行执行，默认最多 50 页、单页 45 秒；超过限制或依赖缺失时返回 `ocr_required`/`ocr_failed`，不写入空切片。
+- 本次代码提交 `6c762d9` 的旧 PaddleOCR 云端适配器已替换为本地 Tesseract；后续应用镜像需以新提交为准重新触发 ACR。
 
 ## 2026-08-16 第五组 RAG 供应商能力验收
 

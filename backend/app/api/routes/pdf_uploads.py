@@ -14,7 +14,7 @@ from backend.app.domain.pdf_upload_security import (
     quarantined_pdf_path,
     validate_pdf_upload,
 )
-from backend.app.infrastructure.ocr.paddleocr_document_parser import (
+from backend.app.infrastructure.ocr.tesseract_document_parser import (
     OcrConfigurationError,
     OcrProviderError,
     parse_pdf,
@@ -99,7 +99,7 @@ async def extract_pdf_text(upload_id: str) -> PdfExtractResponse:
     text = "\n\n".join(page.strip() for page in pages if page.strip()).strip()
     if not text:
         try:
-            # PaddleOCR 文档解析可能持续数秒到数分钟；放到线程池，避免阻塞 API 事件循环。
+            # 本地 OCR 会执行页面渲染和 Tesseract 子进程；放到线程池，避免阻塞 API 事件循环。
             ocr_document = await asyncio.to_thread(parse_pdf, path)
         except OcrConfigurationError as error:
             return PdfExtractResponse(
@@ -112,7 +112,7 @@ async def extract_pdf_text(upload_id: str) -> PdfExtractResponse:
                 upload_id=upload_id, status="ocr_failed", page_count=len(pages),
                 extracted_characters=0, text="", blocked_reason=str(error),
                 text_layer_status="missing", ocr_required=True,
-                ocr_provider="paddleocr-doc-parsing",
+                ocr_provider="tesseract-local",
             )
         return PdfExtractResponse(
             upload_id=upload_id, status="ocr_extracted", page_count=len(ocr_document.pages),
@@ -120,7 +120,7 @@ async def extract_pdf_text(upload_id: str) -> PdfExtractResponse:
             blocked_reason=None, text_layer_status="missing", ocr_required=False,
             ocr_provider=ocr_document.provider,
         )
-    # 文本层为空或提取失败才进入 OCR；普通 PDF 不调用外部供应商。
+    # 文本层为空或提取失败才进入本地 OCR；普通 PDF 不执行 OCR。
     return PdfExtractResponse(
         upload_id=upload_id, status="extracted", page_count=len(pages),
         extracted_characters=len(text), text=text, blocked_reason=None,
