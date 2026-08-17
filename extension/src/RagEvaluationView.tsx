@@ -45,7 +45,7 @@ export function RagEvaluationView() {
   };
   const launch = async (suite: RagEvaluationRun["suite"]) => {
     setBusy(true); setError("");
-    try { setRun(await startRagEvaluation(suite)); setMessage(`${suite} 评测已创建，门禁状态已返回`); }
+    try { setRun(await startRagEvaluation(suite)); setMessage(""); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "评测启动失败"); }
     finally { setBusy(false); }
   };
