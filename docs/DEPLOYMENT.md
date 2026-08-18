@@ -141,11 +141,13 @@ docker compose --env-file .env exec -e PYTHONPATH=/app api \
 
 ## 发布流程
 
-1. 代码检查通过后推送 Git 分支或发布标签。
-2. 阿里云 ACR 使用仓库根目录 `Dockerfile` 从指定 Git 引用构建应用镜像。
-3. 服务器只从 ACR 拉取镜像，不在 2GB 服务器本地构建。
-4. 先执行 `docker compose config`，再拉取并启动。
-5. 验证健康检查、数据库迁移、容器日志和外部 HTTP 访问。
+1. 代码检查通过后，使用本机 Git 的 OpenSSL HTTPS 后端推送 `codex/deployment-base-images`。
+2. GitHub Actions 从该 commit 执行检查、构建 Web、登录 ACR 并推送应用镜像。
+3. GitHub Actions 通过 SSH 登录服务器；服务器只从 ACR 拉取镜像，不在 2GB 服务器本地构建。
+4. 先执行 `docker compose config`，再拉取并启动变更服务。
+5. 验证健康检查、数据库迁移、容器日志和外部 HTTP/HTTPS 访问。
+
+本机 Git 推送故障的固定处理见 [`ACR_STABLE_BUILD_FLOW.md` 第九节](./ACR_STABLE_BUILD_FLOW.md#九本机-git-推送与-github-actions-构建发布标准路径)。
 
 正式发布应使用不可变版本标签或镜像摘要；`dev` 标签仅用于当前开发节点。
 
@@ -234,7 +236,7 @@ docker compose --env-file .env logs --tail=100 api worker
 2. ACR 构建触发必须使用该分支的构建规则；没有构建规则、有效 RAM 权限或构建记录时，立即停止，不把服务器 `git checkout` 当成镜像发布。
 3. 拉取后必须核对镜像 digest、创建时间和镜像内 release revision；digest 未变化时禁止 `up -d`、禁止验收、禁止报告“已发布”。
 4. 发布前后记录 `source_commit`、`image_digest`、`image_created_at`、API/Worker/Scheduler 状态；source commit 与镜像内 revision 不一致即失败关闭。
-5. Git HTTPS 后端切换只能作为一次性受控命令，并在命令结束恢复原配置；禁止把认证失败误判为 ACR 构建失败。
+5. Git 远端固定使用 HTTPS，`http.sslBackend` 固定为 `openssl`；本机推送成功后由 GitHub Actions 负责 ACR 构建和 SSH 云端部署。禁止把 Git 传输故障误判为 ACR 构建失败。
 6. 任何分支误推、旧摘要验收或未授权本地构建都视为严重发布事故，必须先恢复远端分支和服务，再更新本记录。
 
 ## 2026-08-16 RAG 正式调用最终发布验收

@@ -18,7 +18,8 @@
 | 折叠菜单显示浏览器默认大字号和三角 | 样式写入未被入口加载的 CSS 文件 | 修改前先从 `main.tsx` 核对真实 CSS 导入链；构建后检查产物包含目标选择器 |
 | 店铺选择器展开为系统蓝色菜单 | 使用原生 `select`，弹出层样式由操作系统控制 | 改为具备 `listbox`/`option` 语义的项目内选择器，保留键盘焦点、状态和选中反馈 |
 | 点击选品或广告入口看似无响应 | 当前店铺为非 `active` 状态；菜单状态已切换，但所有页面共享同一个“已停用”面板 | 不绕过凭据校验；空状态标题随当前入口变化，明确说明不可用原因并提供店铺连接入口 |
-| GitHub 推送连续失败 | 外部网络连接重置或不可达，不是代码错误 | 同一种推送方式最多尝试两次；记录本地提交，必要时仅临时发布静态产物，并在网络恢复后补推，避免服务器长期偏离 Git 历史 |
+| GitHub 推送连续失败 | Windows Git 的 Schannel HTTPS 后端或外部网络异常，不是代码错误 | 先固定 `git config --global http.sslBackend openssl`，再用 `git -c http.sslBackend=openssl ls-remote origin HEAD` 验证；同一种推送方式最多尝试两次，禁止改分支或用服务器源码替代 GitHub 历史 |
+| `git-remote-https.exe` 应用程序错误 | Git for Windows 的 HTTPS 传输进程与 Schannel 后端异常 | 保持远端 HTTPS，切换 Git SSL 后端为 OpenSSL；若 OpenSSL 诊断成功但正常推送仍崩溃，再升级或重装 Git for Windows。不要把该问题误判为 ACR 凭据或镜像构建失败 |
 
 ### 标准发布流程
 

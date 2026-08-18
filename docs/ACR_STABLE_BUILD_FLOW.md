@@ -174,3 +174,68 @@ Web 入口 JS/CSS:
 
 这套流程不需要每次登录阿里云控制台。若 ACR 固定密码或服务器 SSH 密钥轮换，只需在 GitHub
 Secrets 中更新对应值，不修改工作流和仓库代码。
+
+## 九、本机 Git 推送与 GitHub Actions 构建发布标准路径
+
+### 9.1 传输方式边界
+
+本项目当前 GitHub 远端保持 HTTPS：
+
+```text
+origin = https://github.com/pengxdCSDN/ozonslj.git
+```
+
+本机 `git-remote-https.exe` 曾因 Windows Schannel 后端崩溃，导致推送失败。稳定处理是将
+Git 的 HTTPS SSL 后端固定为 OpenSSL；这不会改变远端地址，也不会把凭据写入仓库：
+
+```powershell
+git config --global http.sslBackend openssl
+git config --global --get http.sslBackend
+```
+
+第二条命令必须输出 `openssl`。推送前固定执行：
+
+```powershell
+git branch --show-current
+git status --short
+git rev-parse HEAD
+git ls-remote --heads origin codex/deployment-base-images
+git push origin codex/deployment-base-images
+```
+
+如果 Git 仍然出现 `git-remote-https.exe` 崩溃，先验证 OpenSSL 后端是否生效；不得反复重试
+同一命令。必要时使用一次性诊断命令确认网络和 TLS 后端：
+
+```powershell
+git -c http.sslBackend=openssl ls-remote origin HEAD
+```
+
+若该命令成功，说明代码和远端没有问题，应保留全局 OpenSSL 配置并升级/重装 Git for Windows，
+而不是改分支、改服务器源码或误判为 ACR 构建故障。
+
+### 9.2 从推送到发布的唯一顺序
+
+```text
+本机 OpenSSL HTTPS 推送 → GitHub Actions 检查/构建 → ACR 推送镜像
+→ Actions 通过 SSH 部署云服务器 → 摘要、健康检查和 Web 资源验收
+```
+
+本机不执行 ACR 登录、不在服务器本地构建镜像、不使用服务器工作树作为构建源。SSH 只存在于
+GitHub Actions 到云服务器的部署阶段；它不是本机 GitHub 推送的替代方式。
+
+### 9.3 每次发布操作清单
+
+1. 确认当前分支为 `codex/deployment-base-images`，检查受控改动和 `git diff --check`。
+2. 确认 `http.sslBackend` 为 `openssl`，推送该分支；不推送 `main`。
+3. 在 GitHub Actions 查看同一 commit 的工作流结果；失败时先看失败步骤，不在 ACR 控制台重复点击构建。
+4. 核对 ACR 镜像的 commit SHA 标签、digest 和 `RELEASE_REVISION`。
+5. 由 Actions 通过 SSH 执行云端部署；服务器只拉取镜像，不执行 `docker build`。
+6. 验证 API、Worker、Scheduler 使用同一 digest；前端变更另外核对 `index.html` 引用的 JS/CSS 均为 200。
+7. 验收通过后保留构建记录、digest、服务状态和回滚目录；失败则保留现场并按第六节回滚。
+
+### 9.4 不要再采用的方式
+
+- 不要把 Git 远端改成 SSH 来绕过一次 HTTPS 崩溃；这会引入另一套密钥和端口问题，不能修复本机 Git 二进制。
+- 不要在 `git-remote-https.exe` 崩溃时重复盲推；先检查 OpenSSL 后端。
+- 不要为同一 commit 同时点击 ACR 自动构建和 GitHub Actions 构建，避免多个任务排队和来源混淆。
+- 不要把 ACR 用户名/密码、SSH 私钥或 `.env` 内容写入日志、文档或聊天。
