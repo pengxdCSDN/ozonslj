@@ -99,6 +99,7 @@ class EvaluationRunResponse(BaseModel):
     failed_count: int
     error_count: int
     metrics: dict[str, float | str] | None = None
+    error_code: str | None = None
 
 
 def _run_response(run: EvaluationRun) -> EvaluationRunResponse:
@@ -106,7 +107,7 @@ def _run_response(run: EvaluationRun) -> EvaluationRunResponse:
         run_id=run.run_id, suite=run.suite, status=run.status, gate_status=run.gate_status,
         target_count=run.target_count, executed_count=run.executed_count,
         passed_count=run.passed_count, failed_count=run.failed_count,
-        error_count=run.error_count, metrics=run.metrics,
+        error_count=run.error_count, metrics=run.metrics, error_code=run.error_code,
     )
 
 

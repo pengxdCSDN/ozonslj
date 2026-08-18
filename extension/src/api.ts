@@ -990,6 +990,7 @@ export interface RagEvaluationRun {
   run_id: string; status: string; suite: "quick" | "standard" | "full";
   target_count: number; executed_count: number; passed_count: number; failed_count: number; error_count: number;
   confirmed_count?: number; case_ids?: string[]; metrics?: RagEvaluationMetrics | null;
+  error_code?: string | null;
   gate_status: "ready" | "blocked";
   deduplicated?: boolean;
 }

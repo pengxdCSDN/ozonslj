@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from contextlib import suppress
 
 from backend.app.domain.knowledge_runtime import get_knowledge_runtime, resolve_knowledge_engine
 from backend.app.domain.rag_evaluation import RagEvaluationGateway, suite_case_limit
 from backend.app.domain.rag_metrics import quality_gate_passed
-from backend.app.domain.rag_quality_runner import run_fixed_quality_suite
+from backend.app.domain.rag_quality_runner import classify_evaluation_error, run_fixed_quality_suite
 from backend.app.infrastructure.redis_rag_evaluation import RedisRagEvaluationTaskConsumer
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ class RagEvaluationWorker:
             runtime = get_knowledge_runtime()
             engine = await resolve_knowledge_engine(runtime)
             report = await run_fixed_quality_suite(engine, run.suite)  # type: ignore[arg-type]
-            metrics = {
+            metrics: dict[str, float | str] = {
                 "recall": report.metrics.recall,
                 "precision": report.metrics.precision,
                 "citation_support_rate": report.metrics.citation_support_rate,
@@ -58,6 +59,11 @@ class RagEvaluationWorker:
                 "multi_intent_completeness": report.metrics.multi_intent_completeness,
                 "safety_pass_rate": report.metrics.safety_pass_rate,
                 "degradation_pass_rate": report.metrics.degradation_pass_rate,
+                # 只保存稳定错误码及数量，不保存供应商原始响应、请求正文或凭据。
+                "error_breakdown": json.dumps(
+                    report.error_breakdown, ensure_ascii=False, sort_keys=True
+                ),
+                "primary_error_code": report.primary_error_code or "none",
                 "gate_status": "passed" if quality_gate_passed(report.metrics) else "blocked",
             }
             saved = await self._runs.save_run_metrics(
@@ -69,13 +75,22 @@ class RagEvaluationWorker:
                 if report.status != "completed" else 0,
                 report.error_count,
                 self._worker_id,
+                report.primary_error_code,
             )
-        except Exception:
+        except Exception as error:
+            error_code = classify_evaluation_error(error)
+            # 这里不打印异常正文，避免第三方 SDK 将响应片段或敏感请求信息带入日志。
+            logger.error("评测运行 %s 执行失败，error_code=%s", run_id, error_code)
             try:
                 saved = await self._runs.save_run_metrics(
                     run_id,
-                    {"gate_status": "blocked", "error_code": "evaluation_runtime_failed"},
+                    {
+                        "gate_status": "blocked",
+                        "primary_error_code": error_code,
+                        "error_breakdown": json.dumps({error_code: suite_case_limit(run.suite)}),
+                    },
                     0, 0, 0, suite_case_limit(run.suite), self._worker_id,
+                    error_code,
                 )
             except Exception:
                 # 回写失败不能让 Worker 进程退出；未确认的 Redis 消息会保留，

@@ -246,7 +246,7 @@ class _ManagedAnswerGenerator(AnswerGeneratorPort):
             self._pool, self._organization_id, "answer_generation", "text"
         )
         if not candidates:
-            return None
+            raise RuntimeError("文本模型不可用")
         evidence_text = "\n".join(
             f"[{item.chunk_id}] {item.excerpt}" for item in evidence
         )

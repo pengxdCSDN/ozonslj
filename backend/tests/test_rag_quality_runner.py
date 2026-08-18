@@ -3,7 +3,12 @@ import pytest
 from backend.app.domain.knowledge_chunking import ChunkMetadata, KnowledgeChunk
 from backend.app.domain.knowledge_runtime import KnowledgeRuntimeIndex
 from backend.app.domain.rag_evaluation_corpus import fixed_evaluation_corpus
-from backend.app.domain.rag_quality_runner import run_fixed_quality_suite
+from backend.app.domain.rag_quality_runner import classify_evaluation_error, run_fixed_quality_suite
+from backend.app.infrastructure.cloud_models import (
+    CloudModelNotFoundError,
+    CloudModelQuotaError,
+    CloudModelTimeoutError,
+)
 
 
 def _chunk(case_id: str, question: str) -> KnowledgeChunk:
@@ -85,3 +90,34 @@ async def test_fixed_quality_fixture_expected_rank_is_top() -> None:
         assert citations[: len(case.expected_chunk_ids)] == case.expected_chunk_ids, (
             case.case_id, case.expected_chunk_ids, citations
         )
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        (CloudModelQuotaError("额度或限流"), "quota_exceeded"),
+        (CloudModelTimeoutError("请求超时"), "timeout"),
+        (CloudModelNotFoundError("模型或接口不存在", status_code=404), "model_not_found"),
+        (RuntimeError("Embedding 向量维度不一致"), "embedding_dimension_mismatch"),
+        (RuntimeError("Chroma 检索不可用"), "chroma_unavailable"),
+    ],
+)
+def test_classify_evaluation_error_without_leaking_provider_text(
+    error: BaseException, expected: str
+) -> None:
+    assert classify_evaluation_error(error) == expected
+
+
+@pytest.mark.asyncio
+async def test_fixed_quality_runner_reports_error_breakdown() -> None:
+    class FailingEngine:
+        async def answer(self, question: str, *, limit: int = 5) -> tuple[object, ...]:
+            raise CloudModelQuotaError("供应商额度或限流已触发", status_code=429)
+
+    report = await run_fixed_quality_suite(FailingEngine(), "quick")  # type: ignore[arg-type]
+
+    assert report.status == "error"
+    assert report.executed_count == 0
+    assert report.error_count == 30
+    assert report.primary_error_code == "quota_exceeded"
+    assert report.error_breakdown == {"quota_exceeded": 30}

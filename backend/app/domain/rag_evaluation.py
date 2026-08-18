@@ -32,6 +32,7 @@ class EvaluationRun:
     failed_count: int = 0
     error_count: int = 0
     metrics: dict[str, float | str] | None = None
+    error_code: str | None = None
 
 
 class RagEvaluationGateway(Protocol):
@@ -61,6 +62,7 @@ class RagEvaluationGateway(Protocol):
     async def save_run_metrics(
         self, run_id: str, metrics: dict[str, float | str], executed_count: int,
         passed_count: int, failed_count: int, error_count: int, worker_id: str | None = None,
+        error_code: str | None = None,
     ) -> EvaluationRun | None: ...
 
 

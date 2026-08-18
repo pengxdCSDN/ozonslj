@@ -250,9 +250,11 @@ Retry-After: 2
 | POST | `/v1/rag-evaluation/cases/{case_id}/confirm` | 单条人工确认 |
 | POST | `/v1/rag-evaluation/cases/confirm-batch` | 批量人工确认，最多 240 个案例 |
 | POST | `/v1/rag-evaluation/runs` | 创建或复用评测运行并计算确认门禁；门禁不足不创建运行记录，同一规模已有活动批次时自动去重 |
-| GET | `/v1/rag-evaluation/runs?limit=20` | 查看当前组织的评测运行历史与脱敏指标；前端按批次分页展示，`run_id` 为内部追踪号，不要求用户填写 |
+| GET | `/v1/rag-evaluation/runs?limit=20` | 查看当前组织的评测运行历史与脱敏指标；前端按批次分页展示，`run_id` 为内部追踪号，不要求用户填写；失败运行返回 `error_code` 和 `metrics.error_breakdown` |
 | GET | `/v1/rag-evaluation/runs/{run_id}` | 查看单次评测运行结果 |
 | POST | `/v1/rag-evaluation/runs/{run_id}/metrics` | 由评测 Worker 回写单次运行的聚合指标 |
+
+评测运行响应中的 `error_code` 是脱敏的主要失败分类，例如 `embedding_dimension_mismatch`、`quota_exceeded`、`timeout`、`unauthorized` 和 `chroma_unavailable`。`metrics.error_breakdown` 是错误码到案例数量的 JSON 字符串，仅用于诊断，不包含供应商原始错误正文、请求内容或凭据。
 
 评测案例列表响应为 `{items, total, page, page_size, total_pages, draft_count, confirmed_count}`。历史 `fixed-rag-v1` 案例保留在 PostgreSQL 供审计，但列表只展示当前 `fixed-rag-v2`；Seller 店铺未验证不阻断 RAG 评测页面。
 

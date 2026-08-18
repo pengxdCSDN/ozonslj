@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Protocol
 
 from backend.app.domain.knowledge_answer import (
@@ -80,6 +80,7 @@ class KnowledgeQueryEngine:
         results: list[KnowledgeSegmentAnswer] = []
         for segment in classify_intents(question):
             rewritten = rewrite_query(segment)
+            chain_error: str | None = None
             hits = (
                 await hybrid_retrieve(
                     rewritten.normalized,
@@ -98,7 +99,7 @@ class KnowledgeQueryEngine:
                     decision = gate_evidence(segment, hits)
                 except (RuntimeError, TimeoutError, ValueError):
                     # 重排只改善排序，失败时保留混合召回结果，不能让问答整体中断。
-                    pass
+                    chain_error = "reranker_unavailable"
             result = _to_answer(segment, rewritten, decision)
             if self._answer_generator is not None and result.status == "answered":
                 try:
@@ -107,12 +108,17 @@ class KnowledgeQueryEngine:
                     )
                 except (RuntimeError, TimeoutError, ValueError):
                     generated = None
+                    chain_error = "text_model_unavailable"
                 if generated:
                     result = KnowledgeSegmentAnswer(
                         text=result.text, intent=result.intent, status=result.status,
                         answer=generated, reason=result.reason, citations=result.citations,
                         rewrite=result.rewrite,
                     )
+            if chain_error is not None and result.status == "answered":
+                # 普通问答保留证据摘录作为安全降级，但将链路故障编码到 reason，
+                # 供正式质量评测拒绝把降级答案当作模型调用成功。
+                result = replace(result, reason=chain_error)
             results.append(result)
         return tuple(results)
 

@@ -18,6 +18,20 @@ const RESULT_METRICS: Array<{ key: string; label: string; threshold: number }> =
   { key: "degradation_pass_rate", label: "主备降级", threshold: 1 },
 ];
 const RUN_PAGE_SIZE = 5;
+const ERROR_LABELS: Record<string, string> = {
+  embedding_unavailable: "Embedding 供应商不可用",
+  embedding_dimension_mismatch: "Embedding 向量维度不一致",
+  chroma_unavailable: "Chroma 检索不可用",
+  reranker_unavailable: "Reranker 供应商不可用",
+  text_model_unavailable: "文本模型不可用",
+  quota_exceeded: "供应商限流或额度不足",
+  timeout: "供应商请求超时",
+  model_not_found: "模型或接口不存在",
+  unauthorized: "供应商认证失败",
+  provider_request_failed: "供应商请求失败",
+  invalid_response: "供应商响应格式无效",
+  runtime_error: "RAG 运行时错误",
+};
 
 function suiteLabel(suite: RagEvaluationRun["suite"]): string {
   return SUITES.find((item) => item.value === suite)?.label ?? suite;
@@ -30,6 +44,11 @@ function runStatusLabel(status: string, gateStatus: RagEvaluationRun["gate_statu
   if (status === "running") return "执行中";
   if (status === "queued") return "等待执行";
   return "待处理";
+}
+
+function errorLabel(code?: string | null): string | null {
+  if (!code || code === "none") return null;
+  return ERROR_LABELS[code] ?? "RAG 运行错误";
 }
 
 export function RagEvaluationView() {
@@ -123,7 +142,7 @@ export function RagEvaluationView() {
     <section className="panel rag-results-panel"><div className="section-heading"><div><span className="eyebrow">正式质量结果</span><h2>评测结果报告</h2></div><button type="button" className="secondary-button rag-results-refresh" onClick={() => void refreshRuns()} disabled={runsLoading}>刷新结果</button></div>
       {runsLoading ? <div className="empty-search">评测运行记录加载中…</div> : null}
       {!runsLoading && !runs.length ? <div className="empty-search"><WarningCircle size={24} /><strong>暂无评测结果</strong><span>先确认语料，再启动 30 / 120 / 240 例评测。</span></div> : null}
-      <div className="rag-run-history">{visibleRuns.map((item, index) => <article className="rag-run-card" key={item.run_id}><div className="rag-run-card-heading"><div><span className="rag-run-kicker">评测批次 #{(runPage - 1) * RUN_PAGE_SIZE + index + 1}</span><strong>{suiteLabel(item.suite)}</strong><small className="rag-run-id"><span>内部 ID：{item.run_id}</span><button type="button" className="rag-copy-id" onClick={() => void copyRunId(item.run_id)} title="复制内部 ID" aria-label={`复制${item.run_id}`}><Copy size={13} />复制</button></small></div><em className={item.status === "succeeded" ? "is-passed" : item.status === "failed" || item.gate_status === "blocked" ? "is-failed" : "is-pending"}>{runStatusLabel(item.status, item.gate_status)}</em></div><div className="rag-run-progress"><span>执行进度</span><strong>{item.executed_count} / {item.target_count}</strong><span>错误 {item.error_count}</span>{item.gate_status === "blocked" ? <span>已确认 {item.confirmed_count ?? 0} / {item.target_count}</span> : null}</div>{item.metrics ? <div className="rag-result-metrics">{RESULT_METRICS.map((metric) => { const raw = item.metrics?.[metric.key]; const value = typeof raw === "number" ? raw : 0; const passed = value >= metric.threshold; return <div className={passed ? "metric-passed" : "metric-failed"} key={metric.key}><span>{metric.label}</span><strong>{(value * 100).toFixed(1)}%</strong><small>门槛 {(metric.threshold * 100).toFixed(0)}%</small></div>; })}</div> : <div className={`rag-result-pending ${item.gate_status === "blocked" ? "is-blocked" : ""}`}><span>{item.gate_status === "blocked" ? "该批次未满足确认门禁，因此不会执行；请先确认对应语料后重新点击启动。" : "该批次已创建，后台执行完成后会回写指标；可点击“刷新结果”查看最新状态。"}</span></div>}</article>)}</div>
+      <div className="rag-run-history">{visibleRuns.map((item, index) => { const primaryError = errorLabel(item.error_code); return <article className="rag-run-card" key={item.run_id}><div className="rag-run-card-heading"><div><span className="rag-run-kicker">评测批次 #{(runPage - 1) * RUN_PAGE_SIZE + index + 1}</span><strong>{suiteLabel(item.suite)}</strong><small className="rag-run-id"><span>内部 ID：{item.run_id}</span><button type="button" className="rag-copy-id" onClick={() => void copyRunId(item.run_id)} title="复制内部 ID" aria-label={`复制${item.run_id}`}><Copy size={13} />复制</button></small></div><em className={item.status === "succeeded" ? "is-passed" : item.status === "failed" || item.gate_status === "blocked" ? "is-failed" : "is-pending"}>{runStatusLabel(item.status, item.gate_status)}</em></div><div className="rag-run-progress"><span>执行进度</span><strong>{item.executed_count} / {item.target_count}</strong><span>错误 {item.error_count}</span>{item.gate_status === "blocked" ? <span>已确认 {item.confirmed_count ?? 0} / {item.target_count}</span> : null}</div>{primaryError ? <div className="rag-result-error"><strong>主要失败原因：{primaryError}</strong><span>请先处理模型供应商、向量索引或额度配置，再重新启动快速评测。</span></div> : null}{item.metrics ? <div className="rag-result-metrics">{RESULT_METRICS.map((metric) => { const raw = item.metrics?.[metric.key]; const value = typeof raw === "number" ? raw : 0; const passed = value >= metric.threshold; return <div className={passed ? "metric-passed" : "metric-failed"} key={metric.key}><span>{metric.label}</span><strong>{(value * 100).toFixed(1)}%</strong><small>门槛 {(metric.threshold * 100).toFixed(0)}%</small></div>; })}</div> : <div className={`rag-result-pending ${item.gate_status === "blocked" ? "is-blocked" : ""}`}><span>{item.gate_status === "blocked" ? "该批次未满足确认门禁，因此不会执行；请先确认对应语料后重新点击启动。" : "该批次已创建，后台执行完成后会回写指标；可点击“刷新结果”查看最新状态。"}</span></div>}</article>; })}</div>
       {!runsLoading && runs.length ? <Pagination page={runPage} totalPages={runTotalPages} total={runs.length} itemLabel="评测批次" disabled={runsLoading} onPageChange={setRunPage} /> : null}
     </section>
     {message ? <p className="form-message">{message}</p> : null}{error ? <p className="form-message">{error}</p> : null}

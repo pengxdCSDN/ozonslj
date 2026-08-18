@@ -138,7 +138,7 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """SELECT id, suite, status, gate_status, executed_count, passed_count,
-                          failed_count, error_count, metrics
+                          failed_count, error_count, metrics, error_code
                      FROM rag_evaluation_runs
                      WHERE organization_id = %s AND suite = %s
                        AND gate_status = 'ready' AND status IN ('queued', 'running')
@@ -197,7 +197,7 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
                      AND (status = 'queued' OR
                           (status = 'running' AND lease_expires_at < CURRENT_TIMESTAMP))
                    RETURNING id, suite, status, gate_status, executed_count, passed_count,
-                             failed_count, error_count, metrics""",
+                             failed_count, error_count, metrics, error_code""",
                 (
                     worker_id, timedelta(seconds=lease_seconds),
                     self._context.organization_id, run_id,
@@ -230,7 +230,7 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT id, suite, status, gate_status, executed_count, passed_count,
-                          failed_count, error_count, metrics
+                          failed_count, error_count, metrics, error_code
                      FROM rag_evaluation_runs WHERE organization_id = %s
                      ORDER BY created_at DESC, id DESC LIMIT %s""",
                 (self._context.organization_id, limit),
@@ -244,7 +244,7 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """SELECT id, suite, status, gate_status, executed_count, passed_count,
-                          failed_count, error_count, metrics
+                          failed_count, error_count, metrics, error_code
                      FROM rag_evaluation_runs
                      WHERE organization_id = %s AND id = %s""",
                 (self._context.organization_id, run_id),
@@ -254,15 +254,17 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
     async def save_run_metrics(
         self, run_id: str, metrics: dict[str, float | str], executed_count: int,
         passed_count: int, failed_count: int, error_count: int, worker_id: str | None = None,
+        error_code: str | None = None,
     ) -> EvaluationRun | None:
         return await asyncio.to_thread(
             self._save_run_metrics, run_id, metrics, executed_count,
-            passed_count, failed_count, error_count, worker_id,
+            passed_count, failed_count, error_count, worker_id, error_code,
         )
 
     def _save_run_metrics(
         self, run_id: str, metrics: dict[str, float | str], executed_count: int,
         passed_count: int, failed_count: int, error_count: int, worker_id: str | None,
+        error_code: str | None,
     ) -> EvaluationRun | None:
         import json
         status = "succeeded" if metrics.get("gate_status") == "passed" else "failed"
@@ -271,16 +273,17 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
                 """UPDATE rag_evaluation_runs
                    SET status = %s, executed_count = %s, passed_count = %s,
                        failed_count = %s, error_count = %s, metrics = %s::jsonb,
+                       error_code = %s,
                        completed_at = CURRENT_TIMESTAMP, lease_owner = NULL,
                        lease_expires_at = NULL
                    WHERE organization_id = %s AND id = %s AND gate_status = 'ready'
                      AND status = 'running'
                      AND (%s::text IS NULL OR lease_owner = %s)
                    RETURNING id, suite, status, gate_status, executed_count, passed_count,
-                             failed_count, error_count, metrics""",
+                             failed_count, error_count, metrics, error_code""",
                 (
                     status, executed_count, passed_count, failed_count, error_count,
-                    json.dumps(metrics),
+                    json.dumps(metrics), error_code,
                     self._context.organization_id, run_id, worker_id, worker_id,
                 ),
             ).fetchone()
@@ -304,5 +307,5 @@ def _run(row: dict[str, Any]) -> EvaluationRun:
         target_count={"quick": 30, "standard": 120, "full": 240}[row["suite"]],
         executed_count=row.get("executed_count", 0), passed_count=row.get("passed_count", 0),
         failed_count=row.get("failed_count", 0), error_count=row.get("error_count", 0),
-        metrics=row.get("metrics") or None,
+        metrics=row.get("metrics") or None, error_code=row.get("error_code"),
     )

@@ -14,6 +14,23 @@
 
 正式验收以“质量通过”为准，不以“任务已创建”或“门禁已通过”为准。若结果仍为“等待执行”，先检查 Worker 是否运行；若为“质量未通过”，根据对应指标卡片和错误数量处理后重新运行。
 
+## 模型调用链路错误诊断
+
+评测 Worker 会把单个案例异常归一为脱敏错误码，并在运行记录的 `error_code` 和 `metrics.error_breakdown` 中保存。结果页展示主要失败原因；不会保存供应商原始响应、完整提示词、API Key 或 Token。
+
+| 错误码 | 常见原因 | 处理顺序 |
+| --- | --- | --- |
+| `embedding_dimension_mismatch` | Embedding 返回维度与 Chroma 索引不一致 | 核对模型维度和索引配置，再重建索引；不要直接混用旧索引 |
+| `embedding_unavailable` | Embedding 主备都不可用或缺少凭据 | 检查用途绑定、启用状态、凭据引用和 Base URL，先用 30 例验证 |
+| `chroma_unavailable` | Chroma 健康检查、集合或查询失败 | 检查 Chroma 服务和集合状态，恢复后再重试 |
+| `reranker_unavailable` | Reranker 超时、错误响应或主备均失败 | 检查 `/rerank` 契约、模型名称和限额；暂时可用召回顺序安全降级 |
+| `text_model_unavailable` | 文本模型主备均失败 | 检查 `/chat/completions`、模型绑定和备用模型；不要把空回答当作成功 |
+| `quota_exceeded` / `timeout` | 额度、限流或网络超时 | 降低规模、检查预算和限流，确认备用模型后再运行 |
+| `unauthorized` / `model_not_found` | Key、模型名或接口地址错误 | 重新测试供应商配置；测试通过后再启动评测 |
+| `invalid_response` / `provider_request_failed` | 返回格式或 HTTP 4xx/5xx 异常 | 查供应商状态和适配器契约，禁止把原始响应复制到工单 |
+
+诊断顺序固定为：先看主要失败原因 → 检查对应模型用途绑定和健康状态 → 运行 30 例 → 30 例通过后再运行 120/240 例。重复点击同一规模不会绕过失败原因，也不会创建并行活动批次。
+
 固定语料版本为 `fixed-rag-v2`，共 400 例：前 160 例用于校准，后 240 例冻结验收。冻结集固定拆为 quick 30 例、standard 120 例、full 240 例。
 
 每个知识问答案例包含 5 个人工确认支持片段；多意图案例包含两个意图、每个意图 5 个支持片段。这样 `Precision@5` 衡量前五条引用是否都是支持证据，而不是被单一金标准片段的标注口径人为压低。
