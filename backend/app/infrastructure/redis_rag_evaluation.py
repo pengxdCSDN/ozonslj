@@ -34,6 +34,19 @@ class RedisRagEvaluationTaskConsumer:
 
     async def read_one(self, *, block_ms: int) -> tuple[str, str] | None:
         await self._ensure_group()
+        # Worker 崩溃后消息会留在旧消费者的 pending 列表；先接管超过 30 秒的消息，
+        # 否则新 Worker 永远只读到 “>”，旧消息会长期占用队列监控并阻断恢复。
+        claimed = await self._redis.xautoclaim(
+            self._stream_name, self._group_name, self._consumer_name,
+            min_idle_time=30_000, start_id="0-0", count=1,
+        )
+        pending = claimed[1]
+        if pending:
+            message_id, fields = pending[0]
+            run_id = fields.get("run_id")
+            if isinstance(run_id, str) and run_id:
+                return str(message_id), run_id
+            await self.acknowledge(str(message_id))
         streams = await self._redis.xreadgroup(
             self._group_name, self._consumer_name, {self._stream_name: ">"},
             count=1, block=block_ms,
