@@ -39,7 +39,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
+          # 不在 setup-node 阶段调用 pnpm；Corepack 会在下一步启用，避免缓存钩子提前失败。
 
       - name: Enable pnpm
         run: corepack enable && corepack prepare pnpm@11.0.0 --activate
