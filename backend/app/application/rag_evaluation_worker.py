@@ -48,7 +48,7 @@ class RagEvaluationWorker:
             # 因此继续使用原有 engine，保持离线契约测试不依赖 Chroma。
             evaluation_builder = getattr(runtime, "evaluation_engine", None)
             engine = (
-                await evaluation_builder()
+                await evaluation_builder(run.suite)
                 if evaluation_builder is not None
                 else await resolve_knowledge_engine(runtime)
             )

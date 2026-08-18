@@ -29,3 +29,15 @@ def test_fixed_evaluation_chunks_match_gold_ids_and_exclude_refusals() -> None:
     assert len(chunks) == len(expected)
     assert all(chunk.metadata.extra[-1] == ("evaluation_only", "true") for chunk in chunks)
     assert all(chunk.metadata.status == "published" for chunk in chunks)
+
+
+def test_fixed_evaluation_chunks_can_be_loaded_by_suite() -> None:
+    quick_case_ids = set(fixed_suite_case_ids("quick"))
+    chunks = fixed_evaluation_chunks(suite="quick")
+    expected = {
+        chunk_id
+        for case in fixed_evaluation_corpus()
+        if case.case_id in quick_case_ids
+        for chunk_id in case.expected_chunk_ids
+    }
+    assert {chunk.chunk_id for chunk in chunks} == expected

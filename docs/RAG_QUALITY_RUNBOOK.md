@@ -41,11 +41,12 @@ collection `ozonslj_rag_evaluation`。该 collection 不登记为业务知识源
 知识源管理列表，也不会污染普通知识问答；每个支持型案例的 `gold-*` 切片与标注 ID 一一对应，
 拒答和未收录案例不生成证据。
 
-索引初始化按 64 条一批调用真实 Embedding，并在每批成功后写入 Chroma。Worker 首次准备评测
-引擎时读取 collection 数量；数量已等于固定语料切片数时直接复用，不重复 Embedding。任一批
+索引按当前评测套件懒加载：30 例只发布 quick 所需证据，120/240 例启动时再补齐各自新增
+证据；每次按 64 条一批调用真实 Embedding，并在每批成功后写入 Chroma。Worker 每次准备评测
+引擎时按切片 ID 查询 collection，已存在项直接复用，不重复 Embedding。任一批
 失败都会阻断本次评测，不允许使用部分索引伪造通过。验收时必须同时确认：
 
-1. 固定语料切片数量与 `fixed_evaluation_chunks()` 一致；
+1. 当前套件的固定语料切片数量与 `fixed_evaluation_chunks(suite=...)` 一致；
 2. Chroma `ozonslj_rag_evaluation` 能查询到所运行案例的 `gold-*` 证据 ID；
 3. 30 例执行进度为 `30/30`、错误为 0，且 Recall@5、Recall@10、Precision@5、引用支持率达到门槛；
 4. 只有 30 例质量通过，才允许创建 120 例；120 例通过后才允许创建 240 例。
@@ -54,7 +55,10 @@ collection `ozonslj_rag_evaluation`。该 collection 不登记为业务知识源
 处理索引和供应商绑定，再新建批次；不要反复刷新或重复创建相同规模的批次。
 
 索引初始化中途失败时，重试会按切片 ID 读取 Chroma 已存在项，只补写缺失切片，不会重复
-Embedding 已成功写入的内容。
+Embedding 已成功写入的内容。同一 Worker 先后执行 quick、standard、full 也会重新检查缺口，
+不会因运行时缓存误认为整套索引已经完成。这样 30 例首次运行的 Embedding 消耗只与 30 例
+证据量相关，正式 full 运行最终只需冻结 240 例证据；前 160 例校准集保留在代码和离线契约中，
+不提前消耗云端索引额度。
 
 每个知识问答案例包含 5 个人工确认支持片段；多意图案例包含两个意图、每个意图 5 个支持片段。这样 `Precision@5` 衡量前五条引用是否都是支持证据，而不是被单一金标准片段的标注口径人为压低。
 

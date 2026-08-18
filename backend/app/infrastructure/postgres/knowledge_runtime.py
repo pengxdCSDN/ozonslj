@@ -973,7 +973,7 @@ class PostgresChromaKnowledgeRuntime:
             ),
         )
 
-    async def evaluation_engine(self) -> KnowledgeQueryEngine:
+    async def evaluation_engine(self, suite: str = "full") -> KnowledgeQueryEngine:
         """构造隔离的正式评测引擎，并幂等发布固定评测语料。
 
         固定评测语料只进入 ``ozonslj_rag_evaluation``，与业务 collection 完全分离；
@@ -986,25 +986,27 @@ class PostgresChromaKnowledgeRuntime:
             self._evaluation_collection = await HttpChromaCollection.ensure(
                 self._chroma_url, "ozonslj_rag_evaluation"
             )
-        chunks = list(fixed_evaluation_chunks())
-        if not self._evaluation_indexed:
-            # 按 ID 做断点续传。仅比较 count 无法区分“缺哪些切片”，失败重试会再次
-            # Embedding 已成功写入的切片，既浪费额度，也可能在预算阻断后形成死循环。
-            existing_ids = await self._evaluation_collection.existing_ids(
-                [item.chunk_id for item in chunks]
+        # 只为当前评测套件发布证据；30 例通过后，后续 120/240 例会按 ID 补齐。
+        # 这避免每次新建快速评测都提前消耗完整固定语料的 Embedding 配额。
+        chunks = list(fixed_evaluation_chunks(suite=suite))
+        # 每次按 ID 做断点续传。不能用运行时布尔缓存：同一个 Worker 先跑 quick，
+        # 再跑 standard/full 时仍需发现并补齐新增切片；仅比较 count 也无法区分缺口。
+        # 失败重试只 Embedding 缺失项，避免重复消耗额度并防止预算阻断形成死循环。
+        existing_ids = await self._evaluation_collection.existing_ids(
+            [item.chunk_id for item in chunks]
+        )
+        missing = [item for item in chunks if item.chunk_id not in existing_ids]
+        # 供应商通常限制单次输入数量；按 64 条分批，单批失败会阻断本次评测，
+        # 不会留下“部分索引也算成功”的假通过状态。已存在的切片直接跳过。
+        for start in range(0, len(missing), 64):
+            batch = missing[start:start + 64]
+            await self._evaluation_collection.upsert(
+                ids=[item.chunk_id for item in batch],
+                documents=[item.content for item in batch],
+                embeddings=await self._embedding.embed([item.content for item in batch]),
+                metadatas=[_metadata_for_chunk(item) for item in batch],
             )
-            missing = [item for item in chunks if item.chunk_id not in existing_ids]
-            # 供应商通常限制单次输入数量；按 64 条分批，单批失败会让评测整体阻断，
-            # 不会留下“部分索引也算成功”的假通过状态。已存在的切片直接跳过。
-            for start in range(0, len(missing), 64):
-                batch = missing[start:start + 64]
-                await self._evaluation_collection.upsert(
-                    ids=[item.chunk_id for item in batch],
-                    documents=[item.content for item in batch],
-                    embeddings=await self._embedding.embed([item.content for item in batch]),
-                    metadatas=[_metadata_for_chunk(item) for item in batch],
-                )
-            self._evaluation_indexed = True
+        self._evaluation_indexed = True
         keyword = InMemoryKeywordIndex()
         await keyword.replace(chunks)
         assert self._evaluation_collection is not None

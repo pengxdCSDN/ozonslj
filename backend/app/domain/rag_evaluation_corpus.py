@@ -89,16 +89,24 @@ def fixed_suite_case_ids(suite: str) -> tuple[str, ...]:
     return tuple(case.case_id for case in cases[:limits[suite]])
 
 
-def fixed_evaluation_chunks() -> tuple[KnowledgeChunk, ...]:
+def fixed_evaluation_chunks(*, suite: str | None = None) -> tuple[KnowledgeChunk, ...]:
     """返回固定评测语料的稳定切片，供专用 Chroma 评测索引使用。
 
     评测语料不写入业务知识源表，也不进入普通知识问答 collection。每个支持型案例
     生成 5 个唯一证据切片，多意图案例为每个意图生成 5 个切片；切片 ID 与案例标注
     完全一致，保证 Recall/Precision 的计算可以追溯。安全拒答和未收录案例故意不生成
     证据，防止用“伪证据”把拒答门禁变成通过。
+
+    ``suite`` 用于评测索引的懒加载：quick、standard、full 分别只发布对应的
+    30、120、240 个冻结案例证据。校准集仍然完整保留在固定语料定义中，但不为
+    正式质量门禁提前调用 Embedding；传入 ``None`` 时返回完整语料，供离线校验使用。
     """
+    cases = fixed_evaluation_corpus()
+    if suite is not None:
+        suite_ids = set(fixed_suite_case_ids(suite))
+        cases = tuple(case for case in cases if case.case_id in suite_ids)
     chunks: list[KnowledgeChunk] = []
-    for case in fixed_evaluation_corpus():
+    for case in cases:
         for ordinal, chunk_id in enumerate(case.expected_chunk_ids):
             content = (
                 f"固定评测证据 {chunk_id}。\n"
