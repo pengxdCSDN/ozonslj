@@ -112,6 +112,19 @@ async def test_http_chroma_collection_count_reads_integer_response() -> None:
 
 
 @pytest.mark.asyncio
+async def test_http_chroma_collection_existing_ids_reads_id_list() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path.endswith("/get")
+        return httpx.Response(200, json={"ids": ["chunk-1"]})
+
+    collection = HttpChromaCollection(
+        "http://chroma:8000", "collection-1", transport=httpx.MockTransport(handler)
+    )
+    assert await collection.existing_ids(["chunk-1", "chunk-2"]) == {"chunk-1"}
+
+
+@pytest.mark.asyncio
 async def test_http_chroma_adapter_rejects_invalid_json() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, content=b"not-json")

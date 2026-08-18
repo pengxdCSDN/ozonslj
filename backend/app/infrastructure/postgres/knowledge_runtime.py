@@ -988,18 +988,22 @@ class PostgresChromaKnowledgeRuntime:
             )
         chunks = list(fixed_evaluation_chunks())
         if not self._evaluation_indexed:
-            count = await self._evaluation_collection.count()
-            if count != len(chunks):
-                # 供应商通常限制单次输入数量；按 64 条分批，单批失败会让评测整体阻断，
-                # 不会留下“部分索引也算成功”的假通过状态。
-                for start in range(0, len(chunks), 64):
-                    batch = chunks[start:start + 64]
-                    await self._evaluation_collection.upsert(
-                        ids=[item.chunk_id for item in batch],
-                        documents=[item.content for item in batch],
-                        embeddings=await self._embedding.embed([item.content for item in batch]),
-                        metadatas=[_metadata_for_chunk(item) for item in batch],
-                    )
+            # 按 ID 做断点续传。仅比较 count 无法区分“缺哪些切片”，失败重试会再次
+            # Embedding 已成功写入的切片，既浪费额度，也可能在预算阻断后形成死循环。
+            existing_ids = await self._evaluation_collection.existing_ids(
+                [item.chunk_id for item in chunks]
+            )
+            missing = [item for item in chunks if item.chunk_id not in existing_ids]
+            # 供应商通常限制单次输入数量；按 64 条分批，单批失败会让评测整体阻断，
+            # 不会留下“部分索引也算成功”的假通过状态。已存在的切片直接跳过。
+            for start in range(0, len(missing), 64):
+                batch = missing[start:start + 64]
+                await self._evaluation_collection.upsert(
+                    ids=[item.chunk_id for item in batch],
+                    documents=[item.content for item in batch],
+                    embeddings=await self._embedding.embed([item.content for item in batch]),
+                    metadatas=[_metadata_for_chunk(item) for item in batch],
+                )
             self._evaluation_indexed = True
         keyword = InMemoryKeywordIndex()
         await keyword.replace(chunks)

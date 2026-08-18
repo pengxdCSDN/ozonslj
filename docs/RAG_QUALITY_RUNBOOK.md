@@ -53,6 +53,9 @@ collection `ozonslj_rag_evaluation`。该 collection 不登记为业务知识源
 如果 30 例出现 `embedding_unavailable`、`embedding_dimension_mismatch` 或 Chroma 错误，先
 处理索引和供应商绑定，再新建批次；不要反复刷新或重复创建相同规模的批次。
 
+索引初始化中途失败时，重试会按切片 ID 读取 Chroma 已存在项，只补写缺失切片，不会重复
+Embedding 已成功写入的内容。
+
 每个知识问答案例包含 5 个人工确认支持片段；多意图案例包含两个意图、每个意图 5 个支持片段。这样 `Precision@5` 衡量前五条引用是否都是支持证据，而不是被单一金标准片段的标注口径人为压低。
 
 ## 离线契约验收

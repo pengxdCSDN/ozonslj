@@ -116,6 +116,16 @@ class HttpChromaCollection:
             raise RuntimeError("Chroma count 返回格式无效")
         return count
 
+    async def existing_ids(self, ids: list[str]) -> set[str]:
+        """读取指定 ID 的存在性，用于断点续传，不读取正文和向量。"""
+        if not ids:
+            return set()
+        body = await self._request("POST", "get", {"ids": ids, "include": []})
+        returned = body.get("ids")
+        if not isinstance(returned, list):
+            raise RuntimeError("Chroma get 返回格式无效")
+        return {item for item in returned if isinstance(item, str)}
+
     async def _request(
         self, method: str, operation: str, payload: dict[str, object]
     ) -> dict[str, object]:

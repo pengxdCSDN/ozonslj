@@ -460,3 +460,6 @@ setup-node → corepack enable/prepare pnpm → pnpm install --frozen-lockfile
 验收必须按顺序执行：确认 Embedding 用途主/备用绑定和维度 → 运行时完成固定语料索引 → 在
 Chroma 查询 `gold-*` 证据 → 新建 30 例 → 30 例质量通过后新建 120 例 → 120 例通过后新建
 240 例。已有的旧失败批次不会被刷新修复，应保留作审计并创建新批次。
+
+若 Chroma 只存在部分固定切片，不能删除后盲目全量重试。运行时按切片 ID 断点续传，只对缺失
+切片调用 Embedding；若仍被预算阻断，应先提高 Embedding 日 Token 上限或等待账本自然重置。
