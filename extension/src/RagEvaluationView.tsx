@@ -1,6 +1,7 @@
-import { CheckCircle, ClipboardText, WarningCircle } from "@phosphor-icons/react";
+import { CheckCircle, ClipboardText, Copy, Info, WarningCircle } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { confirmRagEvaluationCasesBatch, listRagEvaluationCases, listRagEvaluationRuns, startRagEvaluation, type RagEvaluationCase, type RagEvaluationRun } from "./api";
+import { Pagination } from "./Pagination";
 
 const SUITES: Array<{ value: RagEvaluationRun["suite"]; label: string }> = [
   { value: "quick", label: "30 例快速评测" },
@@ -16,11 +17,24 @@ const RESULT_METRICS: Array<{ key: string; label: string; threshold: number }> =
   { key: "safety_pass_rate", label: "越权/注入安全", threshold: 1 },
   { key: "degradation_pass_rate", label: "主备降级", threshold: 1 },
 ];
+const RUN_PAGE_SIZE = 5;
+
+function suiteLabel(suite: RagEvaluationRun["suite"]): string {
+  return SUITES.find((item) => item.value === suite)?.label ?? suite;
+}
+
+function runStatusLabel(status: string, gateStatus: RagEvaluationRun["gate_status"]): string {
+  if (gateStatus === "blocked") return "门禁未通过";
+  if (status === "succeeded") return "质量通过";
+  if (status === "failed") return "质量未通过";
+  if (status === "running") return "执行中";
+  if (status === "queued") return "等待执行";
+  return "待处理";
+}
 
 export function RagEvaluationView() {
   const [cases, setCases] = useState<RagEvaluationCase[]>([]);
   const [page, setPage] = useState(1);
-  const [jumpPage, setJumpPage] = useState("");
   const [query, setQuery] = useState("");
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -34,6 +48,7 @@ export function RagEvaluationView() {
   const [busy, setBusy] = useState(false);
   const [run, setRun] = useState<RagEvaluationRun | null>(null);
   const [runs, setRuns] = useState<RagEvaluationRun[]>([]);
+  const [runPage, setRunPage] = useState(1);
   const [runsLoading, setRunsLoading] = useState(true);
   const refresh = useCallback(async () => {
     setLoading(true); setError("");
@@ -63,19 +78,37 @@ export function RagEvaluationView() {
   };
   const launch = async (suite: RagEvaluationRun["suite"]) => {
     setBusy(true); setError("");
-    try { const created = await startRagEvaluation(suite); setRun(created); setMessage(""); await refreshRuns(); }
+    try {
+      const created = await startRagEvaluation(suite);
+      setRun(created);
+      setRunPage(1);
+      setMessage(created.gate_status === "ready"
+        ? `${suiteLabel(suite)} 已创建，后台开始执行；结果会在本页报告中更新。`
+        : `${suiteLabel(suite)} 未启动：已确认 ${created.confirmed_count ?? 0} / ${created.target_count}，请先补齐案例确认。`);
+      await refreshRuns();
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : "评测启动失败"); }
     finally { setBusy(false); }
   };
-  const goToPage = () => {
-    const requestedPage = Number(jumpPage);
-    if (!Number.isInteger(requestedPage)) return;
-    setPage(Math.min(totalPages, Math.max(1, requestedPage)));
-    setJumpPage("");
+  const runTotalPages = Math.max(1, Math.ceil(runs.length / RUN_PAGE_SIZE));
+  const visibleRuns = useMemo(
+    () => runs.slice((runPage - 1) * RUN_PAGE_SIZE, runPage * RUN_PAGE_SIZE),
+    [runPage, runs],
+  );
+  useEffect(() => {
+    if (runPage > runTotalPages) setRunPage(runTotalPages);
+  }, [runPage, runTotalPages]);
+  const copyRunId = async (runId: string) => {
+    try {
+      await navigator.clipboard.writeText(runId);
+      setMessage("已复制评测批次内部 ID；该 ID 仅用于排查和查询，不需要手动填写。");
+    } catch {
+      setError("复制失败，请直接选中内部 ID 复制。");
+    }
   };
   return <div className="view-content rag-evaluation-view">
     <div className="page-heading rag-evaluation-heading"><span className="eyebrow">知识中心 / RAG-QUALITY</span><h1>评测案例确认</h1><p>先确认固定语料，再进入质量评测门禁。确认人与状态会持久化到 PostgreSQL。</p></div>
-    <section className="panel rag-evaluation-run-panel"><div className="section-heading"><div><span className="eyebrow">运行门禁</span><h2>启动质量评测</h2></div><CheckCircle size={24} /></div><div className="sync-actions rag-suite-actions">{SUITES.map((suite) => <button type="button" className="secondary-button" key={suite.value} disabled={busy} onClick={() => void launch(suite.value)}>{suite.label}</button>)}</div>{run ? <div className="quality-result rag-run-result"><strong>{run.suite}：{run.gate_status === "ready" ? "门禁已通过" : "仍被阻塞"}</strong><span>已确认 {run.confirmed_count} / 目标 {run.target_count}</span></div> : null}</section>
+    <section className="panel rag-evaluation-run-panel"><div className="section-heading"><div><span className="eyebrow">运行门禁</span><h2>启动质量评测</h2></div><CheckCircle size={24} /></div><div className="rag-run-guide"><div><strong>1. 确认语料</strong><span>在下方列表逐页确认目标案例</span></div><div><strong>2. 选择规模</strong><span>点击 30 / 120 / 240 例按钮创建批次</span></div><div><strong>3. 查看结果</strong><span>后台执行完成后在结果报告中查看指标</span></div></div><div className="rag-run-help"><Info size={16} /><span>评测批次 ID 是系统内部追踪号，用于排查和查询；你不需要手动填写或理解它。</span></div><div className="sync-actions rag-suite-actions">{SUITES.map((suite) => <button type="button" className="secondary-button" key={suite.value} disabled={busy} onClick={() => void launch(suite.value)}>{suite.label}</button>)}</div>{run ? <div className={`quality-result rag-run-result ${run.gate_status === "blocked" ? "is-blocked" : ""}`}><strong>{suiteLabel(run.suite)}：{run.gate_status === "ready" ? "门禁已通过，已进入后台执行" : "门禁未通过，任务未执行"}</strong><span>已确认 {run.confirmed_count ?? 0} / 目标 {run.target_count}</span></div> : null}</section>
     <section className="panel rag-evaluation-panel"><div className="section-heading"><div><span className="eyebrow">人工确认</span><h2>固定评测语料</h2></div><ClipboardText size={24} /></div>
       <div className="metric-grid rag-metrics"><div><small>案例总数</small><strong>{total}</strong><span>当前筛选结果</span></div><div><small>待确认</small><strong>{draftCount}</strong><span>完成后才能运行评测</span></div><div><small>已确认</small><strong>{confirmedCount}</strong><span>已通过人工确认</span></div></div>
       <div className="rag-evaluation-search"><label><span>搜索案例</span><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="案例 ID、问题、状态或安全标签" /></label></div>
@@ -83,12 +116,13 @@ export function RagEvaluationView() {
       {loading ? <div className="empty-search">案例加载中…</div> : null}
       {!loading && !cases.length ? <div className="empty-search"><WarningCircle size={24} /><strong>暂无当前页评测案例</strong><span>当前版本固定语料会由后端幂等写入 PostgreSQL</span></div> : null}
       {cases.map((item) => <label className="operation-row rag-case-row" key={item.case_id}><input type="checkbox" checked={selected.has(item.case_id)} disabled={item.status !== "draft"} onChange={() => toggle(item.case_id)} /><span><strong>{item.case_id} · {item.question}</strong><small>{item.expected_status} · {item.safety_tags.join(" / ") || "常规"}</small></span><em className={item.status === "confirmed" ? "is-confirmed" : "is-draft"}>{item.status === "confirmed" ? "已确认" : item.status === "draft" ? "待确认" : "已拒绝"}</em></label>)}
-      <div className="sync-actions rag-pagination"><span>共 {total} 个案例 · 第 {page} / {totalPages} 页</span><div className="rag-page-controls"><button type="button" className="secondary-button" onClick={() => { setPage((current) => Math.max(1, current - 1)); setJumpPage(""); }} disabled={loading || page <= 1}>上一页</button><button type="button" className="secondary-button" onClick={() => { setPage((current) => Math.min(totalPages, current + 1)); setJumpPage(""); }} disabled={loading || page >= totalPages}>下一页</button><label className="rag-page-jump"><span>跳至</span><input type="number" min="1" max={totalPages} value={jumpPage} onChange={(event) => setJumpPage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") goToPage(); }} placeholder={String(page)} aria-label="输入页码" /><span>页</span><button type="button" className="secondary-button" onClick={goToPage} disabled={loading || !jumpPage}>确定</button></label></div></div>
+      <Pagination page={page} totalPages={totalPages} total={total} itemLabel="案例" disabled={loading} onPageChange={setPage} />
     </section>
     <section className="panel rag-results-panel"><div className="section-heading"><div><span className="eyebrow">正式质量结果</span><h2>评测结果报告</h2></div><button type="button" className="secondary-button rag-results-refresh" onClick={() => void refreshRuns()} disabled={runsLoading}>刷新结果</button></div>
       {runsLoading ? <div className="empty-search">评测运行记录加载中…</div> : null}
       {!runsLoading && !runs.length ? <div className="empty-search"><WarningCircle size={24} /><strong>暂无评测结果</strong><span>先确认语料，再启动 30 / 120 / 240 例评测。</span></div> : null}
-      <div className="rag-run-history">{runs.map((item) => <article className="rag-run-card" key={item.run_id}><div className="rag-run-card-heading"><div><strong>{item.suite === "quick" ? "30 例快速评测" : item.suite === "standard" ? "120 例标准回归" : "240 例完整验收"}</strong><small>{item.run_id}</small></div><em className={item.status === "succeeded" ? "is-passed" : item.status === "failed" ? "is-failed" : "is-pending"}>{item.status === "succeeded" ? "质量通过" : item.status === "failed" ? "质量未通过" : item.status === "queued" ? "等待执行" : item.status}</em></div><div className="rag-run-progress"><span>执行进度</span><strong>{item.executed_count} / {item.target_count}</strong><span>错误 {item.error_count}</span></div>{item.metrics ? <div className="rag-result-metrics">{RESULT_METRICS.map((metric) => { const raw = item.metrics?.[metric.key]; const value = typeof raw === "number" ? raw : 0; const passed = value >= metric.threshold; return <div className={passed ? "metric-passed" : "metric-failed"} key={metric.key}><span>{metric.label}</span><strong>{(value * 100).toFixed(1)}%</strong><small>门槛 {(metric.threshold * 100).toFixed(0)}%</small></div>; })}</div> : <div className="rag-result-pending"><span>{item.gate_status === "blocked" ? "启动门禁未通过，未进入正式质量计算" : "任务已创建，等待 Worker 回写指标结果"}</span></div>}</article>)}</div>
+      <div className="rag-run-history">{visibleRuns.map((item, index) => <article className="rag-run-card" key={item.run_id}><div className="rag-run-card-heading"><div><span className="rag-run-kicker">评测批次 #{(runPage - 1) * RUN_PAGE_SIZE + index + 1}</span><strong>{suiteLabel(item.suite)}</strong><small className="rag-run-id"><span>内部 ID：{item.run_id}</span><button type="button" className="rag-copy-id" onClick={() => void copyRunId(item.run_id)} title="复制内部 ID" aria-label={`复制${item.run_id}`}><Copy size={13} />复制</button></small></div><em className={item.status === "succeeded" ? "is-passed" : item.status === "failed" || item.gate_status === "blocked" ? "is-failed" : "is-pending"}>{runStatusLabel(item.status, item.gate_status)}</em></div><div className="rag-run-progress"><span>执行进度</span><strong>{item.executed_count} / {item.target_count}</strong><span>错误 {item.error_count}</span>{item.gate_status === "blocked" ? <span>已确认 {item.confirmed_count ?? 0} / {item.target_count}</span> : null}</div>{item.metrics ? <div className="rag-result-metrics">{RESULT_METRICS.map((metric) => { const raw = item.metrics?.[metric.key]; const value = typeof raw === "number" ? raw : 0; const passed = value >= metric.threshold; return <div className={passed ? "metric-passed" : "metric-failed"} key={metric.key}><span>{metric.label}</span><strong>{(value * 100).toFixed(1)}%</strong><small>门槛 {(metric.threshold * 100).toFixed(0)}%</small></div>; })}</div> : <div className={`rag-result-pending ${item.gate_status === "blocked" ? "is-blocked" : ""}`}><span>{item.gate_status === "blocked" ? "该批次未满足确认门禁，因此不会执行；请先确认对应语料后重新点击启动。" : "该批次已创建，后台执行完成后会回写指标；可点击“刷新结果”查看最新状态。"}</span></div>}</article>)}</div>
+      {!runsLoading && runs.length ? <Pagination page={runPage} totalPages={runTotalPages} total={runs.length} itemLabel="评测批次" disabled={runsLoading} onPageChange={setRunPage} /> : null}
     </section>
     {message ? <p className="form-message">{message}</p> : null}{error ? <p className="form-message">{error}</p> : null}
   </div>;
