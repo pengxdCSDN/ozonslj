@@ -178,17 +178,39 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
             await _set_scope(connection, self._organization_id)
             await cursor.execute(
                 """
-                SELECT id, model, base_url, credential_ref
-                FROM rag_model_providers
-                WHERE organization_id=%s AND model_kind='embedding' AND enabled=TRUE
-                ORDER BY priority, id
+                SELECT primary_provider_id, fallback_provider_ids
+                FROM rag_model_purpose_bindings
+                WHERE organization_id=%s AND purpose='embedding'
                 """,
                 (self._organization_id,),
             )
+            binding = await cursor.fetchone()
+            if binding is None:
+                return []
+            provider_ids = [
+                str(binding["primary_provider_id"]),
+                *[str(item) for item in (binding["fallback_provider_ids"] or [])],
+            ]
+            await cursor.execute(
+                """
+                SELECT id, model, base_url, credential_ref
+                FROM rag_model_providers
+                WHERE organization_id=%s AND model_kind='embedding' AND enabled=TRUE
+                  AND id=ANY(%s)
+                """,
+                (self._organization_id, provider_ids),
+            )
             rows = await cursor.fetchall()
+        by_id = {str(row["id"]): row for row in rows}
         return [
-            (str(row["id"]), str(row["model"]), str(row["base_url"]), row["credential_ref"])
-            for row in rows
+            (
+                provider_id,
+                str(by_id[provider_id]["model"]),
+                str(by_id[provider_id]["base_url"]),
+                by_id[provider_id]["credential_ref"],
+            )
+            for provider_id in provider_ids
+            if provider_id in by_id
         ]
 
 

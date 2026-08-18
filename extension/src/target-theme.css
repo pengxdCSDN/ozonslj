@@ -188,6 +188,14 @@ input:focus-visible { outline: 0; }
 .filter-control .select-menu-trigger { min-height: 40px; padding: 9px 11px; }
 .filter-control .select-menu-popover { min-width: 150px; }
 .filter-control .select-menu-popover svg { position: static; }
+.knowledge-task-filter { align-self: end; min-width: 190px; }
+.knowledge-task-filter .select-menu-label { color: var(--target-muted); font-size: 10px; font-weight: 750; }
+.knowledge-task-filter .select-menu-trigger { min-height: 42px; border-color: #59428d; background: linear-gradient(90deg, #111026, #15112a); }
+.knowledge-task-filter .select-menu-popover { min-width: 190px; }
+@media (max-width: 720px) {
+  .knowledge-task-filter { width: 100%; min-width: 0; }
+  .knowledge-task-filter .select-menu-popover { min-width: 0; }
+}
 .hero-skeleton, .metric-skeleton, .list-skeleton { background: linear-gradient(90deg, #171629 25%, #24213b 50%, #171629 75%); background-size: 200% 100%; }
 
 @media (min-width: 900px) {

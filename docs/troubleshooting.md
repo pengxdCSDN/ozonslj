@@ -352,3 +352,86 @@ Seller 店铺状态门禁只保护依赖商品、库存、订单、履约或店�
 解除的是前端 Seller 状态门禁，不代表自动获得 Performance OAuth、模型供应商或后端角色权限。上述页面应在页面内部显示“未配置/未授权/暂无数据”，不能跳转到 Seller 店铺验证；写入和真实广告请求仍由独立凭据、登录态和服务端权限控制。
 
 以下页面继续保留 Seller 门禁：运营总览、商品、运营、任务、数据质量、Seller 数据同步、库存/订单/履约、搜索词导入、竞品与选品、Listing、只读业务分析、数据来源/Schema/ERP 和 Agent 触发器。它们没有店铺事实时即使打开也无法提供可信结果。
+
+## 2026-08-18：GitHub Actions 在 Set up Node.js 阶段失败
+
+### 现象
+
+推送到 `codex/deployment-base-images` 后，GitHub Actions 在 `Set up Node.js` 步骤失败，导致
+用户误以为工作流偏离项目、Node.js 不应出现在部署流程，或者 ACR 凭据失效。该故障发生在
+ACR 登录和镜像构建之前，因此云服务器尚未被更新。
+
+### 根因
+
+工作流在 `actions/setup-node@v4` 中同时配置了 `cache: pnpm`，但 Corepack/pnpm 的启用步骤
+位于其后。`setup-node` 的缓存钩子会提前尝试解析 pnpm；Runner 此时没有可用的 pnpm 命令，
+所以错误被归类在 Node 初始化步骤，而不是明确显示为 pnpm 缓存初始化失败。
+
+这不是 Node.js 运行时依赖，也不是 ACR 或 SSH 部署问题。Node.js 只在 GitHub Runner 上用于
+前端 TypeScript/Vite 构建，云服务器运行应用时使用已构建的 Web 静态包和 ACR 应用镜像。
+
+### 修复
+
+保持 Node.js 步骤，但移除 `cache: pnpm`，并保持以下固定顺序：
+
+```text
+setup-node → corepack enable/prepare pnpm → pnpm install --frozen-lockfile
+→ pnpm typecheck → vite build → ACR login/build/push → SSH deploy → health check
+```
+
+修复后必须以步骤证据判断：Node.js、Corepack/pnpm、前端依赖安装、TypeScript、Vite、ACR
+登录、镜像构建推送、SSH 部署和健康检查是不同门禁，不能把其中一个步骤的失败归因给后续步骤。
+
+### 可复用排查顺序
+
+1. 打开同一 commit 的 Actions 运行记录，确认失败步骤和前置步骤，不要先去 ACR 控制台重复构建。
+2. 如果失败步骤是 `Set up Node.js`，检查工作流是否在该步骤配置了 pnpm 缓存或其他依赖 pnpm 的参数。
+3. 确认 `Enable pnpm` 位于 `Set up Node.js` 之后，并使用仓库锁定的 pnpm 版本。
+4. 单独确认 `pnpm install`、`pnpm typecheck`、Vite 构建，再继续判断 ACR 凭据和 Docker 构建。
+5. 只有 ACR 推送成功后，才检查 SSH、云端服务摘要、API live/ready 和 Web 资源。
+6. 同一种失败方式不得盲目重复；保留失败运行记录，按失败步骤更换诊断路径。
+
+### 防复发规则
+
+- 不要为了绕过该错误删除 Node.js；这会使前端构建失去明确的 Runner 环境。
+- 不要在 `setup-node` 阶段启用依赖尚未安装工具的 pnpm 缓存。
+- 不要把 Node.js 步骤失败误判为 ACR 用户名、固定密码、SSH 私钥或云服务器故障。
+- 不要同时触发 ACR 控制台构建和 GitHub Actions 构建；同一提交只保留一条发布链路。
+- 变更工作流后必须推送到 `codex/deployment-base-images`，并查看同一 commit 的完整 Actions 结果；
+  在 ACR 推送、云端健康检查完成前，不得报告“已部署”。
+
+## 2026-08-18：任务状态下拉框显示浏览器默认样式
+
+### 现象
+
+知识源管理页的“任务状态”使用原生 `select`。在不同浏览器或操作系统中展开后会出现系统蓝色选项面板，字体、圆角、间距和项目深色主题不一致；这类问题不能只靠调整 `option` 的颜色彻底解决，因为弹出面板由浏览器和操作系统接管。
+
+### 统一处理
+
+项目页面的业务筛选下拉统一使用 `extension/src/SelectMenu.tsx` 的 `SelectMenu` 组件，并复用 `select-menu-*` 主题样式。组件提供 `button + role=listbox + role=option` 语义，支持键盘聚焦、Esc 收起、失焦收起、当前项勾选和响应式宽度；页面只传入 `label`、`value`、`options` 和 `onChange`，不再复制一套下拉样式。
+
+### 防复发规则
+
+- 新增业务筛选器先复用 `SelectMenu`，不要直接使用原生 `select`。
+- 原生 `select` 仅用于确实需要系统原生辅助能力的场景，并必须在评审中说明原因。
+- 下拉的选项文案、状态色和宽度由页面数据与主题类共同决定，禁止在组件内写业务条件。
+- 修改下拉后必须执行 TypeScript 检查和 Vite 构建，并在宽屏、窄屏和键盘操作下检查展开、选择、关闭。
+
+## 2026-08-18：连接测试通过但正式评测提示 Embedding 不可用
+
+### 原因
+
+连接测试只验证页面当前填写的模型、地址和凭据；正式 Worker 必须读取 PostgreSQL 中已保存的配置，并按照 `embedding` 用途绑定的主模型/备用模型执行。若运行时直接扫描所有启用的向量供应商，就可能把未绑定的旧配置、旧维度或已失效凭据带入降级链，造成“测试通过、正式调用失败”。
+
+### 统一处理
+
+正式 Embedding 路由只读取 `rag_model_purpose_bindings` 中 `embedding` 用途的主模型和备用模型，并按绑定顺序执行；未绑定的启用配置不能参与正式调用。页面连接测试、保存配置和 Worker 运行时必须使用同一供应商 ID、模型、Base URL、凭据引用和用途绑定。
+
+### 验收顺序
+
+1. 保存供应商配置后重新读取页面，确认模型、Base URL、模型类型和凭据状态已更新。
+2. 确认 `embedding` 用途绑定的主模型和备用模型均为启用的向量模型。
+3. 连接测试通过后，确认当前索引维度仍为 1024；维度变化必须新建索引版本并完整重建。
+4. 先新建 30 例评测；只有执行进度大于 0 且无 Embedding 错误，才继续 120/240 例。
+
+旧的 `0/N` 失败批次不会因刷新自动修复；配置和绑定修复后必须新建评测批次。排查时以供应商 ID 和用途绑定为准，不以页面显示名称或单次临时连接测试为准。

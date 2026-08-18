@@ -239,3 +239,39 @@ GitHub Actions 到云服务器的部署阶段；它不是本机 GitHub 推送的
 - 不要在 `git-remote-https.exe` 崩溃时重复盲推；先检查 OpenSSL 后端。
 - 不要为同一 commit 同时点击 ACR 自动构建和 GitHub Actions 构建，避免多个任务排队和来源混淆。
 - 不要把 ACR 用户名/密码、SSH 私钥或 `.env` 内容写入日志、文档或聊天。
+
+### 9.5 GitHub Actions 的 Node.js 与 pnpm 初始化顺序
+
+GitHub Actions 使用 Node.js 不是把 Node 部署到云服务器，而是为了在 Runner 上执行
+React/TypeScript 类型检查和 Vite Web 构建。应用运行时仍由 ACR 应用镜像和云端 Compose
+服务提供。当前工作流的顺序必须保持为：
+
+```text
+setup-node → corepack enable/prepare pnpm → pnpm install → typecheck → Vite build
+```
+
+`actions/setup-node` 阶段禁止配置 `cache: pnpm`，因为该缓存钩子会在 Corepack 启用前尝试
+解析 pnpm；当 Runner 没有预先暴露 pnpm 时，失败会显示为 `Set up Node.js`，看起来像 Node
+本身安装失败，实际是缓存初始化顺序错误。正确配置见 `.github/workflows/deploy.yml`：
+
+```yaml
+- name: Set up Node.js
+  uses: actions/setup-node@v4
+  with:
+    node-version: 22
+
+- name: Enable pnpm
+  run: corepack enable && corepack prepare pnpm@11.0.0 --activate
+```
+
+发布前后应按步骤判断，不要重复点击构建：
+
+1. `Set up Node.js` 通过后，确认 `Enable pnpm`、`pnpm install`、TypeScript 和 Vite 依次通过。
+2. 前端步骤通过后，才判断 ACR 登录、镜像构建和推送；Node 步骤失败不等于 ACR 凭据失效。
+3. ACR 推送通过后，继续检查 SSH 部署、API 健康端点、API/Worker/Scheduler 摘要和 Web 入口。
+4. 同一 commit 只保留一个 GitHub Actions 发布运行；不要同时从 ACR 控制台手动构建，避免排队和来源混淆。
+5. 任何步骤失败先读取该步骤日志；同一种命令最多按既有故障规则重试两次，之后必须更换诊断路径。
+
+本次复核结果：修复后的运行已验证 `Set up Node.js`、Corepack/pnpm、前端类型检查、Vite
+构建和 ACR 登录通过，随后进入应用镜像构建阶段。以后以同一 commit 的 Actions 运行记录为
+发布证据，不能只看到 Node 步骤通过就宣称云端已发布。
