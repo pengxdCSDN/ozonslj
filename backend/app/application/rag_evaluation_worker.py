@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from contextlib import suppress
 
 from backend.app.domain.knowledge_runtime import get_knowledge_runtime, resolve_knowledge_engine
@@ -10,6 +11,8 @@ from backend.app.domain.rag_evaluation import RagEvaluationGateway, suite_case_l
 from backend.app.domain.rag_metrics import quality_gate_passed
 from backend.app.domain.rag_quality_runner import run_fixed_quality_suite
 from backend.app.infrastructure.redis_rag_evaluation import RedisRagEvaluationTaskConsumer
+
+logger = logging.getLogger(__name__)
 
 
 class RagEvaluationWorker:
@@ -68,11 +71,17 @@ class RagEvaluationWorker:
                 self._worker_id,
             )
         except Exception:
-            saved = await self._runs.save_run_metrics(
-                run_id,
-                {"gate_status": "blocked", "error_code": "evaluation_runtime_failed"},
-                0, 0, 0, suite_case_limit(run.suite), self._worker_id,
-            )
+            try:
+                saved = await self._runs.save_run_metrics(
+                    run_id,
+                    {"gate_status": "blocked", "error_code": "evaluation_runtime_failed"},
+                    0, 0, 0, suite_case_limit(run.suite), self._worker_id,
+                )
+            except Exception:
+                # 回写失败不能让 Worker 进程退出；未确认的 Redis 消息会保留，
+                # PostgreSQL 租约到期后由 Scheduler 重新投递，避免静默丢任务。
+                logger.exception("评测运行 %s 失败结果回写异常", run_id)
+                saved = None
         finally:
             heartbeat.cancel()
             with suppress(asyncio.CancelledError):

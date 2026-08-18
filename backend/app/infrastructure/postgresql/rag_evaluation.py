@@ -275,7 +275,7 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
                        lease_expires_at = NULL
                    WHERE organization_id = %s AND id = %s AND gate_status = 'ready'
                      AND status = 'running'
-                     AND (%s IS NULL OR lease_owner = %s)
+                     AND (%s::text IS NULL OR lease_owner = %s)
                    RETURNING id, suite, status, gate_status, executed_count, passed_count,
                              failed_count, error_count, metrics""",
                 (
