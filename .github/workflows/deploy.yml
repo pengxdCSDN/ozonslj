@@ -1,0 +1,127 @@
+name: Build and deploy ozonslj
+
+on:
+  push:
+    branches:
+      - codex/deployment-base-images
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: crpi-vq6wc2wogtrd0ib9.cn-guangzhou.personal.cr.aliyuncs.com
+  IMAGE: crpi-vq6wc2wogtrd0ib9.cn-guangzhou.personal.cr.aliyuncs.com/kakapeng0927/pxd
+  APP_TAG: ozonslj-api-dev
+  DEPLOY_HOST: 8.148.215.217
+  DEPLOY_USER: root
+  REMOTE_DEPLOY_DIR: /opt/ozonslj/app/deploy
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend test dependencies
+        run: python -m pip install --upgrade pip && pip install -e . pytest pytest-asyncio
+
+      - name: Run backend regression tests
+        run: python -m pytest -q
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@11.0.0 --activate
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend typecheck
+        run: pnpm typecheck
+
+      - name: Build frontend Web bundle
+        run: pnpm --dir extension exec vite build --mode web --configLoader runner --outDir ../web-release-ci --emptyOutDir
+
+      - name: Log in to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push application image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ env.APP_TAG }}
+            ${{ env.IMAGE }}:${{ github.sha }}
+          build-args: |
+            RELEASE_REVISION=${{ github.sha }}
+
+      - name: Prepare SSH
+        shell: bash
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' '${{ secrets.DEPLOY_SSH_KEY }}' > ~/.ssh/ozonslj_server
+          chmod 600 ~/.ssh/ozonslj_server
+          ssh-keyscan -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload Web bundle to isolated directory
+        shell: bash
+        run: |
+          remote="${REMOTE_DEPLOY_DIR}/web.next-${GITHUB_SHA}"
+          ssh -i ~/.ssh/ozonslj_server "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "rm -rf '${remote}' && mkdir -p '${remote}'"
+          scp -i ~/.ssh/ozonslj_server -r web-release-ci/. \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${remote}/"
+
+      - name: Deploy application services and Web bundle
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/ozonslj_server "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "DEPLOY_SHA='${GITHUB_SHA}' IMAGE='${IMAGE}:${APP_TAG}' REMOTE_DEPLOY_DIR='${REMOTE_DEPLOY_DIR}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$REMOTE_DEPLOY_DIR"
+          docker compose --env-file .env pull api worker scheduler
+          image_id="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          test -n "$image_id"
+          docker compose --env-file .env up -d --no-deps api worker scheduler
+          rollback="web.rollback-${DEPLOY_SHA}"
+          if [ -d web ]; then mv web "$rollback"; fi
+          mv "web.next-${DEPLOY_SHA}" web
+          docker compose --env-file .env up -d --force-recreate --no-deps web
+          printf 'image_id=%s\n' "$image_id"
+          REMOTE
+
+      - name: Verify deployment health and service digest
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/ozonslj_server "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "REMOTE_DEPLOY_DIR='${REMOTE_DEPLOY_DIR}' IMAGE='${IMAGE}:${APP_TAG}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$REMOTE_DEPLOY_DIR"
+          for path in api/health/live api/health/ready; do
+            curl --fail --silent --show-error "http://127.0.0.1/$path" >/dev/null
+          done
+          expected="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          for service in api worker scheduler; do
+            container="$(docker compose --env-file .env ps -q "$service")"
+            actual="$(docker inspect "$container" --format '{{.Image}}')"
+            test "$actual" = "$expected"
+          done
+          curl --fail --silent --show-error https://127.0.0.1/ >/dev/null --insecure
+          REMOTE

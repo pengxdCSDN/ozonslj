@@ -151,3 +151,26 @@ Web 入口 JS/CSS:
 ```
 
 禁止记录凭据、Token、私钥、`.env` 内容或密钥文件内容。
+
+## 八、GitHub Actions 长期自动发布
+
+为避免依赖阿里云控制台登录态，仓库新增 `.github/workflows/deploy.yml`。它只监听
+`codex/deployment-base-images`，在 GitHub Runner 完成后端回归、前端类型检查和 Web 构建，
+再使用 ACR Docker 凭据推送 `ozonslj-api-dev`，最后通过 SSH 只更新 API、Worker、Scheduler
+和 Web 静态目录。
+
+仓库 Settings → Secrets and variables → Actions → Repository secrets 必须配置：
+
+| Secret | 用途 | 注意 |
+|---|---|---|
+| `ACR_USERNAME` | ACR Docker 用户名 | 使用 ACR 页面显示的阿里云账户全名，不是控制台密码 |
+| `ACR_PASSWORD` | ACR 固定密码 | 使用 ACR“设置固定密码”设置的密码，不是阿里云登录密码 |
+| `DEPLOY_SSH_KEY` | 云服务器 SSH 私钥 | 粘贴完整 OpenSSH 私钥，不得提交到仓库或发送到聊天 |
+
+工作流同时推送 commit SHA 镜像标签，并将 `RELEASE_REVISION` 写入镜像环境变量；服务器部署前
+拉取可变 `ozonslj-api-dev` 标签，但会检查服务容器使用同一镜像摘要。Web 先上传到
+`web.next-<commit>` 临时目录，再原子切换并保留 `web.rollback-<commit>`，健康检查失败时不得
+删除回滚目录。
+
+这套流程不需要每次登录阿里云控制台。若 ACR 固定密码或服务器 SSH 密钥轮换，只需在 GitHub
+Secrets 中更新对应值，不修改工作流和仓库代码。
