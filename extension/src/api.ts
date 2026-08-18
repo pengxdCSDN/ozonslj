@@ -85,6 +85,14 @@ export interface ModelBudget {
   state: "normal" | "warning" | "exceeded";
   allowed: boolean;
   reason: string | null;
+  metrics: Array<{
+    key: "daily_tokens" | "monthly_tokens" | "daily_requests" | "monthly_cost";
+    label: string;
+    used: number;
+    limit: number;
+    ratio: number;
+    state: "normal" | "warning" | "exceeded";
+  }>;
 }
 
 let sessionToken: string | null = null;

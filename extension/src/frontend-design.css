@@ -280,6 +280,10 @@ h1, h2, h3, strong { font-family: var(--fd-display); }
 .budget-row-state em.danger { border-color: rgba(255,110,147,.22); color: var(--fd-rose); background: rgba(255,110,147,.08); }
 .budget-row-state em.pending { border-color: rgba(161,132,255,.22); color: var(--fd-violet-hot); background: rgba(161,132,255,.08); }
 .budget-row-state small { overflow: hidden; color: var(--fd-muted); font: 9px var(--fd-mono); text-overflow: ellipsis; white-space: nowrap; }
+.budget-limit-details { display: grid; gap: 3px; margin-top: 2px; }
+.budget-limit-item { color: var(--fd-muted); font: 8px var(--fd-mono); white-space: nowrap; }
+.budget-limit-item.warning { color: var(--fd-orange); }
+.budget-limit-item.exceeded { color: var(--fd-rose); font-weight: 800; }
 .budget-fields { display: grid; grid-template-columns: repeat(4, minmax(82px, 1fr)); gap: 8px; }
 .budget-fields label { display: grid; gap: 5px; color: var(--fd-muted); font-size: 8px; font-weight: 700; }
 .budget-fields input { width: 100%; min-width: 0; height: 34px; padding: 7px 8px; border: 1px solid rgba(143,112,255,.16); border-radius: 8px; color: var(--fd-text); background: rgba(8,8,20,.65); font: 10px var(--fd-mono); }

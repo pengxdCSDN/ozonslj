@@ -44,6 +44,17 @@ class BudgetUsagePayload(BaseModel):
     monthly_cost: float = Field(ge=0)
 
 
+class BudgetMetricPayload(BaseModel):
+    """向页面解释每一项预算的已用、上限和触发状态，避免只显示一个笼统的阻断。"""
+
+    key: Literal["daily_tokens", "monthly_tokens", "daily_requests", "monthly_cost"]
+    label: str
+    used: float
+    limit: float
+    ratio: float
+    state: Literal["normal", "warning", "exceeded"]
+
+
 class BudgetResponse(BaseModel):
     provider_id: str
     purpose: BudgetPurpose
@@ -52,12 +63,27 @@ class BudgetResponse(BaseModel):
     state: str
     allowed: bool
     reason: str | None
+    metrics: list[BudgetMetricPayload]
 
 
 def _response(
     provider_id: str, policy: ModelBudgetPolicy, usage: ModelBudgetUsage
 ) -> BudgetResponse:
     decision = decide_budget(policy, usage)
+    # 四项预算必须全部回传；用户需要知道到底是 Token、请求次数还是费用触发阻断。
+    metric_values = [
+        ("daily_tokens", "今日 Token", usage.daily_tokens, policy.daily_token_limit),
+        ("monthly_tokens", "本月 Token", usage.monthly_tokens, policy.monthly_token_limit),
+        ("daily_requests", "今日请求数", usage.daily_requests, policy.daily_request_limit),
+        ("monthly_cost", "本月费用（RMB）", usage.monthly_cost, policy.monthly_budget),
+    ]
+    metrics = []
+    for key, label, used, limit in metric_values:
+        ratio = used / max(limit, 0.01)
+        state = "exceeded" if ratio >= 1 else "warning" if ratio >= 0.9 else "normal"
+        metrics.append(BudgetMetricPayload(
+            key=key, label=label, used=used, limit=limit, ratio=ratio, state=state,
+        ))
     return BudgetResponse(
         provider_id=provider_id,
         purpose=policy.purpose,
@@ -77,6 +103,7 @@ def _response(
         state=decision.state,
         allowed=decision.allowed,
         reason=decision.reason,
+        metrics=metrics,
     )
 
 
