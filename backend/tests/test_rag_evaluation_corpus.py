@@ -1,4 +1,8 @@
-from backend.app.domain.rag_evaluation_corpus import fixed_evaluation_corpus, fixed_suite_case_ids
+from backend.app.domain.rag_evaluation_corpus import (
+    fixed_evaluation_chunks,
+    fixed_evaluation_corpus,
+    fixed_suite_case_ids,
+)
 
 
 def test_fixed_corpus_has_calibration_and_frozen_suites() -> None:
@@ -15,3 +19,13 @@ def test_fixed_corpus_has_calibration_and_frozen_suites() -> None:
 def test_fixed_corpus_contains_security_and_multi_intent_cases() -> None:
     tags = {tag for item in fixed_evaluation_corpus() for tag in item.safety_tags}
     assert {"prompt_injection", "permission_boundary", "multi_intent", "unsupported"} <= tags
+
+
+def test_fixed_evaluation_chunks_match_gold_ids_and_exclude_refusals() -> None:
+    cases = fixed_evaluation_corpus()
+    chunks = fixed_evaluation_chunks()
+    expected = {chunk_id for case in cases for chunk_id in case.expected_chunk_ids}
+    assert {chunk.chunk_id for chunk in chunks} == expected
+    assert len(chunks) == len(expected)
+    assert all(chunk.metadata.extra[-1] == ("evaluation_only", "true") for chunk in chunks)
+    assert all(chunk.metadata.status == "published" for chunk in chunks)

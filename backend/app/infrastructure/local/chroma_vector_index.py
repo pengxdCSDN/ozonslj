@@ -98,6 +98,24 @@ class HttpChromaCollection:
             {"query_embeddings": query_embeddings, "n_results": n_results, "include": include},
         )
 
+    async def count(self) -> int:
+        """读取 collection 中的切片数量，用于幂等索引初始化，不读取正文。"""
+        path = f"/api/v1/collections/{self._collection_id}/count"
+        try:
+            async with httpx.AsyncClient(
+                base_url=self._base_url,
+                timeout=self._timeout_seconds,
+                transport=self._transport,
+            ) as client:
+                response = await client.get(path)
+            response.raise_for_status()
+            count = response.json()
+        except (httpx.HTTPError, httpx.TimeoutException, ValueError) as error:
+            raise RuntimeError("Chroma count 请求失败") from error
+        if not isinstance(count, int):
+            raise RuntimeError("Chroma count 返回格式无效")
+        return count
+
     async def _request(
         self, method: str, operation: str, payload: dict[str, object]
     ) -> dict[str, object]:

@@ -44,7 +44,14 @@ class RagEvaluationWorker:
         heartbeat = asyncio.create_task(self._heartbeat(run_id))
         try:
             runtime = get_knowledge_runtime()
-            engine = await resolve_knowledge_engine(runtime)
+            # 生产运行时提供隔离的固定评测索引；本地内存运行时没有该外部 collection，
+            # 因此继续使用原有 engine，保持离线契约测试不依赖 Chroma。
+            evaluation_builder = getattr(runtime, "evaluation_engine", None)
+            engine = (
+                await evaluation_builder()
+                if evaluation_builder is not None
+                else await resolve_knowledge_engine(runtime)
+            )
             report = await run_fixed_quality_suite(engine, run.suite)  # type: ignore[arg-type]
             metrics: dict[str, float | str] = {
                 "recall": report.metrics.recall,

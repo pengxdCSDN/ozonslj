@@ -33,6 +33,26 @@
 
 固定语料版本为 `fixed-rag-v2`，共 400 例：前 160 例用于校准，后 240 例冻结验收。冻结集固定拆为 quick 30 例、standard 120 例、full 240 例。
 
+### 固定语料的生产发布与索引验收
+
+正式 Worker 不再把业务知识源当作固定评测语料。发布评测语料时，运行时根据仓库内
+`fixed_evaluation_corpus()` 生成稳定的 `fixed-rag-v2` 切片，并写入独立的 Chroma
+collection `ozonslj_rag_evaluation`。该 collection 不登记为业务知识源，因此不会出现在
+知识源管理列表，也不会污染普通知识问答；每个支持型案例的 `gold-*` 切片与标注 ID 一一对应，
+拒答和未收录案例不生成证据。
+
+索引初始化按 64 条一批调用真实 Embedding，并在每批成功后写入 Chroma。Worker 首次准备评测
+引擎时读取 collection 数量；数量已等于固定语料切片数时直接复用，不重复 Embedding。任一批
+失败都会阻断本次评测，不允许使用部分索引伪造通过。验收时必须同时确认：
+
+1. 固定语料切片数量与 `fixed_evaluation_chunks()` 一致；
+2. Chroma `ozonslj_rag_evaluation` 能查询到所运行案例的 `gold-*` 证据 ID；
+3. 30 例执行进度为 `30/30`、错误为 0，且 Recall@5、Recall@10、Precision@5、引用支持率达到门槛；
+4. 只有 30 例质量通过，才允许创建 120 例；120 例通过后才允许创建 240 例。
+
+如果 30 例出现 `embedding_unavailable`、`embedding_dimension_mismatch` 或 Chroma 错误，先
+处理索引和供应商绑定，再新建批次；不要反复刷新或重复创建相同规模的批次。
+
 每个知识问答案例包含 5 个人工确认支持片段；多意图案例包含两个意图、每个意图 5 个支持片段。这样 `Precision@5` 衡量前五条引用是否都是支持证据，而不是被单一金标准片段的标注口径人为压低。
 
 ## 离线契约验收

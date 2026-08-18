@@ -21,6 +21,7 @@ from backend.app.domain.knowledge_query import (
 from backend.app.domain.knowledge_retrieval import (
     DeterministicEmbedding,
     EmbeddingPort,
+    InMemoryKeywordIndex,
     RetrievalHit,
 )
 from backend.app.domain.model_budget import (
@@ -29,6 +30,7 @@ from backend.app.domain.model_budget import (
     ModelBudgetUsage,
     decide_budget,
 )
+from backend.app.domain.rag_evaluation_corpus import fixed_evaluation_chunks
 from backend.app.infrastructure.cloud_models import (
     CloudModelError,
     DashScopeEmbeddingClient,
@@ -487,6 +489,8 @@ class PostgresChromaKnowledgeRuntime:
             configured_dimension=settings.rag_embedding_dimension,
         )
         self._pool_open = False
+        self._evaluation_collection: HttpChromaCollection | None = None
+        self._evaluation_indexed = False
 
     async def _ensure(self) -> None:
         if not self._pool_open:
@@ -957,6 +961,56 @@ class PostgresChromaKnowledgeRuntime:
                 self._pool, self.organization_id
             ),
             vector_index=HttpChromaVectorIndex(self._collection, {}),
+            reranker=_ManagedRerankerRouter(
+                pool=self._pool,
+                organization_id=self.organization_id,
+                credentials=self._credentials,
+            ),
+            answer_generator=_ManagedAnswerGenerator(
+                pool=self._pool,
+                organization_id=self.organization_id,
+                credentials=self._credentials,
+            ),
+        )
+
+    async def evaluation_engine(self) -> KnowledgeQueryEngine:
+        """构造隔离的正式评测引擎，并幂等发布固定评测语料。
+
+        固定评测语料只进入 ``ozonslj_rag_evaluation``，与业务 collection 完全分离；
+        这样质量评测能验证真实 Embedding、Chroma、Reranker 和文本模型，又不会把
+        评测问题或人工标注证据污染用户的生产知识问答。collection 数量一致时不重复
+        发送 Embedding，避免重复点击评测无意义地消耗供应商额度。
+        """
+        await self._ensure()
+        if self._evaluation_collection is None:
+            self._evaluation_collection = await HttpChromaCollection.ensure(
+                self._chroma_url, "ozonslj_rag_evaluation"
+            )
+        chunks = list(fixed_evaluation_chunks())
+        if not self._evaluation_indexed:
+            count = await self._evaluation_collection.count()
+            if count != len(chunks):
+                # 供应商通常限制单次输入数量；按 64 条分批，单批失败会让评测整体阻断，
+                # 不会留下“部分索引也算成功”的假通过状态。
+                for start in range(0, len(chunks), 64):
+                    batch = chunks[start:start + 64]
+                    await self._evaluation_collection.upsert(
+                        ids=[item.chunk_id for item in batch],
+                        documents=[item.content for item in batch],
+                        embeddings=await self._embedding.embed([item.content for item in batch]),
+                        metadatas=[_metadata_for_chunk(item) for item in batch],
+                    )
+            self._evaluation_indexed = True
+        keyword = InMemoryKeywordIndex()
+        await keyword.replace(chunks)
+        assert self._evaluation_collection is not None
+        return KnowledgeQueryEngine(
+            embedding=self._embedding,
+            keyword_index=keyword,
+            vector_index=HttpChromaVectorIndex(
+                self._evaluation_collection,
+                {item.chunk_id: item for item in chunks},
+            ),
             reranker=_ManagedRerankerRouter(
                 pool=self._pool,
                 organization_id=self.organization_id,

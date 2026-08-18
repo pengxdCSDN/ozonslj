@@ -99,6 +99,19 @@ async def test_http_chroma_collection_ensure_uses_stable_collection_name() -> No
 
 
 @pytest.mark.asyncio
+async def test_http_chroma_collection_count_reads_integer_response() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path.endswith("/count")
+        return httpx.Response(200, json=1234)
+
+    collection = HttpChromaCollection(
+        "http://chroma:8000", "collection-1", transport=httpx.MockTransport(handler)
+    )
+    assert await collection.count() == 1234
+
+
+@pytest.mark.asyncio
 async def test_http_chroma_adapter_rejects_invalid_json() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, content=b"not-json")

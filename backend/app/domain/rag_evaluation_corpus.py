@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from hashlib import sha256
+
+from backend.app.domain.knowledge_chunking import ChunkMetadata, KnowledgeChunk
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,3 +87,45 @@ def fixed_suite_case_ids(suite: str) -> tuple[str, ...]:
     if suite not in limits:
         raise ValueError("suite 只能是 quick、standard 或 full")
     return tuple(case.case_id for case in cases[:limits[suite]])
+
+
+def fixed_evaluation_chunks() -> tuple[KnowledgeChunk, ...]:
+    """返回固定评测语料的稳定切片，供专用 Chroma 评测索引使用。
+
+    评测语料不写入业务知识源表，也不进入普通知识问答 collection。每个支持型案例
+    生成 5 个唯一证据切片，多意图案例为每个意图生成 5 个切片；切片 ID 与案例标注
+    完全一致，保证 Recall/Precision 的计算可以追溯。安全拒答和未收录案例故意不生成
+    证据，防止用“伪证据”把拒答门禁变成通过。
+    """
+    chunks: list[KnowledgeChunk] = []
+    for case in fixed_evaluation_corpus():
+        for ordinal, chunk_id in enumerate(case.expected_chunk_ids):
+            content = (
+                f"固定评测证据 {chunk_id}。\n"
+                f"对应问题：{case.question}\n"
+                f"证据结论：这是评测语料中关于该问题的受控、可引用说明；"
+                "正式回答必须引用本切片，不得把它当作外部店铺事实。"
+            )
+            metadata = ChunkMetadata(
+                document_id="fixed-rag-v2",
+                document_version_id="fixed-rag-v2",
+                business_domain="general",
+                source_type="markdown",
+                source_level="a",
+                language="zh-CN",
+                title_path=("固定评测语料", case.case_id, chunk_id),
+                source_locator=f"fixed-rag-v2://{chunk_id}",
+                chunk_strategy="fixed-evaluation-evidence",
+                chunk_strategy_version="fixed-rag-v2",
+                status="published",
+                sensitivity="internal",
+                extra=(("source_status", "active"), ("evaluation_only", "true")),
+            )
+            chunks.append(KnowledgeChunk(
+                chunk_id=chunk_id,
+                content=content,
+                content_hash=sha256(content.encode("utf-8")).hexdigest(),
+                ordinal=ordinal,
+                metadata=metadata,
+            ))
+    return tuple(chunks)
