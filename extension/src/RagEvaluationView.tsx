@@ -1,6 +1,6 @@
 import { CheckCircle, ClipboardText, Copy, Info, WarningCircle } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { confirmRagEvaluationCasesBatch, listRagEvaluationCases, listRagEvaluationRuns, startRagEvaluation, type RagEvaluationCase, type RagEvaluationRun } from "./api";
+import { confirmRagEvaluationCasesBatch, listRagEvaluationCases, listRagEvaluationRuns, startRagEvaluation, type RagEvaluationCase, type RagEvaluationRun, type RagEvaluationStartResult } from "./api";
 import { Pagination } from "./Pagination";
 
 const SUITES: Array<{ value: RagEvaluationRun["suite"]; label: string }> = [
@@ -46,7 +46,7 @@ export function RagEvaluationView() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [run, setRun] = useState<RagEvaluationRun | null>(null);
+  const [run, setRun] = useState<RagEvaluationStartResult | null>(null);
   const [runs, setRuns] = useState<RagEvaluationRun[]>([]);
   const [runPage, setRunPage] = useState(1);
   const [runsLoading, setRunsLoading] = useState(true);
@@ -83,7 +83,9 @@ export function RagEvaluationView() {
       setRun(created);
       setRunPage(1);
       setMessage(created.gate_status === "ready"
-        ? `${suiteLabel(suite)} 已创建，后台开始执行；结果会在本页报告中更新。`
+        ? (created.deduplicated
+          ? `${suiteLabel(suite)} 已有活动批次，已自动复用；结果会在本页报告中更新。`
+          : `${suiteLabel(suite)} 已创建，后台开始执行；结果会在本页报告中更新。`)
         : `${suiteLabel(suite)} 未启动：已确认 ${created.confirmed_count ?? 0} / ${created.target_count}，请先补齐案例确认。`);
       await refreshRuns();
     }

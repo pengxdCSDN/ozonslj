@@ -6,6 +6,7 @@ import socket
 
 from redis.asyncio import Redis
 
+from backend.app.application.rag_evaluation_worker import RagEvaluationWorker
 from backend.app.application.rag_worker import RagWorker
 from backend.app.application.sync_dispatch import SyncJobDispatcher
 from backend.app.application.sync_processes import run_scheduler_loop, run_worker_loop
@@ -13,9 +14,14 @@ from backend.app.application.sync_worker import SyncWorker
 from backend.app.config import Settings, get_settings
 from backend.app.domain.sync_job import SyncHandler, SyncResourceType
 from backend.app.infrastructure.observability import METRICS
+from backend.app.infrastructure.postgresql.rag_evaluation import PostgresRagEvaluationGateway
 from backend.app.infrastructure.postgresql.rag_tasks import PostgresRagTaskGateway
 from backend.app.infrastructure.postgresql.session import PostgresSessionFactory, TenantContext
 from backend.app.infrastructure.postgresql.sync_jobs import PostgresSyncJobGateway
+from backend.app.infrastructure.redis_rag_evaluation import (
+    RedisRagEvaluationTaskConsumer,
+    RedisRagEvaluationTaskQueue,
+)
 from backend.app.infrastructure.redis_rag_tasks import RedisRagTaskConsumer, RedisRagTaskQueue
 from backend.app.infrastructure.redis_sync_consumer import RedisSyncJobConsumer
 from backend.app.infrastructure.redis_sync_queue import RedisSyncJobQueue
@@ -73,6 +79,8 @@ async def run_scheduler(settings: Settings) -> None:
         dispatcher = SyncJobDispatcher(jobs, RedisSyncJobQueue(redis))
         rag_tasks = PostgresRagTaskGateway(sessions, _service_context(settings))
         rag_queue = RedisRagTaskQueue(redis)
+        evaluation_runs = PostgresRagEvaluationGateway(sessions, _service_context(settings))
+        evaluation_queue = RedisRagEvaluationTaskQueue(redis)
 
         async def dispatch_once() -> int:
             count = await dispatcher.dispatch_due_jobs(limit=settings.sync_dispatch_batch_size)
@@ -93,7 +101,17 @@ async def run_scheduler(settings: Settings) -> None:
                 float(await redis.xlen("rag_tasks")),
                 labels={"queue": "rag"},
             )
-            return count + len(rag_ids)
+            evaluation_ids = await evaluation_runs.dispatchable_run_ids(
+                settings.sync_dispatch_batch_size
+            )
+            for run_id in evaluation_ids:
+                await evaluation_queue.enqueue(run_id)
+            METRICS.set_gauge(
+                "ozonslj_task_queue_stream_length",
+                float(await redis.xlen("rag_evaluation_runs")),
+                labels={"queue": "rag-evaluation"},
+            )
+            return count + len(rag_ids) + len(evaluation_ids)
 
         await run_scheduler_loop(
             dispatch_once,
@@ -152,9 +170,32 @@ async def run_worker(settings: Settings) -> None:
             )
             return processed
 
+        evaluation_runs = PostgresRagEvaluationGateway(sessions, _service_context(settings))
+        evaluation_consumer = RedisRagEvaluationTaskConsumer(
+            redis, consumer_name=f"rag-evaluation-{worker_id}"
+        )
+        evaluation_worker = RagEvaluationWorker(
+            evaluation_runs,
+            evaluation_consumer,
+            worker_id=worker_id,
+            lease_seconds=settings.sync_worker_lease_seconds,
+        )
+
+        async def process_evaluation_one() -> bool:
+            processed = await evaluation_worker.process_one(
+                block_ms=settings.sync_worker_block_ms
+            )
+            METRICS.inc(
+                "ozonslj_worker_processed_jobs_total",
+                labels={"worker": "rag-evaluation"},
+                value=int(processed),
+            )
+            return processed
+
         await asyncio.gather(
             run_worker_loop(process_one, stop),
             run_worker_loop(process_rag_one, stop),
+            run_worker_loop(process_evaluation_one, stop),
         )
     finally:
         await redis.aclose()

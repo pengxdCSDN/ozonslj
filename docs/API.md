@@ -249,7 +249,7 @@ Retry-After: 2
 | GET | `/v1/rag-evaluation/cases?page=1&page_size=20&q=...` | 分页搜索当前组织的固定/草稿案例；`q` 匹配案例 ID、问题、状态和安全标签 |
 | POST | `/v1/rag-evaluation/cases/{case_id}/confirm` | 单条人工确认 |
 | POST | `/v1/rag-evaluation/cases/confirm-batch` | 批量人工确认，最多 240 个案例 |
-| POST | `/v1/rag-evaluation/runs` | 创建评测运行并计算确认门禁 |
+| POST | `/v1/rag-evaluation/runs` | 创建或复用评测运行并计算确认门禁；门禁不足不创建运行记录，同一规模已有活动批次时自动去重 |
 | GET | `/v1/rag-evaluation/runs?limit=20` | 查看当前组织的评测运行历史与脱敏指标；前端按批次分页展示，`run_id` 为内部追踪号，不要求用户填写 |
 | GET | `/v1/rag-evaluation/runs/{run_id}` | 查看单次评测运行结果 |
 | POST | `/v1/rag-evaluation/runs/{run_id}/metrics` | 由评测 Worker 回写单次运行的聚合指标 |

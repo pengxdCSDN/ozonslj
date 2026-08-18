@@ -19,6 +19,7 @@ class MemoryEvaluationGateway:
                 expected_sources=item.expected_chunk_ids, safety_tags=item.safety_tags,
             ) for item in fixed_evaluation_corpus()
         }
+        self.runs: dict[str, EvaluationRun] = {}
 
     async def seed_fixed_cases(self, cases: list[EvaluationCase]) -> None:
         for case in cases:
@@ -52,13 +53,26 @@ class MemoryEvaluationGateway:
         return result
 
     async def create_run(self, suite: str, gate_status: str) -> str:
-        return f"test-run-{suite}"
+        run_id = f"test-run-{suite}"
+        self.runs[run_id] = EvaluationRun(
+            run_id=run_id, suite=suite, status="queued", gate_status=gate_status,
+            target_count={"quick": 30, "standard": 120, "full": 240}[suite],
+        )
+        return run_id
+
+    async def find_active_run(self, suite: str) -> EvaluationRun | None:
+        return next(
+            (run for run in self.runs.values()
+             if run.suite == suite and run.gate_status == "ready"
+             and run.status in {"queued", "running"}),
+            None,
+        )
 
     async def list_runs(self, limit: int = 20) -> list[EvaluationRun]:
         return []
 
     async def get_run(self, run_id: str) -> EvaluationRun | None:
-        return None
+        return self.runs.get(run_id)
 
     async def save_run_metrics(
         self, run_id: str, metrics: dict[str, float | str], executed_count: int,
@@ -109,6 +123,20 @@ def test_metrics_api_returns_quality_indicators() -> None:
     )
     assert response.json()["recall"] == 1
     assert response.json()["citation_support_rate"] == 1
+
+
+def test_ready_run_is_reused_when_same_suite_is_started_twice() -> None:
+    client = TestClient(make_app())
+    case_ids = list(fixed_suite_case_ids("quick"))
+    confirmed = client.post(
+        "/v1/rag-evaluation/cases/confirm-batch",
+        json={"case_ids": case_ids, "reviewer": "qa-user"},
+    )
+    assert confirmed.json()["confirmed_count"] == 30
+    first = client.post("/v1/rag-evaluation/runs", json={"suite": "quick"}).json()
+    second = client.post("/v1/rag-evaluation/runs", json={"suite": "quick"}).json()
+    assert first["run_id"] == second["run_id"]
+    assert second["deduplicated"] is True
 
 
 def test_batch_confirmation_is_idempotent_and_persists_between_requests() -> None:

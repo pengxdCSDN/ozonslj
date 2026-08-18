@@ -5,11 +5,10 @@ from __future__ import annotations
 from typing import Annotated, Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.app.api.dependencies import get_rag_evaluation_gateway
-from backend.app.domain.knowledge_runtime import get_knowledge_runtime, resolve_knowledge_engine
 from backend.app.domain.rag_evaluation import (
     EvaluationCase,
     EvaluationRun,
@@ -22,7 +21,6 @@ from backend.app.domain.rag_metrics import (
     calculate_metrics,
     quality_gate_passed,
 )
-from backend.app.domain.rag_quality_runner import run_fixed_quality_suite
 
 router = APIRouter(prefix="/v1/rag-evaluation", tags=["rag-evaluation"])
 
@@ -199,7 +197,6 @@ async def confirm_evaluation_case(
 @router.post("/runs", response_model=dict[str, object], status_code=202)
 async def start_evaluation(
     payload: EvaluationRunPayload,
-    background_tasks: BackgroundTasks,
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> dict[str, object]:
     await gateway.seed_fixed_cases(_fixed_cases())
@@ -211,51 +208,31 @@ async def start_evaluation(
     gate_status: Literal["ready", "blocked"] = (
         "ready" if len(confirmed) == limit else "blocked"
     )
-    run_id = await gateway.create_run(payload.suite, gate_status)
-    if gate_status == "ready":
-        background_tasks.add_task(_execute_run, gateway, run_id, payload.suite)
+    if gate_status == "blocked":
+        # 门禁未通过的点击只返回当前确认进度，不创建历史运行记录，避免重复点击污染报告。
+        return {
+            "run_id": None,
+            "status": "blocked",
+            "suite": payload.suite,
+            "target_count": limit,
+            "confirmed_count": len(confirmed),
+            "case_ids": list(target_ids),
+            "gate_status": gate_status,
+            "deduplicated": False,
+        }
+    existing = await gateway.find_active_run(payload.suite)
+    run_id = existing.run_id if existing is not None else await gateway.create_run(
+        payload.suite, gate_status
+    )
+    current = existing or await gateway.get_run(run_id)
     return {
         "run_id": run_id,
-        "status": "queued", "suite": payload.suite,
+        "status": current.status if current is not None else "queued", "suite": payload.suite,
         "target_count": limit, "confirmed_count": len(confirmed),
         "case_ids": list(target_ids),
         "gate_status": gate_status,
+        "deduplicated": existing is not None,
     }
-
-
-async def _execute_run(gateway: RagEvaluationGateway, run_id: str, suite: str) -> None:
-    """启动固定集执行器并回写结果；错误只落聚合计数，不保存模型原文。"""
-    try:
-        runtime = get_knowledge_runtime()
-        engine = await resolve_knowledge_engine(runtime)
-        report = await run_fixed_quality_suite(engine, suite)  # type: ignore[arg-type]
-    except Exception:
-        # 运行时不可用也必须结束为失败，不能让结果页永久显示“等待执行”。
-        await gateway.save_run_metrics(
-            run_id,
-            {"gate_status": "blocked", "error_code": "evaluation_runtime_failed"},
-            0, 0, 0, suite_case_limit(suite),
-        )
-        return
-    metrics = {
-        "recall": report.metrics.recall, "precision": report.metrics.precision,
-        "citation_support_rate": report.metrics.citation_support_rate,
-        "correct_refusal_rate": report.metrics.correct_refusal_rate,
-        "average_latency_ms": report.metrics.average_latency_ms,
-        "estimated_cost": report.metrics.estimated_cost,
-        "recall_at_5": report.metrics.recall_at_5, "recall_at_10": report.metrics.recall_at_10,
-        "precision_at_5": report.metrics.precision_at_5,
-        "multi_intent_completeness": report.metrics.multi_intent_completeness,
-        "safety_pass_rate": report.metrics.safety_pass_rate,
-        "degradation_pass_rate": report.metrics.degradation_pass_rate,
-        "gate_status": "passed" if quality_gate_passed(report.metrics) else "blocked",
-    }
-    await gateway.save_run_metrics(
-        run_id, metrics, report.executed_count,
-        report.executed_count if report.status == "completed" else 0,
-        max(report.executed_count - report.error_count, 0) if report.status != "completed" else 0,
-        report.error_count,
-    )
 
 
 @router.post("/metrics", response_model=dict[str, object])

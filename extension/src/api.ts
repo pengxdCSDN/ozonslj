@@ -991,6 +991,10 @@ export interface RagEvaluationRun {
   target_count: number; executed_count: number; passed_count: number; failed_count: number; error_count: number;
   confirmed_count?: number; case_ids?: string[]; metrics?: RagEvaluationMetrics | null;
   gate_status: "ready" | "blocked";
+  deduplicated?: boolean;
+}
+export interface RagEvaluationStartResult extends Omit<RagEvaluationRun, "run_id"> {
+  run_id: string | null;
 }
 export interface RagEvaluationMetrics { [key: string]: number | string; }
 export function listRagEvaluationCases(page = 1, pageSize = 20, query = ""): Promise<RagEvaluationCasesPage> {
@@ -1007,7 +1011,7 @@ export function confirmRagEvaluationCasesBatch(caseIds: string[], reviewer: stri
     method: "POST", body: JSON.stringify({ case_ids: caseIds, reviewer }),
   });
 }
-export function startRagEvaluation(suite: RagEvaluationRun["suite"]): Promise<RagEvaluationRun> {
+export function startRagEvaluation(suite: RagEvaluationRun["suite"]): Promise<RagEvaluationStartResult> {
   return requestJson("/v1/rag-evaluation/runs", { method: "POST", body: JSON.stringify({ suite }) });
 }
 export function listRagEvaluationRuns(limit = 20): Promise<RagEvaluationRun[]> {

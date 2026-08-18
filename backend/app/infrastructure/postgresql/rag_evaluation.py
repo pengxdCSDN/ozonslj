@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
+from datetime import timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -107,6 +108,21 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
     def _create_run(self, suite: str, gate_status: str) -> str:
         run_id = f"rag-eval-{uuid4()}"
         with self._sessions.transaction(self._context) as connection:
+            # 先拿事务级 advisory lock，再查询活动批次。这样两个并发点击即使来自
+            # 不同 API 实例，也不能同时通过“查询后插入”的检查，避免重复消耗模型额度。
+            lock_key = f"rag-evaluation:{self._context.organization_id}:{suite}"
+            connection.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (lock_key,))
+            # 同一组织、同一评测规模只允许一个活动批次；blocked 批次不进入这里，
+            # 门禁不足时由 API 直接返回提示，不污染运行历史。
+            existing = connection.execute(
+                """SELECT id FROM rag_evaluation_runs
+                   WHERE organization_id = %s AND suite = %s
+                     AND gate_status = 'ready' AND status IN ('queued', 'running')
+                   ORDER BY created_at DESC, id DESC LIMIT 1""",
+                (self._context.organization_id, suite),
+            ).fetchone()
+            if existing is not None:
+                return str(existing["id"])
             connection.execute(
                 """INSERT INTO rag_evaluation_runs
                    (id, organization_id, suite, status, gate_status)
@@ -114,6 +130,98 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
                 (run_id, self._context.organization_id, suite, gate_status),
             )
         return run_id
+
+    async def find_active_run(self, suite: str) -> EvaluationRun | None:
+        return await asyncio.to_thread(self._find_active_run, suite)
+
+    def _find_active_run(self, suite: str) -> EvaluationRun | None:
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
+                """SELECT id, suite, status, gate_status, executed_count, passed_count,
+                          failed_count, error_count, metrics
+                     FROM rag_evaluation_runs
+                     WHERE organization_id = %s AND suite = %s
+                       AND gate_status = 'ready' AND status IN ('queued', 'running')
+                     ORDER BY created_at DESC, id DESC LIMIT 1""",
+                (self._context.organization_id, suite),
+            ).fetchone()
+        return _run(row) if row is not None else None
+
+    async def dispatchable_run_ids(self, limit: int) -> list[str]:
+        return await asyncio.to_thread(self._dispatchable_run_ids, min(max(limit, 1), 100))
+
+    def _dispatchable_run_ids(self, limit: int) -> list[str]:
+        with self._sessions.transaction(self._context) as connection:
+            # 过期租约先回到 queued，保证 Worker/API 重启后任务可以自动恢复。
+            connection.execute(
+                """UPDATE rag_evaluation_runs
+                   SET status = 'queued', lease_owner = NULL, lease_expires_at = NULL
+                   WHERE organization_id = %s AND status = 'running'
+                     AND lease_expires_at < CURRENT_TIMESTAMP""",
+                (self._context.organization_id,),
+            )
+            rows = connection.execute(
+                """WITH candidates AS (
+                       SELECT id FROM rag_evaluation_runs
+                       WHERE organization_id = %s AND gate_status = 'ready'
+                         AND status = 'queued'
+                         AND (lease_expires_at IS NULL OR lease_expires_at < CURRENT_TIMESTAMP)
+                       ORDER BY created_at, id
+                       LIMIT %s
+                       FOR UPDATE SKIP LOCKED
+                   )
+                   UPDATE rag_evaluation_runs AS runs
+                   SET lease_owner = 'scheduler',
+                       lease_expires_at = CURRENT_TIMESTAMP + %s
+                   FROM candidates
+                   WHERE runs.id = candidates.id
+                   RETURNING runs.id""",
+                (self._context.organization_id, limit, timedelta(seconds=15)),
+            ).fetchall()
+        return [str(row["id"]) for row in rows]
+
+    async def claim_run(
+        self, run_id: str, worker_id: str, lease_seconds: int
+    ) -> EvaluationRun | None:
+        return await asyncio.to_thread(self._claim_run, run_id, worker_id, lease_seconds)
+
+    def _claim_run(self, run_id: str, worker_id: str, lease_seconds: int) -> EvaluationRun | None:
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
+                """UPDATE rag_evaluation_runs
+                   SET status = 'running', attempt_count = attempt_count + 1,
+                       started_at = COALESCE(started_at, CURRENT_TIMESTAMP),
+                       lease_owner = %s,
+                       lease_expires_at = CURRENT_TIMESTAMP + %s
+                   WHERE organization_id = %s AND id = %s AND gate_status = 'ready'
+                     AND (status = 'queued' OR
+                          (status = 'running' AND lease_expires_at < CURRENT_TIMESTAMP))
+                   RETURNING id, suite, status, gate_status, executed_count, passed_count,
+                             failed_count, error_count, metrics""",
+                (
+                    worker_id, timedelta(seconds=lease_seconds),
+                    self._context.organization_id, run_id,
+                ),
+            ).fetchone()
+        return _run(row) if row is not None else None
+
+    async def heartbeat_run(self, run_id: str, worker_id: str, lease_seconds: int) -> bool:
+        return await asyncio.to_thread(self._heartbeat_run, run_id, worker_id, lease_seconds)
+
+    def _heartbeat_run(self, run_id: str, worker_id: str, lease_seconds: int) -> bool:
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
+                """UPDATE rag_evaluation_runs
+                   SET lease_expires_at = CURRENT_TIMESTAMP + %s
+                   WHERE organization_id = %s AND id = %s AND status = 'running'
+                     AND lease_owner = %s AND lease_expires_at >= CURRENT_TIMESTAMP
+                   RETURNING id""",
+                (
+                    timedelta(seconds=lease_seconds), self._context.organization_id,
+                    run_id, worker_id,
+                ),
+            ).fetchone()
+        return row is not None
 
     async def list_runs(self, limit: int = 20) -> list[EvaluationRun]:
         return await asyncio.to_thread(self._list_runs, min(max(limit, 1), 100))
@@ -145,16 +253,16 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
 
     async def save_run_metrics(
         self, run_id: str, metrics: dict[str, float | str], executed_count: int,
-        passed_count: int, failed_count: int, error_count: int,
+        passed_count: int, failed_count: int, error_count: int, worker_id: str | None = None,
     ) -> EvaluationRun | None:
         return await asyncio.to_thread(
             self._save_run_metrics, run_id, metrics, executed_count,
-            passed_count, failed_count, error_count,
+            passed_count, failed_count, error_count, worker_id,
         )
 
     def _save_run_metrics(
         self, run_id: str, metrics: dict[str, float | str], executed_count: int,
-        passed_count: int, failed_count: int, error_count: int,
+        passed_count: int, failed_count: int, error_count: int, worker_id: str | None,
     ) -> EvaluationRun | None:
         import json
         status = "succeeded" if metrics.get("gate_status") == "passed" else "failed"
@@ -163,14 +271,17 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
                 """UPDATE rag_evaluation_runs
                    SET status = %s, executed_count = %s, passed_count = %s,
                        failed_count = %s, error_count = %s, metrics = %s::jsonb,
-                       completed_at = CURRENT_TIMESTAMP
+                       completed_at = CURRENT_TIMESTAMP, lease_owner = NULL,
+                       lease_expires_at = NULL
                    WHERE organization_id = %s AND id = %s AND gate_status = 'ready'
+                     AND status = 'running'
+                     AND (%s IS NULL OR lease_owner = %s)
                    RETURNING id, suite, status, gate_status, executed_count, passed_count,
                              failed_count, error_count, metrics""",
                 (
                     status, executed_count, passed_count, failed_count, error_count,
                     json.dumps(metrics),
-                    self._context.organization_id, run_id,
+                    self._context.organization_id, run_id, worker_id, worker_id,
                 ),
             ).fetchone()
         return _run(row) if row is not None else None
