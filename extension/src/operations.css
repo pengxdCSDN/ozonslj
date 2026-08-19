@@ -173,7 +173,139 @@
 .quality-shortcut { align-self: start; margin: 8px 14px 0; }
 .quality-result { display: grid; gap: 8px; margin-top: 12px; }
 .import-panel { display: grid; gap: 16px; }
+.import-panel:not(.keyword-import-panel):not(.import-history-panel) {
+  padding: 22px;
+}
+.import-panel:not(.keyword-import-panel):not(.import-history-panel) > .secondary-button,
+.import-panel:not(.keyword-import-panel):not(.import-history-panel) > .primary-button {
+  justify-self: start;
+}
 .import-panel textarea { width: 100%; min-height: 150px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; color: #eeeaf8; background: #0e0d1d; font: 10px/1.5 ui-monospace, monospace; resize: vertical; }
+
+/* 公开采样页统一采用“输入区—状态区—结果区”的纵向节奏，避免控件被压成窄条。 */
+.sampling-policy-panel,
+.competitor-seed-panel,
+.public-snapshot-panel,
+.sample-scope-panel {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+}
+.sampling-policy-panel > label,
+.competitor-seed-panel form > label,
+.public-snapshot-panel > label {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  color: var(--fd-text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+.sampling-policy-panel > label:first-child,
+.competitor-seed-panel form > label,
+.public-snapshot-panel > label { grid-column: 1 / -1; }
+.sampling-policy-panel input,
+.competitor-seed-panel input,
+.public-snapshot-panel input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid rgba(143, 112, 255, .18);
+  border-radius: 10px;
+  color: var(--fd-text);
+  background: rgba(8, 8, 20, .68);
+}
+.sampling-policy-panel .checkbox-line {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+  border: 1px solid rgba(143, 112, 255, .14);
+  border-radius: 10px;
+  color: var(--fd-text-soft);
+  background: rgba(15, 13, 30, .56);
+  font-size: 11px;
+}
+.sampling-policy-panel .checkbox-line input { width: 16px; min-height: 16px; accent-color: var(--fd-violet); }
+.sampling-policy-panel .secondary-button,
+.public-snapshot-panel .secondary-button { justify-self: start; }
+.competitor-seed-panel form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+.competitor-seed-panel form > label { grid-column: auto; }
+.competitor-seed-panel form .secondary-button { min-width: 118px; }
+.public-snapshot-panel { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.public-snapshot-panel .form-message { grid-column: 1 / -1; margin: 0; }
+.sample-scope-panel .panel-toolbar {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sample-scope-panel .panel-toolbar h2 { margin: 0; color: var(--fd-text); font-size: 17px; }
+.sample-scope-panel .panel-toolbar .eyebrow { margin: 0 0 3px; }
+.sample-scope-panel .form-message { margin: 0; }
+.sampling-policy-panel .form-message,
+.competitor-seed-panel .form-message,
+.public-sampling-panel .form-message { margin: 0; }
+.sample-scope-panel .metric-grid { margin: 0; }
+.sample-scope-panel .quality-result { margin: 0; }
+.sample-scope-panel .empty-search { margin: 0; }
+
+@media (max-width: 720px) {
+  .import-panel:not(.keyword-import-panel):not(.import-history-panel) { padding: 16px; }
+  .sampling-policy-panel,
+  .competitor-seed-panel,
+  .public-snapshot-panel,
+  .sample-scope-panel { padding: 16px; }
+  .sampling-policy-panel .checkbox-line { grid-column: 1 / -1; }
+  .competitor-seed-panel form,
+  .public-snapshot-panel { grid-template-columns: 1fr; }
+  .competitor-seed-panel form > label,
+  .public-snapshot-panel > label,
+  .public-snapshot-panel .form-message { grid-column: 1; }
+  .competitor-seed-panel form .secondary-button { width: 100%; }
+  .sample-scope-panel .panel-toolbar { align-items: stretch; flex-direction: column; }
+}
+
+/* 低并发采样与其他公开采样页面共享同一组输入、动作和结果边界。 */
+.public-sampling-panel {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+}
+.public-sampling-panel > label {
+  display: grid;
+  gap: 7px;
+  color: var(--fd-text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+.public-sampling-panel input,
+.public-sampling-panel textarea {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid rgba(143, 112, 255, .18);
+  border-radius: 10px;
+  color: var(--fd-text);
+  background: rgba(8, 8, 20, .68);
+}
+.public-sampling-panel input { min-height: 42px; padding: 10px 12px; }
+.public-sampling-panel textarea { min-height: 150px; padding: 12px; resize: vertical; }
+.public-sampling-panel .form-grid { padding: 0; }
+.public-sampling-panel .quality-result,
+.public-sampling-panel .empty-search { margin-left: 0; margin-right: 0; }
+@media (max-width: 720px) {
+  .public-sampling-panel { padding: 16px; }
+  .public-sampling-panel .form-grid { grid-template-columns: 1fr; }
+  .public-sampling-panel > .secondary-button { width: 100%; }
+}
 
 .keyword-import-panel, .import-history-panel { grid-column: 1 / -1; min-width: 0; overflow: hidden; }
 .import-step-heading { display: grid; gap: 4px; padding: 20px 22px 0; }

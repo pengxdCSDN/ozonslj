@@ -29,7 +29,7 @@ export function PublicSamplingView({ workspaceId }: { workspaceId: string }) {
 
   return <div className="view-content">
     <section className="page-heading compact"><div><p className="eyebrow">公开采样 / RES-006</p><h1>低并发采样预览</h1><p>全局并发最多 2，单域名串行；429/503 按退避策略重试，不绕过访问限制。</p></div></section>
-    <section className="panel import-panel">
+    <section className="panel import-panel public-sampling-panel">
       <label>受控 URL（每行一个）<textarea rows={6} value={urls} onChange={(event) => setUrls(event.target.value)} /></label>
       <div className="form-grid"><label>全局并发上限<input type="number" min={1} max={2} value={globalLimit} onChange={(event) => setGlobalLimit(Number(event.target.value))} /></label><label>最大重试次数<input type="number" min={1} max={5} value={maxAttempts} onChange={(event) => setMaxAttempts(Number(event.target.value))} /></label></div>
       <button className="secondary-button" disabled={busy} onClick={() => void run()}>{busy ? "采样中…" : "执行并记录预览"}</button>

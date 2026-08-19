@@ -25,7 +25,7 @@ export function SamplingPolicyView({ workspaceId }: { workspaceId: string }) {
 
   return <div className="view-content">
     <section className="page-heading compact"><div><p className="eyebrow">公开采样 / RES-005</p><h1>合规策略检查</h1><p>请求发送前必须检查 HTTPS、robots、限流和停止策略；被禁止时不会发出采样请求。</p></div></section>
-    <section className="panel import-panel">
+    <section className="panel import-panel sampling-policy-panel">
       <label>待检查 URL<input type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://..." /></label>
       <label className="checkbox-line"><input type="checkbox" checked={robotsAllowed} onChange={(event) => setRobotsAllowed(event.target.checked)} /> robots 允许访问</label>
       <label className="checkbox-line"><input type="checkbox" checked={rateLimited} onChange={(event) => setRateLimited(event.target.checked)} /> 当前域名限流</label>

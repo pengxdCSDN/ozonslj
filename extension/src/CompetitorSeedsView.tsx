@@ -49,7 +49,7 @@ export function CompetitorSeedsView({ workspaceId }: { workspaceId: string }) {
 
   return <div className="view-content">
     <section className="page-heading compact"><div><p className="eyebrow">选品研究 / RES-004</p><h1>竞品种子</h1><p>仅维护受控竞品 HTTPS URL；公开采样必须遵守合规策略，不遍历全站。</p></div></section>
-    <section className="panel import-panel"><form onSubmit={(event) => void add(event)}>
+    <section className="panel import-panel competitor-seed-panel"><form onSubmit={(event) => void add(event)}>
       <label>公开 HTTPS 商品页<input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://..." type="url" required /></label>
       <button className="secondary-button" disabled={busy}>{busy ? "保存中…" : "添加竞品"}</button>
     </form><p className="form-message">{message}</p></section>
