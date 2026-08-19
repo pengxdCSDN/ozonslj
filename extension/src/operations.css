@@ -172,8 +172,25 @@
 .task-error { color: var(--rose); font-size: 9px; }
 .quality-shortcut { align-self: start; margin: 8px 14px 0; }
 .quality-result { display: grid; gap: 8px; margin-top: 12px; }
-.import-panel { display: grid; gap: 10px; }
+.import-panel { display: grid; gap: 16px; }
 .import-panel textarea { width: 100%; min-height: 150px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; color: #eeeaf8; background: #0e0d1d; font: 10px/1.5 ui-monospace, monospace; resize: vertical; }
+
+.keyword-import-panel, .import-history-panel { grid-column: 1 / -1; min-width: 0; overflow: hidden; }
+.import-step-heading { display: grid; gap: 4px; padding: 20px 22px 0; }
+.import-step-heading .eyebrow { margin: 0; }
+.import-step-heading h2 { margin: 0; color: var(--fd-text); font-size: 17px; }
+.import-step-heading p { margin: 0; color: var(--fd-muted); font-size: 11px; line-height: 1.6; }
+.keyword-mapping-grid { margin-top: -2px; }
+.import-input-block { display: grid; gap: 12px; margin: 0 18px; padding: 16px 0 0; border-top: 1px solid rgba(143,112,255,.1); }
+.import-input-block .import-step-heading { padding: 0; }
+.file-input-field { display: grid; gap: 7px; color: var(--fd-text-soft); font-size: 10px; font-weight: 700; }
+.file-input-field input { min-height: 42px; padding: 9px 12px; border: 1px solid rgba(143,112,255,.16); border-radius: 10px; color: var(--fd-text); background: rgba(8,8,20,.68); }
+.file-input-field input::file-selector-button { margin-right: 10px; padding: 7px 11px; border: 1px solid rgba(143,112,255,.28); border-radius: 8px; color: var(--fd-text); background: rgba(92,65,153,.42); font: inherit; font-weight: 800; cursor: pointer; }
+.file-input-field small { color: var(--fd-muted); font-size: 10px; font-weight: 500; }
+.import-input-block textarea { min-height: 168px; }
+.import-actions { padding: 0 18px; }
+.import-status { margin-top: -2px; }
+.import-history-panel .panel-heading { min-height: 64px; }
 .workspace-switcher { position: relative; }
 .workspace-trigger { display: flex; min-width: 0; align-items: center; justify-content: flex-end; gap: 7px; padding: 0; border: 0; color: #e9e7f5; background: transparent; font-size: 10px; cursor: pointer; }
 .workspace-trigger strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

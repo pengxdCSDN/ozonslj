@@ -152,6 +152,24 @@ h1, h2, h3, strong { font-family: var(--fd-display); }
 .section-heading h2 { color: var(--fd-text); font-size: 16px; letter-spacing: -0.02em; }
 .section-heading > svg { color: var(--fd-violet); filter: drop-shadow(0 0 9px rgba(161, 132, 255, 0.2)); }
 
+/* 数据质量页的摘要和问题列表共用同一条标题基线，避免按钮被挤到标题下方。 */
+.panel-heading {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid rgba(143, 112, 255, 0.1);
+}
+.panel-heading h2 { margin: 0; color: var(--fd-text); font-size: 17px; letter-spacing: -0.02em; }
+.quality-summary-panel, .quality-findings-panel { overflow: hidden; }
+.quality-summary-panel .metric-grid { margin: 18px 22px 0; }
+.quality-summary-panel .form-message { margin-top: 16px; }
+.quality-findings-panel .empty-state { margin: 18px 22px 22px; }
+.quality-findings-panel .operation-row { align-items: center; padding: 15px 22px; }
+.quality-findings-panel .operation-row .text-button { justify-self: end; white-space: nowrap; }
+
 /* 页面内并列操作统一使用同一条对齐基线，避免按钮因文字长度或父级布局漂移。 */
 .button-group,
 .button-row,

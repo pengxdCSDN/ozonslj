@@ -82,26 +82,26 @@ export function KeywordImportView({ workspaceId }: { workspaceId: string }) {
           <p>支持 CSV 和 XLSX；先映射列并预览校验，再按文件指纹幂等提交导入批次。</p>
         </div>
       </section>
-      <section className="panel import-panel">
-        <div className="form-grid">
+      <section className="panel import-panel keyword-import-panel">
+        <div className="import-step-heading"><span className="eyebrow">步骤 1</span><h2>字段映射</h2><p>将文件列名对应到系统字段，预览前可随时调整。</p></div>
+        <div className="form-grid keyword-mapping-grid">
           <label>关键词列<input value={mapping.term} onChange={(event) => setMapping({ ...mapping, term: event.target.value })} /></label>
           <label>搜索量列<input value={mapping.volume} onChange={(event) => setMapping({ ...mapping, volume: event.target.value })} /></label>
           <label>转化率列<input value={mapping.rate} onChange={(event) => setMapping({ ...mapping, rate: event.target.value })} /></label>
         </div>
-        <label>选择 XLSX 文件（可选）<input type="file" accept=".xlsx" onChange={chooseFile} /></label>
-        <textarea value={csv} disabled={Boolean(file)} onChange={(event) => setCsv(event.target.value)} aria-label="CSV 内容" rows={8} />
-        <div className="sync-actions">
+        <div className="import-input-block"><div className="import-step-heading"><span className="eyebrow">步骤 2</span><h2>导入数据</h2><p>可选择 XLSX，或直接粘贴 CSV 内容；二者只使用一种输入方式。</p></div><label className="file-input-field">选择 XLSX 文件（可选）<input type="file" accept=".xlsx" onChange={chooseFile} /><small>{file ? `已选择：${file.name}` : "未选择文件"}</small></label><textarea value={csv} disabled={Boolean(file)} onChange={(event) => setCsv(event.target.value)} aria-label="CSV 内容" rows={8} /></div>
+        <div className="sync-actions import-actions">
           <button className="secondary-button" disabled={busy} onClick={() => void previewImport()}>映射并预览</button>
           <button className="secondary-button" disabled={busy || !preview} onClick={() => void commit()}>提交导入</button>
           <button className="secondary-button" disabled={busy} onClick={() => void loadHistory()}>加载历史</button>
         </div>
-        <p className="form-message" role="status">{message}</p>
+        <p className="form-message import-status" role="status">{message}</p>
         {preview ? <div className="quality-result">
           <strong>{preview.total} 行 · 指纹 {preview.fingerprint.slice(0, 12)}…</strong>
           {preview.rows.slice(0, 5).map((row) => <div className="operation-row" key={row.source_row}><span><strong>{row.keyword}</strong><small>第 {row.source_row} 行 · 转化率 {row.conversion_rate ?? "无"}</small></span><em>{row.search_count ?? "无搜索量"}</em></div>)}
         </div> : null}
       </section>
-      <section className="panel">
+      <section className="panel import-history-panel">
         <div className="panel-heading"><h2>导入批次历史</h2></div>
         {history.length ? history.map((batch) => <div className="operation-row" key={batch.id}><span><strong>{batch.row_count} 行</strong><small>{batch.created_at} · {batch.fingerprint.slice(0, 12)}…</small></span><em>{batch.reused ? "已复用" : "新批次"}</em></div>) : <div className="empty-search"><strong>暂无导入历史</strong><span>相同文件指纹不会重复生成事实批次。</span></div>}
       </section>
