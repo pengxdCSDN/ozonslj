@@ -408,8 +408,9 @@ body { font-size: 12px; }
 
 /* 知识源接入区使用同一条操作基线：文件选择、预览和创建按钮高度一致，降低原生控件的突兀感。 */
 .knowledge-source-create .knowledge-file-field { grid-column: 1 / -1; max-width: 640px; }
-.knowledge-source-type-field { display: grid; min-width: 0; align-content: start; gap: 7px; }
-.knowledge-source-type-field .select-menu-label { color: var(--fd-text-soft); font-size: 10px; font-weight: 700; }
+.knowledge-source-type-field { display: grid; width: 100%; min-width: 0; align-content: start; gap: 7px; }
+.knowledge-source-type-field .select-menu { width: 100%; min-width: 0; }
+.knowledge-source-type-field .select-menu-label { display: block; color: var(--fd-text-soft); font-size: 10px; font-weight: 700; }
 .knowledge-source-type-field .select-menu-trigger { min-height: 42px; padding: 10px 12px; border: 1px solid rgba(143, 112, 255, 0.16); border-radius: 10px; background: rgba(8, 8, 20, 0.68); font-size: 12px; }
 .knowledge-source-type-field .select-menu-trigger:hover { border-color: rgba(161, 132, 255, 0.38); background: rgba(18, 15, 38, 0.92); }
 .knowledge-source-type-field .select-menu-trigger[aria-expanded="true"] { border-color: var(--fd-violet); background: rgba(18, 15, 38, 0.92); box-shadow: 0 0 0 3px rgba(161, 132, 255, 0.13); }
@@ -477,6 +478,30 @@ body { font-size: 12px; }
 .knowledge-task-pagination .secondary-button { min-height: 34px; margin: 0; padding-inline: 12px; font-size: 12px; }
 .knowledge-task-pagination input { width: 64px; min-height: 34px; padding: 0 9px; border: 1px solid rgba(143, 112, 255, 0.2); border-radius: 9px; color: var(--fd-text); background: rgba(8, 8, 20, 0.62); font-size: 12px; text-align: center; }
 .knowledge-task-pagination input:focus-visible { border-color: var(--fd-violet); outline: 0; box-shadow: 0 0 0 3px rgba(161, 132, 255, 0.12); }
+
+/* 来源字段和任务治理操作共用清晰的对齐基线，避免宽屏缩放时控件被压成内联元素。 */
+.knowledge-source-create .form-grid > .knowledge-source-type-field { align-self: start; }
+.knowledge-source-create .form-grid > .knowledge-source-type-field,
+.knowledge-source-create .form-grid > .knowledge-source-type-field .select-menu,
+.knowledge-source-create .form-grid > .knowledge-source-type-field .select-menu-trigger { min-width: 0; }
+.knowledge-archive-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+}
+.knowledge-archive-toolbar {
+  display: flex;
+  min-width: max-content;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.archive-toggle, .archive-cleanup-button { white-space: nowrap; }
+@media (max-width: 980px) {
+  .knowledge-archive-heading { grid-template-columns: 1fr; gap: 13px; align-items: start; }
+  .knowledge-archive-toolbar { justify-content: flex-start; }
+}
 @media (max-width: 700px) {
   .knowledge-source-create .knowledge-file-field { max-width: none; }
   .knowledge-source-actions .knowledge-action-button { flex: 1 1 148px; }
