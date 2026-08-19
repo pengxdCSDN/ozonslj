@@ -34,7 +34,8 @@ class PostgresRagTaskGateway:
                    ON CONFLICT (organization_id, idempotency_key)
                    DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
                    RETURNING id, job_type, organization_id, status, attempt_count,
-                             lease_expires_at, error_code, source_id, document_version_id""",
+                             lease_expires_at, error_code, source_id, document_version_id,
+                             archived_at""",
                 (f"rag-{uuid4()}", self._context.organization_id, source_id,
                  document_version_id, task_type, idempotency_key),
             ).fetchone()
@@ -42,8 +43,16 @@ class PostgresRagTaskGateway:
             raise RuntimeError("RAG 任务创建后未返回任务事实")
         return _task(row)
 
-    async def list_tasks(self) -> list[RagWorkerTask]:
-        return await asyncio.to_thread(self._list)
+    async def list_tasks(self, *, include_archived: bool = False) -> list[RagWorkerTask]:
+        return await asyncio.to_thread(self._list, include_archived)
+
+    async def archive(self, task_id: str) -> RagWorkerTask | None:
+        """归档失败或取消任务；保留状态、错误码和任务 ID 供审计复盘。"""
+        return await asyncio.to_thread(self._archive, task_id)
+
+    async def cleanup_archived(self, older_than_days: int) -> int:
+        """清理达到保留期的已归档终结任务，不触碰排队、运行中或成功任务。"""
+        return await asyncio.to_thread(self._cleanup_archived, older_than_days)
 
     async def dispatchable_ids(self, limit: int) -> list[str]:
         return await asyncio.to_thread(self._dispatchable_ids, limit)
@@ -76,7 +85,8 @@ class PostgresRagTaskGateway:
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """SELECT id, job_type, organization_id, status, attempt_count,
-                          lease_expires_at, error_code, source_id, document_version_id
+                          lease_expires_at, error_code, source_id, document_version_id,
+                          archived_at
                    FROM rag_ingestion_jobs WHERE organization_id = %s AND id = %s""",
                 (self._context.organization_id, task_id),
             ).fetchone()
@@ -97,7 +107,8 @@ class PostgresRagTaskGateway:
                      AND (status = 'queued' OR
                           (status = 'running' AND lease_expires_at < CURRENT_TIMESTAMP))
                    RETURNING id, job_type, organization_id, status, attempt_count,
-                             lease_expires_at, error_code, source_id, document_version_id""",
+                             lease_expires_at, error_code, source_id, document_version_id,
+                             archived_at""",
                 (timedelta(seconds=lease_seconds), self._context.organization_id, task_id),
             ).fetchone()
         return _task(row) if row is not None else None
@@ -120,7 +131,8 @@ class PostgresRagTaskGateway:
                    WHERE organization_id = %s AND id = %s
                      AND status IN ('queued', 'running')
                    RETURNING id, job_type, organization_id, status, attempt_count,
-                             lease_expires_at, error_code, source_id, document_version_id""",
+                             lease_expires_at, error_code, source_id, document_version_id,
+                             archived_at""",
                 (self._context.organization_id, task_id),
             ).fetchone()
         return _task(row) if row is not None else None
@@ -142,6 +154,33 @@ class PostgresRagTaskGateway:
                 (self._context.organization_id, task_id),
             ).fetchone()
         return _task(row) if row is not None else None
+
+    def _archive(self, task_id: str) -> RagWorkerTask | None:
+        with self._sessions.transaction(self._context) as connection:
+            row = connection.execute(
+                """UPDATE rag_ingestion_jobs
+                   SET archived_at = CURRENT_TIMESTAMP
+                   WHERE organization_id = %s AND id = %s
+                     AND status IN ('failed', 'cancelled')
+                     AND archived_at IS NULL
+                   RETURNING id, job_type, organization_id, status, attempt_count,
+                             lease_expires_at, error_code, source_id, document_version_id,
+                             archived_at""",
+                (self._context.organization_id, task_id),
+            ).fetchone()
+        return _task(row) if row is not None else None
+
+    def _cleanup_archived(self, older_than_days: int) -> int:
+        with self._sessions.transaction(self._context) as connection:
+            result = connection.execute(
+                """DELETE FROM rag_ingestion_jobs
+                   WHERE organization_id = %s
+                     AND archived_at IS NOT NULL
+                     AND archived_at <= CURRENT_TIMESTAMP - %s
+                     AND status IN ('failed', 'cancelled')""",
+                (self._context.organization_id, timedelta(days=older_than_days)),
+            )
+        return result.rowcount
 
     async def heartbeat(self, task_id: str, worker_id: str, lease_seconds: int) -> bool:
         return await asyncio.to_thread(self._heartbeat, task_id, worker_id, lease_seconds)
@@ -170,13 +209,17 @@ class PostgresRagTaskGateway:
             ).fetchone()
         return _task(row) if row is not None else None
 
-    def _list(self) -> list[RagWorkerTask]:
+    def _list(self, include_archived: bool) -> list[RagWorkerTask]:
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT id, job_type, organization_id, status, attempt_count,
-                          lease_expires_at, error_code, source_id, document_version_id
-                   FROM rag_ingestion_jobs WHERE organization_id = %s
-                   ORDER BY created_at DESC""", (self._context.organization_id,)
+                          lease_expires_at, error_code, source_id, document_version_id,
+                          archived_at
+                   FROM rag_ingestion_jobs
+                   WHERE organization_id = %s
+                     AND (%s OR archived_at IS NULL)
+                   ORDER BY created_at DESC""",
+                (self._context.organization_id, include_archived),
             ).fetchall()
         return [_task(row) for row in rows]
 
@@ -188,4 +231,5 @@ def _task(row: dict[str, Any]) -> RagWorkerTask:
         source_id=row.get("source_id"), document_version_id=row.get("document_version_id"),
         attempt=row["attempt_count"], lease_until=row["lease_expires_at"],
         error_code=row["error_code"],
+        archived_at=row.get("archived_at"),
     )

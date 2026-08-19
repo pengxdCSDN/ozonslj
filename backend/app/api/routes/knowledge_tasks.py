@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.app.api.dependencies import get_rag_task_gateway, get_rag_task_queue
@@ -34,6 +34,7 @@ def _task_response(task: RagWorkerTask) -> dict[str, object]:
         "attempt": task.attempt,
         "lease_until": task.lease_until.isoformat() if task.lease_until else None,
         "error_code": task.error_code,
+        "archived": task.archived_at is not None,
     }
 
 
@@ -55,15 +56,25 @@ async def create_knowledge_task(
 async def list_knowledge_tasks(
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
     organization_id: str | None = None,
+    include_archived: bool = False,
 ) -> list[dict[str, object]]:
     """返回任务状态，供管理页显示排队、租约过期和失败原因。"""
 
-    tasks = await gateway.list_tasks()
+    tasks = await gateway.list_tasks(include_archived=include_archived)
     return [
         _task_response(task)
         for task in tasks
         if organization_id is None or task.organization_id == organization_id
     ]
+
+
+@router.post("/cleanup", response_model=dict[str, int])
+async def cleanup_knowledge_tasks(
+    gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
+    older_than_days: int = Query(default=30, ge=1, le=3650),
+) -> dict[str, int]:
+    """清理已归档且超过保留期的失败/取消任务；默认保留 30 天。"""
+    return {"deleted_count": await gateway.cleanup_archived(older_than_days)}
 
 
 @router.post("/{task_id}/claim", response_model=dict[str, object], status_code=200)
@@ -99,6 +110,17 @@ async def cancel_knowledge_task(
     task = await gateway.cancel(task_id)
     if task is None:
         raise HTTPException(status_code=409, detail="任务当前不可取消")
+    return _task_response(task)
+
+
+@router.post("/{task_id}/archive", response_model=dict[str, object])
+async def archive_knowledge_task(
+    task_id: str,
+    gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
+) -> dict[str, object]:
+    task = await gateway.archive(task_id)
+    if task is None:
+        raise HTTPException(status_code=409, detail="只有失败或已取消任务可以归档")
     return _task_response(task)
 
 

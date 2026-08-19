@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -20,8 +22,23 @@ class FakeRagGateway:
             self.tasks[task.task_id] = task
         return task
 
-    async def list_tasks(self) -> list[RagWorkerTask]:
-        return list(self.tasks.values())
+    async def list_tasks(self, *, include_archived: bool = False) -> list[RagWorkerTask]:
+        if include_archived:
+            return list(self.tasks.values())
+        return [task for task in self.tasks.values() if task.archived_at is None]
+
+    async def archive(self, task_id: str) -> RagWorkerTask:
+        task = self.tasks[task_id]
+        archived = RagWorkerTask(
+            task.task_id, task.task_type, task.organization_id, task.status,
+            task.attempt, None, task.error_code, task.source_id,
+            task.document_version_id, datetime.now(UTC),
+        )
+        self.tasks[task_id] = archived
+        return archived
+
+    async def cleanup_archived(self, older_than_days: int) -> int:
+        return 0
 
     async def claim(self, task_id: str, worker_id: str, lease_seconds: int) -> RagWorkerTask | None:
         task = self.tasks[task_id]
@@ -107,3 +124,28 @@ def test_task_can_be_cancelled_and_retried() -> None:
     task_id = created.json()["task_id"]
     assert client.post(f"/v1/knowledge-tasks/{task_id}/cancel").json()["status"] == "cancelled"
     assert client.post(f"/v1/knowledge-tasks/{task_id}/retry").json()["status"] == "queued"
+
+
+def test_task_archive_and_cleanup_endpoints() -> None:
+    app = FastAPI()
+    app.include_router(router)
+    fake_gateway = FakeRagGateway()
+    app.dependency_overrides[get_rag_task_gateway] = lambda: fake_gateway
+    app.dependency_overrides[get_rag_task_queue] = FakeRagQueue
+    client = TestClient(app)
+    created = client.post(
+        "/v1/knowledge-tasks",
+        json={
+            "task_type": "index", "organization_id": "org-1", "source_id": "s",
+            "document_version_id": "v", "idempotency_key": "task-archive",
+        },
+    )
+    task_id = created.json()["task_id"]
+    client.post(f"/v1/knowledge-tasks/{task_id}/claim?organization_id=org-1")
+    client.post(f"/v1/knowledge-tasks/{task_id}/finish", json={"status": "failed"})
+    archived = client.post(f"/v1/knowledge-tasks/{task_id}/archive")
+    assert archived.status_code == 200
+    assert archived.json()["archived"] is True
+    assert client.post("/v1/knowledge-tasks/cleanup?older_than_days=30").json() == {
+        "deleted_count": 0
+    }

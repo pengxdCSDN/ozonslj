@@ -20,6 +20,7 @@ class RagWorkerTask:
     error_code: str | None = None
     source_id: str | None = None
     document_version_id: str | None = None
+    archived_at: datetime | None = None
 
 
 class RagWorkerQueue:

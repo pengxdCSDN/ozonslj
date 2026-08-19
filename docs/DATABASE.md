@@ -166,6 +166,8 @@ Redis Streams + Consumer Group 已确认但尚未开发。Redis 消息只携带�
 
 RAG 的 PostgreSQL 目标模型包括知识来源、来源版本、解析产物、切片目录、发布版本、摄取/索引任务、查询追踪、反馈、评测案例、模型配置引用和审计事实。详细实体所有权、约束、索引和迁移顺序以 [RAG 知识治理与数据模型设计](./RAG_GOVERNANCE_AND_DATA_MODEL.md) 为准。
 
+`0105_rag_task_archive.sql` 为任务运营治理迁移：`rag_ingestion_jobs.archived_at` 非空表示任务已从默认运营列表归档，但不改变原始状态、错误摘要或知识数据。归档只允许失败/取消任务；清理接口只物理删除当前组织内、已归档且超过保留期的失败/取消任务，默认保留 30 天，避免误删运行中、成功任务和知识来源事实。需要复盘时使用 `include_archived=true` 查询归档任务。
+
 Chroma 只保存已发布切片的向量和最少必要的非敏感过滤元数据，记录 ID 必须与 PostgreSQL `chunk_id` 对账。Chroma 可删除、重建和切换索引版本，不能保存唯一正文、发布状态、权限、凭据或审计事实。`0090` 至 `0094` migration、PostgreSQL 仓储适配器、Chroma 本地/HTTP 适配器和 RAG 查询闭环已实现；剩余工作是开发云实例、备份恢复和资源边界的实际验收。
 ## 2026-08-09 开发状态同步
 
