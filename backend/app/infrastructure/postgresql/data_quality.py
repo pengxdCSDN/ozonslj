@@ -71,18 +71,29 @@ class PostgresQualityFindingGateway:
         self, workspace_id: str, status: QualityFindingStatus | None, limit: int
     ) -> list[QualityFindingRecord]:
         with self._sessions.transaction(self._context) as connection:
-            rows = connection.execute(
-                """
+            select_sql = """
                 SELECT id, workspace_id, rule_code, field_name, severity, message,
                        status, source, created_at
                 FROM data_quality_findings
                 WHERE organization_id = %s AND workspace_id = %s
-                  AND (%s IS NULL OR status = %s)
+            """
+            order_limit_sql = """
                 ORDER BY created_at DESC, id DESC
                 LIMIT %s
-                """,
-                (self._context.organization_id, workspace_id, status, status, limit),
-            ).fetchall()
+            """
+            if status is None:
+                # 不把 NULL 状态参数送入 PostgreSQL，避免数据库无法推断参数类型。
+                # 该分支仍然只返回当前组织和工作区的数据，不能绕过租户隔离。
+                rows = connection.execute(
+                    select_sql + order_limit_sql,
+                    (self._context.organization_id, workspace_id, limit),
+                ).fetchall()
+            else:
+                # 指定状态时使用独立的参数化条件，保持状态值不可注入且可利用索引。
+                rows = connection.execute(
+                    select_sql + " AND status = %s\n" + order_limit_sql,
+                    (self._context.organization_id, workspace_id, status, limit),
+                ).fetchall()
         return [_record_from_row(row) for row in rows]
 
     async def update_status(
