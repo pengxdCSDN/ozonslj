@@ -4,6 +4,9 @@
 }
 
 .operation-summary {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
@@ -71,6 +74,9 @@
 }
 
 .operation-panel {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
   content-visibility: auto;
 }
 
