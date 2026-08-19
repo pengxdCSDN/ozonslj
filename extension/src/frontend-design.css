@@ -751,3 +751,51 @@ body { font-size: 12px; }
 @media (max-width: 720px) {
   .feedback-toast { top: 12px; right: 12px; width: calc(100vw - 24px); }
 }
+
+/* 搜索词导入：把字段映射、数据输入和提交动作分成可扫读的三步。 */
+.keyword-import-panel { overflow: hidden; }
+.keyword-import-guide {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.5fr);
+  gap: 24px;
+  padding: 20px 22px;
+  border-bottom: 1px solid rgba(120, 103, 178, 0.16);
+  background: linear-gradient(110deg, rgba(45, 34, 76, 0.32), rgba(17, 15, 31, 0.08));
+}
+.keyword-import-guide h2 { margin: 5px 0 7px; color: #f0ecfa; font-size: 17px; }
+.keyword-import-guide p:not(.eyebrow) { max-width: 430px; margin: 0; color: #948ca9; font-size: 11px; line-height: 1.6; }
+.keyword-import-guide ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: import-step; }
+.keyword-import-guide li { display: grid; gap: 7px; min-width: 0; padding: 12px 13px; border: 1px solid rgba(139, 113, 220, 0.18); border-radius: 12px; background: rgba(18, 16, 34, 0.54); counter-increment: import-step; }
+.keyword-import-guide li::before { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 7px; color: #d7caff; background: rgba(123, 92, 207, 0.38); content: counter(import-step); font-size: 11px; font-weight: 800; }
+.keyword-import-guide li strong { color: #e8e1f5; font-size: 12px; }
+.keyword-import-guide li span { color: #8e879f; font-size: 10px; line-height: 1.45; }
+.keyword-import-workflow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 18px 22px; }
+.import-step-card { min-width: 0; padding: 16px; border: 1px solid rgba(126, 104, 197, 0.2); border-radius: 13px; background: rgba(16, 14, 30, 0.5); }
+.import-step-heading { margin-bottom: 14px; }
+.import-step-heading h2 { margin: 4px 0 5px; color: #eee9f8; font-size: 16px; }
+.import-step-heading p { margin: 0; color: #8e879f; font-size: 10px; line-height: 1.5; }
+.keyword-mapping-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.keyword-mapping-grid .field { min-width: 0; }
+.keyword-mapping-grid label { display: block; margin-bottom: 6px; color: #afa6c0; font-size: 10px; font-weight: 700; }
+.keyword-mapping-grid input { width: 100%; min-width: 0; }
+.file-input-field { display: grid; gap: 7px; margin-bottom: 12px; color: #aaa2b8; font-size: 10px; font-weight: 700; }
+.file-input-field input { width: 100%; color: #b8aec8; font: inherit; }
+.file-input-field small { color: #7f788d; font-size: 10px; font-weight: 500; }
+.import-input-block textarea { width: 100%; min-height: 142px; resize: vertical; }
+.sample-data-button { margin-top: 9px; color: #b6a7ee; }
+.sample-data-button:hover:not(:disabled) { color: #eee9ff; }
+.keyword-import-actions { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 22px 18px; border-top: 1px solid rgba(120, 103, 178, 0.16); background: rgba(28, 22, 49, 0.26); }
+.keyword-import-actions > div:first-child { display: grid; gap: 4px; }
+.keyword-import-actions strong { color: #e9e2f6; font-size: 13px; }
+.keyword-import-actions small { color: #898198; font-size: 10px; }
+.keyword-import-actions .import-actions { margin: 0; padding: 0; }
+@media (max-width: 860px) {
+  .keyword-import-guide { grid-template-columns: 1fr; }
+  .keyword-import-workflow { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .keyword-import-guide, .keyword-import-workflow { padding-right: 14px; padding-left: 14px; }
+  .keyword-import-guide ol, .keyword-mapping-grid { grid-template-columns: 1fr; }
+  .keyword-import-actions { align-items: stretch; flex-direction: column; padding-right: 14px; padding-left: 14px; }
+  .keyword-import-actions .import-actions { flex-wrap: wrap; }
+}
