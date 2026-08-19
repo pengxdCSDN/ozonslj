@@ -63,11 +63,14 @@ def test_create_workspace_and_audit_share_tenant_scoped_transaction() -> None:
     assert sessions.contexts == [context, context]
     account_params = connection.execute.call_args_list[0].args[1]
     workspace_params = connection.execute.call_args_list[1].args[1]
+    audit_sql = connection.execute.call_args_list[2].args[0]
     audit_params = connection.execute.call_args_list[2].args[1]
     assert account_params[1] == "org-1"
     assert account_params[5] == 7
     assert workspace_params[1] == "org-1"
     assert audit_params[1:4] == ("org-1", workspace_params[0], "user-1")
+    assert "detail_json" in audit_sql
+    assert "detail\n" not in audit_sql
     assert b"ciphertext" not in audit_params
 
 

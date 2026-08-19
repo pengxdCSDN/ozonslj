@@ -474,3 +474,27 @@ Chroma 查询 `gold-*` 证据 → 新建 30 例 → 30 例质量通过后新建 
 
 若 Chroma 只存在部分固定切片，不能删除后盲目全量重试。运行时按切片 ID 断点续传，只对缺失
 切片调用 Embedding；若仍被预算阻断，应先提高 Embedding 日 Token 上限或等待账本自然重置。
+
+## 2026-08-19：创建工作区返回 HTTP 500
+
+### 症状
+
+“卖家工作区”页面提交名称、Client ID 和 Api-Key 后，`POST /api/v1/store-workspaces`
+返回 HTTP 500。由于创建工作区、卖家账户和创建审计必须在同一 PostgreSQL 事务中完成，审计
+写入失败会使前两项一起回滚，页面不会留下半成品工作区。
+
+### 根因
+
+当前迁移基线在 `seller_operations` 中使用 `detail_json` 保存脱敏审计详情，并由后续迁移补齐
+`organization_id`、`user_id` 及其租户约束。工作区仓储曾误写入不存在的 `detail` 列，导致
+PostgreSQL 抛出“列不存在”，API 未捕获该数据库异常后返回 500。
+
+### 修复与验证规则
+
+- 工作区创建、凭据替换和凭据验证的审计 INSERT 必须使用当前迁移字段 `detail_json`，不能
+  依据旧的权威 schema 片段自行猜测列名。
+- 修改审计字段时必须同步检查 `database/migrations/0003_business_facts_rls.sql`、仓储 SQL
+  和 PostgreSQL 仓储回归测试；测试应断言实际 INSERT 使用 `detail_json`，且脱敏参数中不含
+  加密 Api-Key。
+- 线上遇到同类 500 时先查 API 脱敏日志中的 SQL 字段错误和当前迁移账本，再确认事务回滚；
+  不要通过重试或清空数据掩盖 schema 漂移。

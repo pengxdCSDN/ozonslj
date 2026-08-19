@@ -308,7 +308,7 @@ def _insert_audit(
         """
         INSERT INTO seller_operations (
             id, organization_id, workspace_id, user_id, operation_type,
-            risk_level, target_type, target_count, result, detail
+            risk_level, target_type, target_count, result, detail_json
         ) VALUES (%s, %s, %s, %s, %s, %s, 'seller_account', 1, %s, %s)
         """,
         (
