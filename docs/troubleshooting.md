@@ -159,6 +159,17 @@ API、Worker、PostgreSQL 和 Redis 均健康，但登录接口返回 500；API 
 
 将验证步骤拆开，并给每一步设置独立、较短的超时时间：
 
+### 仓库路径与前端依赖位置
+
+本仓库是前后端同仓库结构，但 Node 依赖只安装在前端目录 `extension\node_modules`，仓库根目录通常没有 `node_modules`。因此：
+
+- TypeScript 必须从仓库根目录调用 `extension\node_modules\.bin\tsc.CMD`，并传入 `extension\tsconfig.json`。
+- Vite 必须先切换到 `extension` 目录，再调用该目录下的 `node_modules\.bin\vite.CMD`；否则会因找不到 `sidepanel.html` 或配置文件而误判为项目构建失败。
+- 发布构建使用 GitHub Actions/ACR 的既有工作流；本地只做类型检查和临时目录构建验证，不把临时产物当作发布源。
+- 执行前先确认当前目录为 `D:\learn\gpt\ozonslj`，再确认 `Test-Path .\extension\node_modules\.bin\tsc.CMD` 和 `Test-Path .\extension\node_modules\.bin\vite.CMD`。
+
+不要在仓库根目录执行 `.\node_modules\.bin\tsc.CMD` 或直接从根目录执行 Vite；这类命令失败是路径错误，不是依赖缺失。路径错误只允许更正到上述固定路径后重试一次，仍失败则转入日志诊断。
+
 ```powershell
 # 在仓库根目录执行类型检查
 .\extension\node_modules\.bin\tsc.CMD -b extension\tsconfig.json --pretty false
