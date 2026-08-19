@@ -192,9 +192,38 @@ input:focus-visible { outline: 0; }
 .knowledge-task-filter .select-menu-label { color: var(--target-muted); font-size: 10px; font-weight: 750; }
 .knowledge-task-filter .select-menu-trigger { min-height: 42px; border-color: #59428d; background: linear-gradient(90deg, #111026, #15112a); }
 .knowledge-task-filter .select-menu-popover { min-width: 190px; }
+.knowledge-archive-heading { align-items: center; min-height: 102px; padding: 18px 18px 16px; border-bottom: 1px solid rgb(66 56 99 / 44%); }
+.knowledge-archive-heading > div:first-child { min-width: 0; }
+.knowledge-archive-heading .section-helper { max-width: 58ch; margin: 6px 0 0; color: var(--target-muted); font-size: 9px; line-height: 1.55; }
+.knowledge-archive-toolbar { display: flex; align-items: center; gap: 8px; flex: none; }
+.archive-toggle { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 10px; border: 1px solid #393154; border-radius: 8px; color: #bdb5cf; background: #171529; font-size: 9px; font-weight: 700; cursor: pointer; transition: border-color 150ms ease, color 150ms ease, background 150ms ease; }
+.archive-toggle:hover { border-color: #5a478d; color: #eeeaff; background: #1d1932; }
+.archive-toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.archive-toggle-box { display: grid; width: 14px; height: 14px; place-items: center; border: 1px solid #655b79; border-radius: 4px; background: #0f0e1d; }
+.archive-toggle-box::after { width: 7px; height: 4px; border-bottom: 2px solid #f5f2ff; border-left: 2px solid #f5f2ff; opacity: 0; transform: rotate(-45deg) translate(1px, -1px); content: ""; }
+.archive-toggle input:checked + .archive-toggle-box { border-color: #8d6be6; background: #6e4fc0; box-shadow: 0 0 0 3px rgb(141 107 230 / 12%); }
+.archive-toggle input:checked + .archive-toggle-box::after { opacity: 1; }
+.archive-toggle input:focus-visible + .archive-toggle-box { outline: 2px solid #b398ff; outline-offset: 2px; }
+.archive-cleanup-button { min-height: 34px; padding: 0 11px; border: 1px solid rgb(232 136 159 / 40%); border-radius: 8px; color: #f0a2b3; background: rgb(83 34 53 / 32%); font-size: 9px; font-weight: 800; cursor: pointer; transition: border-color 150ms ease, color 150ms ease, background 150ms ease, box-shadow 150ms ease; }
+.archive-cleanup-button:hover:not(:disabled) { border-color: rgb(243 145 169 / 70%); color: #ffd5df; background: rgb(105 40 66 / 44%); box-shadow: 0 7px 18px rgb(100 35 60 / 18%); }
+.knowledge-archive-row { min-height: 58px; align-items: center; padding: 10px 18px; background: linear-gradient(90deg, rgb(29 24 49 / 42%), transparent 72%); }
+.knowledge-archive-row > span { gap: 5px; }
+.knowledge-archive-row strong { display: flex; align-items: center; gap: 8px; }
+.knowledge-archive-row small { display: flex; align-items: center; gap: 8px; color: #8e879f; }
+.knowledge-archive-row small b { padding-left: 8px; border-left: 1px solid #3a3154; color: #6f6980; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 8px; font-weight: 500; }
+.knowledge-archive-row .knowledge-task-status { flex: none; }
+.archive-row-action { min-height: 28px; padding: 0 9px; border: 1px solid #4b3974; border-radius: 7px; background: #241d40; }
+.archive-row-action:hover:not(:disabled) { color: #e8dcff; background: #302452; }
+.knowledge-archive-empty { display: grid; gap: 5px; padding: 24px 18px 26px; color: var(--target-muted); background: linear-gradient(180deg, rgb(24 21 42 / 48%), transparent); text-align: left; }
+.knowledge-archive-empty strong { color: #e7e1f3; font-size: 10px; }
+.knowledge-archive-empty span { font-size: 9px; line-height: 1.5; }
 @media (max-width: 720px) {
   .knowledge-task-filter { width: 100%; min-width: 0; }
   .knowledge-task-filter .select-menu-popover { min-width: 0; }
+  .knowledge-archive-heading { display: grid; gap: 14px; align-items: start; }
+  .knowledge-archive-toolbar { width: 100%; }
+  .archive-toggle, .archive-cleanup-button { flex: 1; justify-content: center; }
+  .knowledge-archive-row { padding-inline: 14px; }
 }
 .hero-skeleton, .metric-skeleton, .list-skeleton { background: linear-gradient(90deg, #171629 25%, #24213b 50%, #171629 75%); background-size: 200% 100%; }
 
