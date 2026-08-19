@@ -160,7 +160,7 @@ async def refresh_performance_token(
     except PerformanceTokenError as error:
         raise HTTPException(
             status_code=502,
-            detail={"code": "performance_token_request_failed", "message": str(error)},
+            detail={"code": error.code, "message": str(error)},
         ) from error
 
 
@@ -193,7 +193,7 @@ async def _ensure_performance_access_token(
     except PerformanceTokenError as error:
         raise HTTPException(
             status_code=502,
-            detail={"code": "performance_token_request_failed", "message": str(error)},
+            detail={"code": error.code, "message": str(error)},
         ) from error
 
 

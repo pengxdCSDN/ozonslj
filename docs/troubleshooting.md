@@ -519,3 +519,28 @@ PostgreSQL 适配器现在按筛选条件分两条参数化查询执行：未指
 - 数据质量摘要和问题列表 API 契约测试继续通过。
 
 部署后刷新数据质量中心；若仍出现 500，先检查 API 容器是否已切换到包含该修复的镜像，再查看最新 API 日志，不要重复点击重试造成无意义任务。
+
+## 2026-08-19：Performance Token 提示“响应不是合法 JSON”
+
+### 现象
+
+Performance 页面可以显示“Client ID 已配置”，但点击“获取 Token 并测试连接”失败，旧版本统一提示
+“Performance Token 响应不是合法 JSON”。Client Secret 输入框在保存后恢复为空是正常行为：前端会清空输入框，
+密钥仍由后端加密保存，不会写入浏览器持久存储。
+
+### 处理方式
+
+后端现在保留脱敏的错误类别，不保存或返回上游响应正文：
+
+| 错误类别 | 含义 | 处理 |
+|---|---|---|
+| `performance_oauth_invalid` | Client ID/Secret 校验失败（401） | 确认凭据属于 Performance 服务账号，并重新加密保存 |
+| `performance_permission_denied` | 账号没有广告/Performance 权限（403） | 在 Ozon 侧确认账号授权范围 |
+| `performance_rate_limited` | 上游限流（429） | 等待后再试，不连续点击 |
+| `performance_upstream_unavailable` | Ozon 上游 5xx | 稍后重试并观察服务状态 |
+| `performance_upstream_invalid_response` | 返回内容不是预期 JSON 或缺少令牌字段 | 检查接口地址、代理和上游服务状态 |
+| `performance_timeout` / `performance_network_error` | 网络或超时 | 检查云端出口、DNS、代理和 TLS，不要把密钥粘贴到工单或日志 |
+
+正确操作顺序是：先点击“加密保存密钥”，确认保存成功后再点击“获取 Token 并测试连接”。页面显示
+“Client ID 已配置”只代表加密凭据存在；只有 Access Token 获取成功且连接状态变为可用，才代表真实
+Performance OAuth 验证通过。自动化测试使用 MockTransport，不访问真实 Ozon 账号。

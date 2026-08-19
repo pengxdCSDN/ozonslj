@@ -5,6 +5,7 @@ import httpx
 import pytest
 
 from backend.app.infrastructure.ozon.performance_client import (
+    PerformanceTokenError,
     fetch_performance_campaigns,
     request_performance_token,
 )
@@ -45,3 +46,42 @@ async def test_fetch_performance_campaigns_is_read_only() -> None:
     )
 
     assert result == {"list": [{"id": "1"}]}
+
+
+@pytest.mark.asyncio
+async def test_request_performance_token_classifies_invalid_upstream_response() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/html; charset=utf-8"},
+            text="secret-looking upstream body must not be returned",
+        )
+
+    with pytest.raises(PerformanceTokenError) as caught:
+        await request_performance_token(
+            client_id="client-id",
+            client_secret="client-secret",
+            transport=httpx.MockTransport(handler),
+        )
+
+    assert caught.value.code == "performance_upstream_invalid_response"
+    assert "HTTP 200" in str(caught.value)
+    assert "text/html" in str(caught.value)
+    assert "secret-looking" not in str(caught.value)
+
+
+@pytest.mark.asyncio
+async def test_request_performance_token_classifies_auth_failure_without_upstream_body() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"message": "do not expose this body"})
+
+    with pytest.raises(PerformanceTokenError) as caught:
+        await request_performance_token(
+            client_id="client-id",
+            client_secret="client-secret",
+            transport=httpx.MockTransport(handler),
+        )
+
+    assert caught.value.code == "performance_oauth_invalid"
+    assert "401" in str(caught.value)
+    assert "do not expose" not in str(caught.value)

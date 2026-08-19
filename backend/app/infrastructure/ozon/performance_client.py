@@ -9,7 +9,46 @@ import httpx
 class PerformanceTokenError(RuntimeError):
     """Performance Client Credentials 获取失败，错误信息不包含密钥内容。"""
 
-    code = "performance_token_request_failed"
+    def __init__(
+        self, message: str, *, code: str = "performance_token_request_failed"
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+def _content_type(response: httpx.Response) -> str:
+    """只返回响应头中的媒体类型，避免把上游响应正文带入错误信息。"""
+    return response.headers.get("content-type", "").split(";", 1)[0].strip() or "未返回"
+
+
+def _token_http_error(response: httpx.Response) -> PerformanceTokenError:
+    """将 OAuth 上游状态转换为可操作且不泄露正文的错误。"""
+    status = response.status_code
+    if status == 401:
+        return PerformanceTokenError(
+            "Performance 凭据校验失败（HTTP 401）：请确认 Client ID 和 "
+            "Client Secret 属于 Performance 服务账号。",
+            code="performance_oauth_invalid",
+        )
+    if status == 403:
+        return PerformanceTokenError(
+            "Performance 凭据无权访问（HTTP 403）：请确认账号已开通广告/Performance 权限。",
+            code="performance_permission_denied",
+        )
+    if status == 429:
+        return PerformanceTokenError(
+            "Performance 请求受限（HTTP 429）：请稍后重试，避免重复点击。",
+            code="performance_rate_limited",
+        )
+    if status >= 500:
+        return PerformanceTokenError(
+            f"Performance 服务暂时不可用（HTTP {status}）。",
+            code="performance_upstream_unavailable",
+        )
+    return PerformanceTokenError(
+        f"Performance Token 获取失败（HTTP {status}）。",
+        code="performance_token_request_failed",
+    )
 
 
 async def request_performance_token(
@@ -27,22 +66,37 @@ async def request_performance_token(
                     "grant_type": "client_credentials",
                 },
             )
-    except httpx.HTTPError as error:
-        raise PerformanceTokenError("Performance Token 请求失败") from error
-    if response.status_code >= 400:
+    except httpx.TimeoutException as error:
         raise PerformanceTokenError(
-            f"Performance Token 获取失败（HTTP {response.status_code}）"
-        )
+            "Performance Token 请求超时：请检查网络后稍后重试。", code="performance_timeout"
+        ) from error
+    except httpx.HTTPError as error:
+        raise PerformanceTokenError(
+            "Performance Token 网络请求失败：请检查网络、代理和服务地址。",
+            code="performance_network_error",
+        ) from error
+    if response.status_code >= 400:
+        raise _token_http_error(response)
     try:
         body: Any = response.json()
     except ValueError as error:
-        raise PerformanceTokenError("Performance Token 响应不是合法 JSON") from error
+        raise PerformanceTokenError(
+            f"Performance Token 响应格式无效（HTTP {response.status_code}，"
+            f"Content-Type {_content_type(response)}）；请检查接口地址、网络代理和服务状态。",
+            code="performance_upstream_invalid_response",
+        ) from error
     access_token = body.get("access_token") if isinstance(body, dict) else None
     expires_in = body.get("expires_in") if isinstance(body, dict) else None
     if not isinstance(access_token, str) or not access_token.strip():
-        raise PerformanceTokenError("Performance Token 响应缺少 access_token")
+        raise PerformanceTokenError(
+            "Performance Token 响应缺少 access_token。请确认 Performance 凭据和授权范围。",
+            code="performance_upstream_invalid_response",
+        )
     if not isinstance(expires_in, (int, float)) or expires_in <= 0:
-        raise PerformanceTokenError("Performance Token 响应缺少有效 expires_in")
+        raise PerformanceTokenError(
+            "Performance Token 响应缺少有效 expires_in。请确认 Performance 接口返回格式。",
+            code="performance_upstream_invalid_response",
+        )
     return access_token, datetime.now(UTC) + timedelta(seconds=float(expires_in))
 
 
