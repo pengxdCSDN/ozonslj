@@ -116,3 +116,66 @@
 .model-pool-view .route-panel { min-height: 264px; }
 .model-pool-view .route-list { display: grid; min-height: 184px; height: auto; overflow: visible; }
 .model-pool-view .route-card { min-height: 72px; height: auto; overflow: visible; }
+
+/* 受控执行页由多个功能模块组成，必须共享一个纵向滚动上下文。
+ * 这些模块不能直接作为 app-shell 的隐式网格行，否则浏览器会把各自的
+ * view-content 和 panel 压缩到同一行，造成标题重叠和卡片只剩边框。 */
+.controlled-execution-stack {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  min-width: 0;
+  min-height: 0;
+  width: min(100%, 1440px);
+  margin: 0 auto;
+  padding: 38px 42px 48px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #4b3b76 transparent;
+}
+.controlled-execution-stack > * {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+}
+.controlled-execution-stack > .view-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 18px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+.controlled-execution-stack .panel,
+.controlled-execution-stack .page-heading {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.controlled-execution-stack .section-heading,
+.controlled-execution-stack .panel-heading {
+  min-width: 0;
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+.controlled-execution-stack .section-heading > div,
+.controlled-execution-stack .panel-heading > div {
+  min-width: 0;
+}
+.controlled-execution-stack .section-heading .button-row,
+.controlled-execution-stack .panel-heading .button-row {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+@media (min-width: 1280px) {
+  .controlled-execution-stack { padding-inline: 54px; }
+}
