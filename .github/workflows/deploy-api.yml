@@ -1,0 +1,105 @@
+name: Build and deploy ozonslj API
+
+on:
+  push:
+    branches:
+      - codex/deployment-base-images
+    paths:
+      - backend/**
+      - database/**
+      - deploy/**
+      - scripts/**
+      - Dockerfile
+      - pyproject.toml
+      - .github/workflows/deploy-api.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ozonslj-api-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: crpi-vq6wc2wogtrd0ib9.cn-guangzhou.personal.cr.aliyuncs.com
+  IMAGE: crpi-vq6wc2wogtrd0ib9.cn-guangzhou.personal.cr.aliyuncs.com/kakapeng0927/pxd
+  APP_TAG: ozonslj-api-dev
+  DEPLOY_HOST: 8.148.215.217
+  DEPLOY_USER: root
+  REMOTE_DEPLOY_DIR: /opt/ozonslj/app/deploy
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend test dependencies
+        run: python -m pip install --upgrade pip && pip install -e . pytest pytest-asyncio
+
+      - name: Run backend regression tests
+        run: python -m pytest -q
+
+      - name: Log in to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push application image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ env.APP_TAG }}
+            ${{ env.IMAGE }}:${{ github.sha }}
+          build-args: |
+            RELEASE_REVISION=${{ github.sha }}
+
+      - name: Prepare SSH
+        shell: bash
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' '${{ secrets.DEPLOY_SSH_KEY }}' > ~/.ssh/ozonslj_server
+          chmod 600 ~/.ssh/ozonslj_server
+          ssh-keyscan -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy API, Worker and Scheduler only
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/ozonslj_server "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "IMAGE='${IMAGE}:${APP_TAG}' REMOTE_DEPLOY_DIR='${REMOTE_DEPLOY_DIR}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$REMOTE_DEPLOY_DIR"
+          docker compose --env-file .env pull api worker scheduler
+          expected="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          test -n "$expected"
+          docker compose --env-file .env up -d --no-deps api worker scheduler
+          docker compose --env-file .env restart web
+          for service in api worker scheduler; do
+            container="$(docker compose --env-file .env ps -q "$service")"
+            actual="$(docker inspect "$container" --format '{{.Image}}')"
+            test "$actual" = "$expected"
+          done
+          REMOTE
+
+      - name: Verify API health
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/ozonslj_server "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "REMOTE_DEPLOY_DIR='${REMOTE_DEPLOY_DIR}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$REMOTE_DEPLOY_DIR"
+          curl --fail --silent --show-error https://127.0.0.1/api/health/live >/dev/null --insecure
+          curl --fail --silent --show-error https://127.0.0.1/api/health/ready >/dev/null --insecure
+          REMOTE

@@ -59,6 +59,27 @@ curl -fsS http://127.0.0.1/api/health/ready
 - 当前需要外部授权的验证项是只读 Seller 账号、官方接口契约，以及 Worker/Scheduler 和备份恢复的只读 SSH 检查；Secret 不通过聊天传输。
 - 已有备份方案优先复用；只有缺失项才按本项目文档补齐，恢复验证必须使用隔离数据库，不覆盖运行库。
 
+## 2026-08-19 前后端部署工作流拆分
+
+为避免只改前端却重复构建 API 镜像，发布已按路径拆分为两个 GitHub Actions：
+
+- `.github/workflows/deploy-web.yml`：监听 `extension/**`、前端包管理文件和自身配置；执行
+  Node/pnpm 类型检查与 Vite Web 构建，将完整静态目录原子切换到云端并重建 Web 容器；不登录
+  ACR，不重建 API、Worker、Scheduler。
+- `.github/workflows/deploy-api.yml`：监听 `backend/**`、`database/**`、`deploy/**`、后端
+  脚本、Dockerfile 和自身配置；执行 pytest，构建并推送 `ozonslj-api-dev`，只更新 API、
+  Worker、Scheduler，并重启 Web 刷新 Nginx upstream。
+- 首次提交两个工作流文件会触发两条流水线；拆分完成后，纯前端提交不再触发 ACR，纯后端提交
+  不再重复上传 Web。两条工作流继续复用 `ACR_USERNAME`、`ACR_PASSWORD`、`DEPLOY_SSH_KEY`。
+
+### 前端或后端单独发布判断
+
+1. 只改 React、CSS、前端文案或 `extension/**`：等待 `Publish ozonslj Web` 成功，验收首页
+   和全部 JS/CSS 资源，不需要等待 ACR。
+2. 改 Python、数据库、Compose、Dockerfile 或后端脚本：等待 `Build and deploy ozonslj API`
+   成功，验收 ACR digest、API/Worker/Scheduler 和健康端点。
+3. 同一提交同时改前后端：两条流水线都必须成功；不得在 ACR 控制台手动重复构建。
+
 ## 2026-08-15 前后端部署操作手册
 
 本节是当前项目的标准发布闭环，适用于前端静态资源和后端 API/Worker 镜像一起发布。所有命令均不得把密码、API Key、访问令牌或 `.env` 内容复制到聊天、日志或 GitHub。

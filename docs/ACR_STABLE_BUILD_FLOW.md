@@ -154,10 +154,19 @@ Web 入口 JS/CSS:
 
 ## 八、GitHub Actions 长期自动发布
 
-为避免依赖阿里云控制台登录态，仓库新增 `.github/workflows/deploy.yml`。它只监听
-`codex/deployment-base-images`，在 GitHub Runner 完成后端回归、前端类型检查和 Web 构建，
-再使用 ACR Docker 凭据推送 `ozonslj-api-dev`，最后通过 SSH 只更新 API、Worker、Scheduler
-和 Web 静态目录。
+为避免依赖阿里云控制台登录态，仓库将发布拆成两个 GitHub Actions 工作流。两者都只监听
+`codex/deployment-base-images`，但按文件路径分流：前端改动只发布 Web 静态资源，后端改动才
+执行测试、ACR 镜像推送和 API/Worker/Scheduler 更新。
+
+| 工作流 | 触发范围 | 发布内容 | 是否构建 ACR 应用镜像 |
+|---|---|---|---|
+| `.github/workflows/deploy-web.yml` | `extension/**`、前端包管理文件和该工作流 | Node/pnpm 类型检查、Vite Web 构建、原子切换云端 `deploy/web`、重建 Web 容器 | 否 |
+| `.github/workflows/deploy-api.yml` | `backend/**`、`database/**`、`deploy/**`、后端运行脚本、Dockerfile 和该工作流 | pytest、构建并推送 `ozonslj-api-dev`、更新 API/Worker/Scheduler，并刷新 Web upstream | 是 |
+
+首次提交拆分工作流时，因为两个工作流文件本身都发生变化，两个工作流可能各运行一次；拆分
+完成后，纯前端提交不会再触发 Python 测试、ACR 登录或 API 镜像构建。纯后端提交不会重复
+上传前端静态资源。手动发布仍可使用各工作流的 `workflow_dispatch`，但同一 commit 不应再
+从 ACR 控制台重复点击构建。
 
 仓库 Settings → Secrets and variables → Actions → Repository secrets 必须配置：
 
@@ -252,7 +261,8 @@ setup-node → corepack enable/prepare pnpm → pnpm install → typecheck → V
 
 `actions/setup-node` 阶段禁止配置 `cache: pnpm`，因为该缓存钩子会在 Corepack 启用前尝试
 解析 pnpm；当 Runner 没有预先暴露 pnpm 时，失败会显示为 `Set up Node.js`，看起来像 Node
-本身安装失败，实际是缓存初始化顺序错误。正确配置见 `.github/workflows/deploy.yml`：
+本身安装失败，实际是缓存初始化顺序错误。正确配置见 `.github/workflows/deploy-web.yml` 和
+`.github/workflows/deploy-api.yml`：
 
 ```yaml
 - name: Set up Node.js

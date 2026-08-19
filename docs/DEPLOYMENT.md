@@ -142,8 +142,10 @@ docker compose --env-file .env exec -e PYTHONPATH=/app api \
 ## 发布流程
 
 1. 代码检查通过后，使用本机 Git 的 OpenSSL HTTPS 后端推送 `codex/deployment-base-images`。
-2. GitHub Actions 从该 commit 执行检查、构建 Web、登录 ACR 并推送应用镜像。
-3. GitHub Actions 通过 SSH 登录服务器；服务器只从 ACR 拉取镜像，不在 2GB 服务器本地构建。
+2. GitHub Actions 按路径选择工作流：前端改动执行 `deploy-web.yml`，只检查并发布 Web
+   静态资源；后端改动执行 `deploy-api.yml`，执行回归测试、登录 ACR 并推送应用镜像。
+3. GitHub Actions 通过 SSH 登录服务器；服务器只接收 Web 产物或从 ACR 拉取镜像，不在
+   2GB 服务器本地构建。
 4. 先执行 `docker compose config`，再拉取并启动变更服务。
 5. 验证健康检查、数据库迁移、容器日志和外部 HTTP/HTTPS 访问。
 
@@ -198,6 +200,21 @@ docker compose --env-file .env logs --tail=100 api worker
 - 服务器 ACR CLI 曾返回无效 AccessKey；本次由 GitHub 分支自动构建生成新摘要，未在云服务器本地构建镜像。
 
 ### 应用镜像与 Web 前端的分工
+
+#### 发布工作流分流规则（2026-08-19）
+
+- `.github/workflows/deploy-web.yml` 监听 `extension/**`、前端包管理文件和自身配置。
+  它在 Runner 上执行 `pnpm install`、`pnpm typecheck` 和 Vite Web 构建，然后将完整
+  `index.html` 与 `assets/` 上传到云端临时目录，原子切换并强制重建 Web 容器；不会登录
+  ACR，也不会重建 API、Worker 或 Scheduler。
+- `.github/workflows/deploy-api.yml` 监听 `backend/**`、`database/**`、后端部署文件、
+  Dockerfile 和自身配置。它执行 pytest，构建并推送 `ozonslj-api-dev`，再只更新 API、
+  Worker、Scheduler，并重启 Web 以刷新 Nginx upstream。
+- 同一 commit 同时修改前端和后端时，两个工作流都会运行；只有工作流配置本身变化时，
+  才需要接受首次拆分提交触发两条流水线。后续 CSS、React、Vite 或前端文案改动均不应
+  触发 ACR 构建。
+- 两条工作流继续复用 `ACR_USERNAME`、`ACR_PASSWORD`、`DEPLOY_SSH_KEY`，不新增凭据，
+  也不把凭据复制到仓库、日志或 Obsidian。
 
 - `ozonslj-api-dev` 只承载 API、Worker 和 Scheduler 的 Python 代码；后端代码变更只需要触发该应用镜像构建。
 - Web 服务通过 `./web:/usr/share/nginx/html:ro` 挂载 `deploy/web` 静态目录；前端页面不会因为 API 镜像更新而自动出现。
