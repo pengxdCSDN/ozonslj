@@ -152,6 +152,22 @@ h1, h2, h3, strong { font-family: var(--fd-display); }
 .section-heading h2 { color: var(--fd-text); font-size: 16px; letter-spacing: -0.02em; }
 .section-heading > svg { color: var(--fd-violet); filter: drop-shadow(0 0 9px rgba(161, 132, 255, 0.2)); }
 
+/* 页面内并列操作统一使用同一条对齐基线，避免按钮因文字长度或父级布局漂移。 */
+.button-group,
+.button-row,
+.sync-actions,
+.task-actions,
+.header-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.button-group > button,
+.button-row > button,
+.sync-actions > button,
+.task-actions > button { margin: 0; }
+
 .hero-metric, .command-hero {
   border-color: rgba(161, 132, 255, 0.32);
   background: radial-gradient(circle at 10% 15%, rgba(161, 132, 255, 0.22), transparent 42%), linear-gradient(135deg, #211a40, #111729 78%);
@@ -546,6 +562,75 @@ body { font-size: 12px; }
 .knowledge-task-pagination .secondary-button { min-height: 34px; margin: 0; padding-inline: 12px; font-size: 12px; }
 .knowledge-task-pagination input { width: 64px; min-height: 34px; padding: 0 9px; border: 1px solid rgba(143, 112, 255, 0.2); border-radius: 9px; color: var(--fd-text); background: rgba(8, 8, 20, 0.62); font-size: 12px; text-align: center; }
 .knowledge-task-pagination input:focus-visible { border-color: var(--fd-violet); outline: 0; box-shadow: 0 0 0 3px rgba(161, 132, 255, 0.12); }
+
+/* 全站导航基线：分组标题、子项和当前项保持同一左边界与垂直节奏。 */
+.advanced-navigation { gap: 8px; margin-top: 14px; padding-top: 14px; }
+.advanced-navigation details { overflow: visible; }
+.advanced-navigation summary { min-height: 44px; padding: 10px 14px; border-radius: 12px; font-size: 12px; }
+.advanced-navigation details > div { gap: 3px; padding: 6px 0 4px 30px; }
+.advanced-navigation details button { min-height: 38px; padding: 9px 14px; border-radius: 9px; font-size: 12px; line-height: 1.2; }
+.advanced-navigation details button.active { box-shadow: inset 3px 0 var(--fd-violet); }
+
+/* 自定义下拉与项目统一的 select-menu 共用视觉语言，避免原生 option 风格泄漏。 */
+.soft-select-trigger,
+.select-menu-trigger {
+  min-height: 44px;
+  border-color: rgba(143, 112, 255, .24);
+  border-radius: 11px;
+  color: var(--fd-text);
+  background: linear-gradient(135deg, rgba(17, 16, 38, .96), rgba(25, 18, 48, .96));
+  font-size: 12px;
+  font-weight: 700;
+}
+.soft-select-trigger:hover,
+.soft-select-trigger[aria-expanded="true"],
+.select-menu-trigger:hover,
+.select-menu-trigger[aria-expanded="true"] {
+  border-color: var(--fd-violet);
+  background: linear-gradient(135deg, rgba(30, 23, 61, .98), rgba(40, 24, 68, .98));
+  box-shadow: 0 0 0 3px rgba(161, 132, 255, .12);
+}
+.soft-select-menu,
+.select-menu-popover {
+  gap: 4px;
+  padding: 7px;
+  border-color: rgba(143, 112, 255, .46);
+  border-radius: 12px;
+  background: linear-gradient(145deg, #211a3b, #111026 88%);
+  box-shadow: 0 18px 38px rgba(4, 3, 16, .58);
+}
+.soft-select-option,
+.select-menu-popover button {
+  min-height: 38px;
+  padding: 0 11px;
+  border-radius: 9px;
+  color: var(--fd-text-soft);
+  font-size: 12px;
+  font-weight: 650;
+}
+.soft-select-option:hover,
+.soft-select-option[aria-selected="true"],
+.select-menu-popover button:hover,
+.select-menu-popover button:focus-visible,
+.select-menu-popover button.selected {
+  border-color: rgba(153, 121, 235, .32);
+  color: var(--fd-text);
+  background: rgba(119, 82, 208, .24);
+}
+
+/* 所有表单和工具栏使用统一的边界盒，宽屏三列、窄屏单列均不溢出。 */
+.form-grid > *, .toolbar > *, .model-form-grid > *, .account-form-grid > * { min-width: 0; }
+.form-grid input, .form-grid select, .form-grid textarea,
+.model-form-grid input, .model-form-grid select,
+.account-form-grid input, .account-form-grid select { box-sizing: border-box; }
+.button-group, .button-row, .sync-actions, .task-actions { min-height: 40px; }
+
+@media (max-width: 899px) {
+  .advanced-navigation summary { min-height: 42px; }
+  .advanced-navigation details > div { padding-left: 26px; }
+  .advanced-navigation details button { min-height: 36px; font-size: 11px; }
+  .soft-select-menu, .select-menu-popover { max-width: min(100%, 320px); }
+}
 
 /* 来源字段和任务治理操作共用清晰的对齐基线，避免宽屏缩放时控件被压成内联元素。 */
 .knowledge-source-create .form-grid > .knowledge-source-type-field { align-self: start; }

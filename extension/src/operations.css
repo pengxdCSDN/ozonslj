@@ -6,28 +6,68 @@
 .operation-summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 7px;
+  gap: 12px;
 }
 
 .operation-summary article {
   display: grid;
-  gap: 4px;
-  padding: 11px;
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  color: #9f88f7;
-  background: #171629;
+  min-width: 0;
+  min-height: 82px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 16px;
+  border: 1px solid color-mix(in srgb, var(--operation-accent) 24%, var(--fd-line));
+  border-radius: 14px;
+  color: var(--fd-text);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--operation-accent) 9%, var(--fd-panel-raised)), rgba(13, 13, 29, .92));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .025);
 }
 
-.operation-summary span,
+.operation-summary article:nth-child(1) { --operation-accent: var(--fd-cyan); }
+.operation-summary article:nth-child(2) { --operation-accent: var(--fd-orange); }
+.operation-summary article:nth-child(3) { --operation-accent: var(--fd-green); }
+
+.operation-summary-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--operation-accent) 28%, transparent);
+  border-radius: 11px;
+  color: var(--operation-accent);
+  background: color-mix(in srgb, var(--operation-accent) 10%, transparent);
+}
+
+.operation-summary-label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fd-text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .operation-row small {
   color: var(--muted);
   font-size: 8px;
 }
 
 .operation-summary strong {
-  color: #f1eef8;
-  font-size: 18px;
+  color: var(--operation-accent);
+  font-family: var(--fd-mono);
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+@media (max-width: 560px) {
+  .operation-summary { gap: 8px; }
+  .operation-summary article { min-height: 72px; gap: 8px; padding: 11px; }
+  .operation-summary-icon { width: 32px; height: 32px; }
+  .operation-summary-label { font-size: 10px; }
+  .operation-summary strong { font-size: 19px; }
 }
 
 .operation-panel {
