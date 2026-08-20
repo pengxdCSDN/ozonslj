@@ -401,3 +401,13 @@ docker compose --env-file .env logs --tail=100 api worker
 - API `live=200`、`ready=200`；API、Worker、Scheduler 均运行正常；Web 首页 `200 text/html`。
 - Web 资源验收通过：`index-DqINHAjq.js` 返回 `200 application/javascript`，`index-CnIcW-o0.css` 返回 `200 text/css`，favicon 返回 `200 image/png`。
 - 本次发布只读 Ozon 商品数据和利润测算边界，未调用商品、价格、库存、订单或广告写接口。
+
+## 2026-08-20 Ozon 财务 начисления 自动同步发布验收
+
+- 发布提交：`56d079e`；推送到 `codex/deployment-base-images` 后，API、Worker、Scheduler 已完成镜像更新。
+- 三项后端服务统一使用应用镜像摘要：`sha256:66e4dcb3c73017468ec08847d836eaef4e11f5a0569f1f3fc77ddbc0a9e259fa`；API 容器 `OZONSLJ_RELEASE_REVISION=56d079ef7733`。
+- 镜像内已确认财务适配器存在，并使用当前只读接口 `/v1/finance/accrual/by-day`；按日期逐日查询并使用 `last_id` 分页，不再依赖已弃用的旧交易接口。
+- API `live=200`、`ready=200`；API、Worker、Scheduler 均运行正常。
+- Web 资源验收通过：`index-CUliVqbQ.js`、`index-CCvx1uyu.css` 和 favicon 均返回 `200`。
+- 利润模型页面新增财务日期范围和“从 Ozon 同步财务”入口；同步结果只归一化销售额、佣金、物流及其他费用，供订单实际费用回填和利润校准使用。
+- 本次发布仅增加 Ozon 财务只读读取能力，未调用任何 Seller 写接口；自动化测试使用 Mock，真实店铺数据需在生产页面点击同步后再按账号权限验收。
