@@ -11,9 +11,12 @@ from backend.app.infrastructure.redis_rag_tasks import RedisRagTaskConsumer
 
 
 class RagWorker:
+    """消费 RAG 任务并将索引、撤回、删除或重建交给知识运行时。"""
+
     def __init__(self, tasks: PostgresRagTaskGateway, consumer: RedisRagTaskConsumer,
                  *, worker_id: str, lease_seconds: int = 300,
                  runtime: KnowledgeRuntimePort | None = None) -> None:
+        """注入 PostgreSQL 任务事实、Redis 唤醒消费者和可选知识运行时。"""
         self._tasks = tasks
         self._consumer = consumer
         self._worker_id = worker_id
@@ -21,6 +24,7 @@ class RagWorker:
         self._runtime = runtime
 
     async def process_one(self, *, block_ms: int = 1_000) -> bool:
+        """消费一条 RAG 任务，按任务类型执行并确认最终状态。"""
         message = await self._consumer.read_one(block_ms=block_ms)
         if message is None:
             return False
@@ -62,6 +66,7 @@ class RagWorker:
         return finished is not None
 
     async def _heartbeat(self, task_id: str) -> None:
+        """在 RAG 任务运行期间周期性续租，避免长任务被重复领取。"""
         interval = max(1, self._lease_seconds // 3)
         while True:
             await asyncio.sleep(interval)

@@ -1,3 +1,5 @@
+"""应用层身份服务：密码哈希、登录会话创建、认证和退出。"""
+
 import hashlib
 import hmac
 import secrets
@@ -14,6 +16,7 @@ class PasswordHasher:
     _p = 1
 
     def hash(self, password: str) -> str:
+        """校验密码长度并生成带随机盐的 scrypt 编码结果。"""
         if len(password) < 12:
             raise ValueError("密码至少需要 12 个字符")
         salt = secrets.token_bytes(16)
@@ -27,6 +30,7 @@ class PasswordHasher:
         return f"scrypt${self._n}${self._r}${self._p}${salt.hex()}${digest.hex()}"
 
     def verify(self, password: str, encoded: str) -> bool:
+        """验证密码与编码哈希；格式错误或算法不匹配时返回 False。"""
         try:
             algorithm, n, r, p, salt, expected = encoded.split("$", 5)
             if algorithm != "scrypt":
@@ -63,6 +67,7 @@ class IdentityService:
         password: str,
         organization_id: str,
     ) -> LoginResult | None:
+        """校验登录身份并创建只保存哈希的短期会话。"""
         identity = await self._gateway.find_login_identity(
             email.strip().lower(),
             organization_id,
@@ -83,11 +88,13 @@ class IdentityService:
         return LoginResult(token=token, expires_at=expires_at, user=user)
 
     async def authenticate(self, token: str) -> AuthenticatedUser | None:
+        """通过会话令牌哈希查找当前认证用户。"""
         if not token:
             return None
         return await self._gateway.find_user_by_session_hash(self._token_hash(token))
 
     async def logout(self, token: str) -> None:
+        """撤销会话令牌；空令牌视为无需处理。"""
         if token:
             await self._gateway.revoke_session(self._token_hash(token))
 
