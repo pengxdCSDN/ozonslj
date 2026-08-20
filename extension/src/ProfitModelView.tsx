@@ -235,7 +235,7 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
     anchor.click();
     URL.revokeObjectURL(url);
     const guide = "Ozon SLJ 物流模板字段说明\n\n" +
-      "template_id：物流模板编号\nfulfillment_type：履约方式，如 FBS\nwarehouse_id：仓库编号\nroute_id：物流线路编号\nregion_id：区域编号\nversion：模板版本\neffective_from：生效日期\neffective_to：失效日期，可留空\nvolumetric_divisor_cm3_per_kg：体积重系数\nmax_weight_g：计费重量上限，克\nbase_fee_minor：基础费用，最小货币单位，5000 表示 50 RUB\nadditional_fee_minor：超重附加费\nadditional_step_g：超重计费步长\nfee_rate_bps：比例费率，基点\ncurrency：币种，如 RUB\nsource：来源，如 manual\n\n注意：CSV 表头保持英文，才能被系统导入。";
+      "必填字段（每行都必须有值）：template_id、fulfillment_type、warehouse_id、route_id、region_id、version、effective_from、volumetric_divisor_cm3_per_kg、max_weight_g、base_fee_minor、currency、source。\n\n可选字段：effective_to、additional_fee_minor、additional_step_g、fee_rate_bps；可选费用字段留空时按 0 处理，effective_to 留空表示长期有效。\n\n字段说明：\ntemplate_id：物流模板编号\nfulfillment_type：履约方式，如 FBS\nwarehouse_id：仓库编号\nroute_id：物流线路编号\nregion_id：区域编号\nversion：模板版本\neffective_from：生效日期\neffective_to：失效日期，可留空\nvolumetric_divisor_cm3_per_kg：体积重系数\nmax_weight_g：计费重量上限，克\nbase_fee_minor：基础费用，最小货币单位，5000 表示 50 RUB\nadditional_fee_minor：超重附加费\nadditional_step_g：超重计费步长\nfee_rate_bps：比例费率，基点\ncurrency：币种，如 RUB\nsource：来源，如 manual\n\n注意：CSV 表头保持英文，才能被系统导入；同一个 template_id 的多行必须使用一致的仓库、线路、区域和版本信息。";
     const guideUrl = URL.createObjectURL(new Blob(["\uFEFF" + guide], { type: "text/plain;charset=utf-8" }));
     const guideAnchor = document.createElement("a");
     guideAnchor.href = guideUrl;
