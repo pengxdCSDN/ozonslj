@@ -40,6 +40,7 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
   const [source, setSource] = useState<"manual" | "ozon">("manual");
   const [offers, setOffers] = useState<OzonProductSkuFact[]>([]);
   const [commissionPercent, setCommissionPercent] = useState(15);
+  const [commissionSource, setCommissionSource] = useState<"manual" | "ozon" | "missing">("manual");
   const [adPercent, setAdPercent] = useState(5);
   const [returnPercent, setReturnPercent] = useState(2);
   const [paymentPercent, setPaymentPercent] = useState(0);
@@ -72,8 +73,16 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
     setSource("ozon");
     setProductName(offer.name);
     if (offer.category_id) setCategoryId(offer.category_id);
+    if (offer.commission_rate_bps !== null) {
+      setCommissionPercent(offer.commission_rate_bps / 100);
+      setCommissionSource("ozon");
+    } else {
+      setCommissionSource("missing");
+    }
     setSkus([{ ...initialSku(1), skuId: offer.offer_id, priceRub: offer.price_minor === null ? 1000 : offer.price_minor / 100, weightG: offer.weight_g ?? initialSku(1).weightG, lengthMm: offer.length_mm ?? initialSku(1).lengthMm, widthMm: offer.width_mm ?? initialSku(1).widthMm, heightMm: offer.height_mm ?? initialSku(1).heightMm }]);
-    setMessage(`已载入 ${offer.offer_id} 的 Ozon 只读资料；到岸成本和缺失费率仍需确认。`);
+    setMessage(offer.commission_rate_bps === null
+      ? `已载入 ${offer.offer_id} 的 Ozon 资料；未读取到当前佣金，请人工确认类目费率。`
+      : `已载入 ${offer.offer_id} 的 Ozon 资料，并自动填入 ${offer.commission_rate_bps / 100}% 类目佣金；请确认后再计算。`);
   };
 
   const syncCatalog = async () => {
