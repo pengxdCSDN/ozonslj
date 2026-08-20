@@ -86,7 +86,7 @@ class PostgresProductOfferGateway:
             items=items,
             total=total,
             next_cursor=str(end) if end < total else None,
-            source="postgres",
+            source="postgresql",
         )
 
 

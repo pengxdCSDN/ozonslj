@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Annotated, Literal
+from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -82,9 +82,15 @@ def _response(
     metrics = []
     for key, label, used, limit in metric_values:
         ratio = used / max(limit, 0.01)
-        state = "exceeded" if ratio >= 1 else "warning" if ratio >= 0.9 else "normal"
+        state: Literal["normal", "warning", "exceeded"] = (
+            "exceeded" if ratio >= 1 else "warning" if ratio >= 0.9 else "normal"
+        )
         metrics.append(BudgetMetricPayload(
-            key=key, label=label, used=used, limit=limit, ratio=ratio, state=state,
+            key=cast(
+                Literal["daily_tokens", "monthly_tokens", "daily_requests", "monthly_cost"],
+                key,
+            ),
+            label=label, used=used, limit=limit, ratio=ratio, state=state,
         ))
     return BudgetResponse(
         provider_id=provider_id,

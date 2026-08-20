@@ -33,10 +33,16 @@ class ExploreOpportunity:
 
 class ExploreOpportunityGateway(Protocol):
     """说明 ExploreOpportunityGateway 的职责、状态边界和对外协作关系。"""
+
     async def save_opportunities(
         self, *, workspace_id: str, opportunities: list[ExploreOpportunity]
     ) -> list[ExploreOpportunity]:
         """执行 save_opportunities 的业务流程并返回该流程的结果。"""
+
+    async def list_opportunities(
+        self, *, workspace_id: str, limit: int
+    ) -> list[ExploreOpportunity]:
+        """读取指定工作区已保存的选品机会快照。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,12 +73,6 @@ def filter_opportunities(
         )
         and (not filters.coverage_gap_only or item.own_coverage_gap)
     ]
-
-    async def list_opportunities(
-        self, *, workspace_id: str, limit: int
-    ) -> list[ExploreOpportunity]:
-        """执行 list_opportunities 的业务流程并返回该流程的结果。"""
-
 
 def explore_opportunities(items: list[ExploreInput]) -> list[ExploreOpportunity]:
     """融合搜索热度、公开样本和自有覆盖缺口，生成可复核的机会候选。"""
