@@ -822,6 +822,26 @@ export function listOzonProductCatalog(workspaceId: string, cursor?: string, lim
   return requestJson(`/v1/seller/products/store-workspaces/${encodeURIComponent(workspaceId)}/catalog?${params.toString()}`, { method: "GET" });
 }
 
+export interface FinanceAccrualPage {
+  lines: Array<{
+    accrual_id: string;
+    accrual_date: string;
+    order_id: string | null;
+    sku_id: string | null;
+    category: string;
+    amount_minor: number;
+    currency: string;
+    source: string;
+  }>;
+  dates: string[];
+  source: string;
+}
+
+export function listOzonFinanceAccruals(workspaceId: string, dateFrom: string, dateTo: string): Promise<FinanceAccrualPage> {
+  const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+  return requestJson(`/v1/seller/products/store-workspaces/${encodeURIComponent(workspaceId)}/finance/accruals?${params.toString()}`, { method: "GET" });
+}
+
 export interface CostSensitivityScenario { label: string; change_percent: number; profit_minor: number; margin_percent: number; }
 export function analyzeCostSensitivity(payload: Record<string, unknown>): Promise<CostSensitivityScenario[]> { return requestJson("/v1/selection/cost-sensitivity/analyze", { method: "POST", body: JSON.stringify(payload) }); }
 export function analyzeAndSaveCostSensitivity(workspaceId: string, payload: Record<string, unknown>): Promise<CostSensitivityScenario[]> { return requestJson(`/v1/selection/cost-sensitivity/store-workspaces/${encodeURIComponent(workspaceId)}/analyze-and-save`, { method: "POST", body: JSON.stringify(payload) }); }

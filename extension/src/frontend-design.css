@@ -815,6 +815,9 @@ body { font-size: 12px; }
 .csv-preview { display: grid; gap: 3px; margin: 0 18px 18px; padding: 10px; border-left: 3px solid var(--fd-green); color: var(--fd-green); background: rgba(70,223,176,.06); }
 .csv-preview.has-errors { border-left-color: var(--fd-rose); color: var(--fd-rose); background: rgba(255,110,147,.06); }
 .reconciliation-panel { border-color: rgba(82,217,232,.18); }
+.finance-sync-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 18px 10px; }
+.finance-sync-fields label { display: grid; gap: 5px; color: var(--fd-muted); font-size: 8px; }
+.finance-sync-fields input { min-height: 30px; padding: 6px 8px; border: 1px solid rgba(82,217,232,.16); border-radius: 7px; color: var(--fd-text); background: rgba(8,8,20,.65); font: 9px var(--fd-mono); }
 .csv-preview strong { font-size: 10px; }
 .csv-preview small { color: var(--fd-muted); font-size: 8px; line-height: 1.5; }
 .profit-message { margin: 0; }

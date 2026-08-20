@@ -128,6 +128,10 @@
 
 当前适配器按 Seller API 的只读商品列表、属性和价格契约进行组合；上线前仍需用目标店铺的脱敏响应完成一次契约验收，确认字段版本和权限，不把未经验证的上游字段当作计算事实。
 
+`GET /v1/seller/products/store-workspaces/{workspace_id}/finance/accruals`
+
+按 `date_from`、`date_to`（最多 31 个自然日）调用 Ozon 新版 `/v1/finance/accrual/by-day`，按 `last_id` 自动翻页，返回标准化的销售、佣金、物流服务和其他费用明细。该接口只读，不写订单或财务数据；同步结果当前用于前端对账预览，后续可接入持久化同步批次。
+
 ### 5.1 本地商品报价切片
 
 `GET /v1/store-workspaces/{workspace_id}/product-offers`

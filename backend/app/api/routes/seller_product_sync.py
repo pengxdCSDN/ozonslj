@@ -1,5 +1,6 @@
 """说明本模块的职责、边界和主要协作对象。"""
 
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -7,10 +8,12 @@ from pydantic import BaseModel
 
 from backend.app.api.dependencies import (
     get_credential_protector,
+    get_ozon_finance_accrual_gateway,
     get_ozon_product_catalog_gateway,
     get_seller_product_snapshot_gateway,
     get_store_workspace_gateway,
 )
+from backend.app.domain.ozon_finance_accrual import FinanceAccrualPage, OzonFinanceAccrualGateway
 from backend.app.domain.ozon_product_catalog import (
     OzonProductCatalogGateway,
     ProductCatalogPage,
@@ -36,6 +39,7 @@ router = APIRouter(prefix="/v1/seller/products", tags=["seller-api"])
 
 class SellerProductSyncPayload(BaseModel):
     """说明 SellerProductSyncPayload 的职责、状态边界和对外协作关系。"""
+
     response: dict[str, object]
     cursor: str | None = None
 
@@ -99,19 +103,86 @@ async def read_ozon_catalog(
         ) from error
 
 
+@router.get(
+    "/store-workspaces/{workspace_id}/finance/accruals",
+    response_model=FinanceAccrualPage,
+)
+async def read_ozon_finance_accruals(
+    workspace_id: str,
+    date_from: date,
+    date_to: date,
+    workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
+    finance_gateway: Annotated[
+        OzonFinanceAccrualGateway,
+        Depends(get_ozon_finance_accrual_gateway),
+    ],
+    protector: Annotated[CredentialProtector, Depends(get_credential_protector)],
+) -> FinanceAccrualPage:
+    """按日期范围读取 Ozon 财务 начисления，供实际利润对账使用。
+
+    Args:
+        workspace_id: 当前已授权店铺工作区编号。
+        date_from: ISO 日期格式的同步开始日期。
+        date_to: ISO 日期格式的同步结束日期，最多 31 个自然日。
+        workspace_gateway: 读取工作区和加密凭据的端口。
+        finance_gateway: Ozon 财务只读适配器。
+        protector: 后端凭据解密器，不向响应暴露密文或明文。
+
+    Returns:
+        标准化财务明细页面，金额使用最小货币单位整数。
+
+    Raises:
+        HTTPException: 工作区、日期、凭据或 Ozon 财务读取失败时抛出。
+    """
+    workspace = await workspace_gateway.get_workspace(workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
+    loaded = await workspace_gateway.load_credentials(workspace_id)
+    if loaded is None:
+        raise HTTPException(status_code=409, detail={"code": "ozon_credentials_missing"})
+    client_id, encrypted_api_key, credential_version = loaded
+    try:
+        api_key = protector.unprotect(encrypted_api_key, credential_version=credential_version)
+        return await finance_gateway.list_accruals(
+            credentials=OzonCredentials(client_id=client_id, api_key=api_key),
+            date_from=date_from,
+            date_to=date_to,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "finance_range_invalid", "message": str(error)},
+        ) from error
+    except (OzonAuthenticationError, OzonPermissionError) as error:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "ozon_finance_forbidden", "message": str(error)},
+        ) from error
+    except OzonRateLimitError as error:
+        raise HTTPException(
+            status_code=429,
+            detail={"code": "ozon_finance_rate_limited", "message": str(error)},
+        ) from error
+    except (OzonTemporaryError, OzonMalformedResponseError) as error:
+        raise HTTPException(
+            status_code=502,
+            detail={"code": "ozon_finance_unavailable", "message": str(error)},
+        ) from error
+
+
 @router.post("/sync-preview", response_model=SellerProductSyncPreview)
 async def sync_preview(payload: SellerProductSyncPayload) -> SellerProductSyncPreview:
     """执行 sync_preview 的业务流程并返回该流程的结果。
 
-Args:
-    payload: 参数语义、输入边界和安全约束。
+    Args:
+        payload: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。
+    Returns:
+        返回调用完成后的领域结果。
 
-Raises:
-    HTTPException: 业务约束或外部依赖失败时抛出。
-"""
+    Raises:
+        HTTPException: 业务约束或外部依赖失败时抛出。
+    """
     try:
         return map_seller_product_response(payload.response, cursor=payload.cursor)
     except ValueError as error:
@@ -133,18 +204,18 @@ async def sync_and_save(
 ) -> SellerProductSyncPreview:
     """执行 sync_and_save 的业务流程并返回该流程的结果。
 
-Args:
-    workspace_id: 参数语义、输入边界和安全约束。
-    payload: 参数语义、输入边界和安全约束。
-    gateway: 参数语义、输入边界和安全约束。
-    workspace_gateway: 参数语义、输入边界和安全约束。
+    Args:
+        workspace_id: 参数语义、输入边界和安全约束。
+        payload: 参数语义、输入边界和安全约束。
+        gateway: 参数语义、输入边界和安全约束。
+        workspace_gateway: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。
+    Returns:
+        返回调用完成后的领域结果。
 
-Raises:
-    HTTPException: 业务约束或外部依赖失败时抛出。
-"""
+    Raises:
+        HTTPException: 业务约束或外部依赖失败时抛出。
+    """
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -169,18 +240,18 @@ async def list_snapshots(
 ) -> list[SellerProductSyncPreview]:
     """执行 list_snapshots 的业务流程并返回该流程的结果。
 
-Args:
-    workspace_id: 参数语义、输入边界和安全约束。
-    gateway: 参数语义、输入边界和安全约束。
-    workspace_gateway: 参数语义、输入边界和安全约束。
-    limit: 参数语义、输入边界和安全约束。
+    Args:
+        workspace_id: 参数语义、输入边界和安全约束。
+        gateway: 参数语义、输入边界和安全约束。
+        workspace_gateway: 参数语义、输入边界和安全约束。
+        limit: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。
+    Returns:
+        返回调用完成后的领域结果。
 
-Raises:
-    HTTPException: 业务约束或外部依赖失败时抛出。
-"""
+    Raises:
+        HTTPException: 业务约束或外部依赖失败时抛出。
+    """
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_snapshots(workspace_id=workspace_id, limit=limit)
