@@ -392,3 +392,12 @@ docker compose --env-file .env logs --tail=100 api worker
 - Performance Token 地址已确认使用 `https://api-performance.ozon.ru/api/client/token`，广告活动只读地址使用 `https://api-performance.ozon.ru/api/client/campaign`；未再使用网页域名 `performance.ozon.ru`。
 - 生产 Performance 凭据页面点击“获取 Token 并测试连接”成功，连接验证通过；未记录 Client ID、Client Secret 或 Access Token。
 - 本次仅执行 OAuth 验证和广告活动只读边界检查，没有调用 Ozon 写接口。
+
+## 2026-08-20 商品只读同步与利润测算发布验收
+
+- 发布提交：`092795a`；GitHub Actions API/Worker 构建部署与 Web 静态资源发布均成功。
+- API、Worker、Scheduler 使用同一应用镜像摘要：`sha256:b5b4162e856be121d47fd63d15b5248381d9478725cede6e9038e03fa5b9d422`；镜像内 `OZONSLJ_RELEASE_REVISION=092795a80c9c469271c4fdd2635f0a96a29d86a6`。
+- 镜像内已确认 Ozon 商品目录适配器存在，属性接口为 `/v4/product/info/attributes`；商品列表为 `/v3/product/list`，价格为 `/v5/product/info/prices`。
+- API `live=200`、`ready=200`；API、Worker、Scheduler 均运行正常；Web 首页 `200 text/html`。
+- Web 资源验收通过：`index-DqINHAjq.js` 返回 `200 application/javascript`，`index-CnIcW-o0.css` 返回 `200 text/css`，favicon 返回 `200 image/png`。
+- 本次发布只读 Ozon 商品数据和利润测算边界，未调用商品、价格、库存、订单或广告写接口。
