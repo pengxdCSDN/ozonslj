@@ -846,6 +846,10 @@ body { font-size: 12px; }
 .side-copy { margin: 14px 18px 10px; color: var(--fd-muted); font-size: 9px; line-height: 1.6; }
 .csv-panel textarea { display: block; width: calc(100% - 36px); min-height: 92px; margin: 0 18px 10px; font: 9px var(--fd-mono); }
 .csv-panel > .secondary-button { margin: 0 18px 14px; }
+.template-file-actions { display: flex; align-items: center; gap: 10px; margin: 0 18px 10px; }
+.template-file-actions label { margin: 0; cursor: pointer; }
+.template-file-actions input[type="file"] { display: none; }
+.template-file-actions .text-button { color: var(--fd-cyan); font-size: 9px; }
 .csv-preview { display: grid; gap: 3px; margin: 0 18px 18px; padding: 10px; border-left: 3px solid var(--fd-green); color: var(--fd-green); background: rgba(70,223,176,.06); }
 .csv-preview.has-errors { border-left-color: var(--fd-rose); color: var(--fd-rose); background: rgba(255,110,147,.06); }
 .reconciliation-panel { border-color: rgba(82,217,232,.18); }
