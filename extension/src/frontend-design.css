@@ -809,6 +809,7 @@ body { font-size: 12px; }
 .catalog-modal-item small { overflow: hidden; color: var(--fd-muted); text-overflow: ellipsis; white-space: nowrap; }
 .catalog-modal-item b { color: var(--fd-cyan); font: 800 10px var(--fd-mono); white-space: nowrap; }
 .catalog-modal-actions { border-top: 1px solid rgba(143,112,255,.14); }
+.catalog-modal-actions > div { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .catalog-modal-actions small, .catalog-modal-empty span { color: var(--fd-muted); font-size: 9px; line-height: 1.6; }
 .catalog-modal-empty { display: grid; justify-items: center; gap: 8px; padding: 56px 32px; text-align: center; }
 .catalog-modal-empty strong { color: var(--fd-text-soft); font-size: 14px; }
