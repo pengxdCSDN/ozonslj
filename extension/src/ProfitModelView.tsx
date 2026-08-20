@@ -234,6 +234,15 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
     anchor.download = "ozon-logistics-template-sample.csv";
     anchor.click();
     URL.revokeObjectURL(url);
+    const guide = "Ozon SLJ 物流模板字段说明\n\n" +
+      "template_id：物流模板编号\nfulfillment_type：履约方式，如 FBS\nwarehouse_id：仓库编号\nroute_id：物流线路编号\nregion_id：区域编号\nversion：模板版本\neffective_from：生效日期\neffective_to：失效日期，可留空\nvolumetric_divisor_cm3_per_kg：体积重系数\nmax_weight_g：计费重量上限，克\nbase_fee_minor：基础费用，最小货币单位，5000 表示 50 RUB\nadditional_fee_minor：超重附加费\nadditional_step_g：超重计费步长\nfee_rate_bps：比例费率，基点\ncurrency：币种，如 RUB\nsource：来源，如 manual\n\n注意：CSV 表头保持英文，才能被系统导入。";
+    const guideUrl = URL.createObjectURL(new Blob(["\uFEFF" + guide], { type: "text/plain;charset=utf-8" }));
+    const guideAnchor = document.createElement("a");
+    guideAnchor.href = guideUrl;
+    guideAnchor.download = "ozon-logistics-template-fields-中文说明.txt";
+    guideAnchor.click();
+    URL.revokeObjectURL(guideUrl);
+    setMessage("已下载 CSV 模板和中文字段说明两个文件。CSV 表头保持英文以便导入。 ");
   };
 
   const previewActualFees = async () => {
