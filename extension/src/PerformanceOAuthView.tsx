@@ -9,6 +9,20 @@ import {
 
 interface Props { workspaceId: string; }
 
+function formatTokenExpiry(value: string | null): { display: string; state: string } {
+  if (!value) return { display: "未获取", state: "未获取" };
+  const expiry = new Date(value);
+  if (Number.isNaN(expiry.getTime())) return { display: "时间格式异常", state: "需重新获取" };
+  const display = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  }).format(expiry);
+  const remainingSeconds = (expiry.getTime() - Date.now()) / 1000;
+  if (remainingSeconds <= 0) return { display, state: "已过期" };
+  if (remainingSeconds <= 300) return { display, state: `即将过期（约 ${Math.ceil(remainingSeconds / 60)} 分钟）` };
+  return { display, state: "有效" };
+}
+
 export function PerformanceOAuthView({ workspaceId }: Props) {
   const [status, setStatus] = useState<PerformanceCredentialStatus | null>(null);
   const [clientId, setClientId] = useState("");
@@ -69,6 +83,6 @@ export function PerformanceOAuthView({ workspaceId }: Props) {
       </div>
       {message ? <p className="form-message" role="status">{message}</p> : null}
     </section>
-    <section className="panel credential-panel"><div className="section-heading"><div><p className="eyebrow">Performance API</p><h2>连接状态</h2></div></div>{status ? <div className="quality-result"><strong>{status.credential_scope} · {status.ready ? "已就绪" : "未就绪"}</strong><span>Client ID：{status.client_id_present ? "已配置" : "未配置"} · Client Secret：{status.client_secret_present ? "已保存" : "未保存"} · Access Token：{status.access_token_present ? "已获取" : "未获取"}</span><small>Token 过期时间：{status.expires_at ?? "未获取"} · Seller 隔离：{status.isolated_from_seller ? "是" : "否"}</small></div> : <div className="empty-search"><strong>尚未读取 Performance 连接状态</strong><span>保存密钥后点击“获取 Token 并测试连接”。</span></div>}</section>
+    <section className="panel credential-panel"><div className="section-heading"><div><p className="eyebrow">Performance API</p><h2>连接状态</h2></div></div>{status ? <div className="quality-result"><strong>{status.credential_scope} · {status.ready ? "已就绪" : "未就绪"}</strong><span>Client ID：{status.client_id_present ? "已配置" : "未配置"} · Client Secret：{status.client_secret_present ? "已保存" : "未保存"} · Access Token：{status.access_token_present ? "已获取" : "未获取"}</span>{(() => { const expiry = formatTokenExpiry(status.expires_at); return <small>Token 有效至（北京时间）：{expiry.display} · 状态：{expiry.state} · Seller 隔离：{status.isolated_from_seller ? "是" : "否"}</small>; })()}</div> : <div className="empty-search"><strong>尚未读取 Performance 连接状态</strong><span>保存密钥后点击“获取 Token 并测试连接”。</span></div>}</section>
   </div>;
 }
