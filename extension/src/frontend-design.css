@@ -784,6 +784,15 @@ body { font-size: 12px; }
 .offer-picker label { display: grid; gap: 6px; color: var(--fd-text-soft); font-size: 9px; font-weight: 800; }
 .offer-picker select { min-height: 34px; padding: 7px 9px; border: 1px solid rgba(82,217,232,.2); border-radius: 7px; color: var(--fd-text); background: rgba(8,8,20,.7); font-size: 9px; }
 .offer-picker small { color: var(--fd-muted); font-size: 8px; line-height: 1.5; }
+.offer-picker-list { display: grid; max-height: 220px; overflow-y: auto; border: 1px solid rgba(82,217,232,.12); border-radius: 8px; background: rgba(8,8,20,.34); }
+.offer-picker-item { display: grid; grid-template-columns: 18px minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 9px 10px; border-top: 1px solid rgba(143,112,255,.08); color: var(--fd-text-soft); cursor: pointer; }
+.offer-picker-item:first-child { border-top: 0; }
+.offer-picker-item input { accent-color: var(--fd-violet); }
+.offer-picker-item span { display: grid; min-width: 0; gap: 2px; }
+.offer-picker-item strong { color: var(--fd-text); font: 800 9px var(--fd-mono); }
+.offer-picker-item small { overflow: hidden; color: var(--fd-muted); text-overflow: ellipsis; white-space: nowrap; }
+.offer-picker-item b { color: var(--fd-cyan); font: 800 9px var(--fd-mono); white-space: nowrap; }
+.offer-import-button { margin: 10px 0 4px; }
 .profit-form-grid { padding-top: 15px; }
 .sku-stack { display: grid; gap: 10px; }
 .sku-editor { margin: 0 20px; border: 1px solid rgba(143,112,255,.16); border-radius: 12px; background: rgba(8,8,20,.28); }

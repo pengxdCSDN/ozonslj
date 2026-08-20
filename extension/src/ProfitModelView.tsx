@@ -39,6 +39,8 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
   const [categoryId, setCategoryId] = useState("category-id");
   const [source, setSource] = useState<"manual" | "ozon">("manual");
   const [offers, setOffers] = useState<OzonProductSkuFact[]>([]);
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [selectedOfferIds, setSelectedOfferIds] = useState<string[]>([]);
   const [commissionPercent, setCommissionPercent] = useState(15);
   const [commissionSource, setCommissionSource] = useState<"manual" | "ozon" | "missing">("manual");
   const [adPercent, setAdPercent] = useState(5);
@@ -83,6 +85,32 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
     setMessage(offer.commission_rate_bps === null
       ? `已载入 ${offer.offer_id} 的 Ozon 资料；未读取到当前佣金，请人工确认类目费率。`
       : `已载入 ${offer.offer_id} 的 Ozon 资料，并自动填入 ${offer.commission_rate_bps / 100}% 类目佣金；请确认后再计算。`);
+  };
+
+  const filteredOffers = offers.filter((offer) => {
+    const query = catalogQuery.trim().toLowerCase();
+    return !query || [offer.offer_id, offer.name, offer.category_id ?? ""].some((value) => value.toLowerCase().includes(query));
+  });
+
+  const toggleOffer = (offerId: string) => setSelectedOfferIds((current) => current.includes(offerId) ? current.filter((id) => id !== offerId) : [...current, offerId]);
+
+  const importSelectedOffers = () => {
+    const selected = offers.filter((offer) => selectedOfferIds.includes(offer.offer_id));
+    if (!selected.length) {
+      setMessage("请先勾选至少一个 Ozon 商品。");
+      return;
+    }
+    selectOffer(selected[0]);
+    setSkus(selected.map((offer, index) => ({
+      ...initialSku(index + 1),
+      skuId: offer.offer_id,
+      priceRub: offer.price_minor === null ? initialSku(index + 1).priceRub : offer.price_minor / 100,
+      weightG: offer.weight_g ?? initialSku(index + 1).weightG,
+      lengthMm: offer.length_mm ?? initialSku(index + 1).lengthMm,
+      widthMm: offer.width_mm ?? initialSku(index + 1).widthMm,
+      heightMm: offer.height_mm ?? initialSku(index + 1).heightMm,
+    })));
+    setMessage(`已导入 ${selected.length} 个商品 SKU；到岸成本和缺失规格仍需确认。`);
   };
 
   const syncCatalog = async () => {
@@ -241,7 +269,7 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
             <button className={source === "ozon" ? "is-active" : ""} disabled={!offers.length} onClick={() => setSource("ozon")} title={offers.length ? "选择已同步商品" : "暂无已同步商品"} type="button">Ozon 商品 <small>{offers.length ? `${offers.length} 个可用` : "等待同步"}</small></button>
             <button className="source-sync-button" disabled={busy !== ""} onClick={() => void syncCatalog()} type="button">{busy === "sync" ? "同步中…" : "同步 Ozon 商品"}</button>
           </div>
-          {source === "ozon" && offers.length ? <div className="offer-picker"><label>选择已同步商品<select defaultValue="" onChange={(event) => { const offer = offers.find((item) => item.offer_id === event.target.value); if (offer) selectOffer(offer); }}><option value="">选择商品报价…</option>{offers.map((offer) => <option key={offer.offer_id} value={offer.offer_id}>{offer.offer_id} · {offer.name}</option>)}</select></label><small>当前同步提供报价；规格字段缺失时会保留为待确认。</small></div> : null}
+          {source === "ozon" && offers.length ? <div className="offer-picker"><label>筛选商品<input value={catalogQuery} onChange={(event) => setCatalogQuery(event.target.value)} placeholder="搜索 SKU、商品名称或类目…" /></label><div className="offer-picker-list">{filteredOffers.map((offer) => <label className="offer-picker-item" key={offer.offer_id}><input type="checkbox" checked={selectedOfferIds.includes(offer.offer_id)} onChange={() => toggleOffer(offer.offer_id)} /><span><strong>{offer.offer_id}</strong><small>{offer.name} · {offer.category_id ?? "类目待确认"}</small></span><b>{offer.price_minor === null ? "价格待确认" : `${(offer.price_minor / 100).toFixed(2)} ${offer.currency}`}</b></label>)}{!filteredOffers.length ? <small>没有匹配的商品，请调整搜索条件。</small> : null}</div><button className="secondary-button offer-import-button" disabled={!selectedOfferIds.length || busy !== ""} onClick={importSelectedOffers} type="button">导入已选商品（{selectedOfferIds.length}）</button><small>已同步 {offers.length} 个商品；规格缺失时会保留为待确认。</small></div> : null}
           <div className="form-grid profit-form-grid">
             <label>产品名称<input value={productName} onChange={(event) => setProductName(event.target.value)} /></label>
             <label>Ozon 类目编号<input value={categoryId} onChange={(event) => setCategoryId(event.target.value)} /></label>
