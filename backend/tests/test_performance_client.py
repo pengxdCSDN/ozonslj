@@ -14,6 +14,7 @@ from backend.app.infrastructure.ozon.performance_client import (
 @pytest.mark.asyncio
 async def test_request_performance_token_uses_client_credentials() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.host == "api-performance.ozon.ru"
         assert request.url.path == "/api/client/token"
         assert request.headers["content-type"] == "application/json"
         assert json.loads(request.content) == {
@@ -50,7 +51,7 @@ async def test_request_performance_token_follows_trusted_307_redirect() -> None:
 
     assert token == "access"
     assert len(calls) == 2
-    assert calls[1].url.host == "performance.ozon.ru"
+    assert calls[1].url.host == "api-performance.ozon.ru"
 
 
 @pytest.mark.asyncio
@@ -76,6 +77,7 @@ async def test_request_performance_token_blocks_untrusted_redirect() -> None:
 async def test_fetch_performance_campaigns_is_read_only() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
+        assert request.url.host == "api-performance.ozon.ru"
         assert request.url.path == "/api/client/campaign"
         assert request.headers["authorization"] == "Bearer access"
         return httpx.Response(200, json={"list": [{"id": "1"}]})

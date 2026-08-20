@@ -5,6 +5,16 @@ from typing import Any
 
 import httpx
 
+# Performance 接口必须使用 API 专用域名。performance.ozon.ru 是网页入口，
+# 会返回面向浏览器的重定向或 HTML，不能用于携带服务账号密钥的后端调用。
+PERFORMANCE_API_HOST = "api-performance.ozon.ru"
+PERFORMANCE_TOKEN_URL = httpx.URL(
+    f"https://{PERFORMANCE_API_HOST}/api/client/token"
+)
+PERFORMANCE_CAMPAIGNS_URL = httpx.URL(
+    f"https://{PERFORMANCE_API_HOST}/api/client/campaign"
+)
+
 
 class PerformanceTokenError(RuntimeError):
     """Performance Client Credentials 获取失败，错误信息不包含密钥内容。"""
@@ -56,7 +66,7 @@ async def request_performance_token(
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> tuple[str, datetime]:
     """使用 Ozon Performance 服务账号获取短期访问令牌。"""
-    token_url = httpx.URL("https://performance.ozon.ru/api/client/token")
+    token_url = PERFORMANCE_TOKEN_URL
     payload = {
         "client_id": client_id,
         "client_secret": client_secret,
@@ -79,7 +89,7 @@ async def request_performance_token(
                 redirect_url = token_url.join(location)
                 if (
                     redirect_url.scheme != "https"
-                    or redirect_url.host != "performance.ozon.ru"
+                    or redirect_url.host != PERFORMANCE_API_HOST
                     or redirect_url.port not in {None, 443}
                 ):
                     raise PerformanceTokenError(
@@ -143,7 +153,7 @@ async def fetch_performance_campaigns(
     try:
         async with httpx.AsyncClient(timeout=timeout_seconds, transport=transport) as client:
             response = await client.get(
-                "https://performance.ozon.ru/api/client/campaign",
+                PERFORMANCE_CAMPAIGNS_URL,
                 headers={"Authorization": f"Bearer {access_token}"},
             )
     except httpx.HTTPError as error:

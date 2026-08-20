@@ -547,7 +547,12 @@ Performance OAuth 验证通过。自动化测试使用 MockTransport，不访问
 
 ### 307 重定向处理
 
-Token 上游偶发返回 307 时，客户端不会直接把包含凭据的请求交给任意地址。系统只允许 HTTPS 且主机为
-`performance.ozon.ru`（默认 443 端口）的重定向，最多跟随 3 次；外部域名、HTTP 地址、缺少 Location
+2026-08-20 已确认：`performance.ozon.ru` 是网页入口，调用 Token 时会返回面向浏览器的 307，随后可能
+落到 HTML 或 404；这不表示 Client Secret 未保存。后端必须直接请求 API 专用域名
+`api-performance.ozon.ru`。可用占位凭据探测时，正确接口应返回 JSON 格式的 401，而不是网页重定向或
+HTML；诊断探测禁止使用真实客户凭据。
+
+Token 上游返回重定向时，客户端不会直接把包含凭据的请求交给任意地址。系统只允许 HTTPS 且主机为
+`api-performance.ozon.ru`（默认 443 端口）的重定向，最多跟随 3 次；外部域名、HTTP 地址、缺少 Location
 或重定向循环均会以 `performance_upstream_redirect` 失败。遇到该错误时应检查 Ozon 接口地址、云端代理和
 TLS 配置，不要关闭校验或把 Client Secret 写入日志。
