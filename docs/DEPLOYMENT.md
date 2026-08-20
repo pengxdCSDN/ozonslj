@@ -385,3 +385,10 @@ docker compose --env-file .env logs --tail=100 api worker
 - `/metrics` 已返回请求计数、请求耗时、磁盘使用率和内存可用量；Worker/Scheduler 可导入可观测性模块。
 - 云端资源检查：磁盘使用率约 `45.15%`，内存和 Swap 可读，`ops.status=ok`；Nginx `-t` 通过，HTTPS 首页 `200 text/html`。
 - PostgreSQL、Redis、Chroma 和基础镜像未重建；服务器既有 Web 静态回滚目录/工作树变更已保留，未强制 checkout 或清理。
+
+## 2026-08-20 Performance OAuth 域名修复最终验收
+
+- 发布提交：`6fed8c4`；API、Worker、Scheduler 已统一使用包含修复的应用镜像，镜像内源码 revision 与提交一致。
+- Performance Token 地址已确认使用 `https://api-performance.ozon.ru/api/client/token`，广告活动只读地址使用 `https://api-performance.ozon.ru/api/client/campaign`；未再使用网页域名 `performance.ozon.ru`。
+- 生产 Performance 凭据页面点击“获取 Token 并测试连接”成功，连接验证通过；未记录 Client ID、Client Secret 或 Access Token。
+- 本次仅执行 OAuth 验证和广告活动只读边界检查，没有调用 Ozon 写接口。
