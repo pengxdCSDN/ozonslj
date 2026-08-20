@@ -41,6 +41,7 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
   const [offers, setOffers] = useState<OzonProductSkuFact[]>([]);
   const [catalogQuery, setCatalogQuery] = useState("");
   const [selectedOfferIds, setSelectedOfferIds] = useState<string[]>([]);
+  const [catalogModalOpen, setCatalogModalOpen] = useState(false);
   const [commissionPercent, setCommissionPercent] = useState(15);
   const [commissionSource, setCommissionSource] = useState<"manual" | "ozon" | "missing">("manual");
   const [adPercent, setAdPercent] = useState(5);
@@ -110,10 +111,12 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
       widthMm: offer.width_mm ?? initialSku(index + 1).widthMm,
       heightMm: offer.height_mm ?? initialSku(index + 1).heightMm,
     })));
+    setCatalogModalOpen(false);
     setMessage(`已导入 ${selected.length} 个商品 SKU；到岸成本和缺失规格仍需确认。`);
   };
 
   const syncCatalog = async () => {
+    setCatalogModalOpen(true);
     setBusy("sync");
     try {
       const page = await listOzonProductCatalog(_workspaceId);
@@ -303,6 +306,7 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
         <section className="panel profit-panel csv-panel reconciliation-panel"><div className="profit-panel-heading"><div><p className="eyebrow">ACTUAL COSTS</p><h2>校准实际费用</h2></div><div className="result-heading-actions"><button className="text-button" disabled={!reconciliation?.rows.length} onClick={exportReconciliation} type="button">导出对账 ↓</button><span className="panel-index">RECON</span></div></div><p className="side-copy">优先从 Ozon 财务只读接口同步已产生的 начисления，也支持导入财务 CSV。</p><div className="finance-sync-fields"><label>开始日期<input type="date" value={financeDateFrom} onChange={(event) => setFinanceDateFrom(event.target.value)} /></label><label>结束日期<input type="date" value={financeDateTo} onChange={(event) => setFinanceDateTo(event.target.value)} /></label></div><button className="secondary-button" disabled={busy !== ""} onClick={() => void syncFinance()} type="button">{busy === "reconcile" ? "同步中…" : "从 Ozon 同步财务"}</button>{financeAccruals ? <div className="csv-preview"><strong>{financeAccruals.lines.length} 条 Ozon 财务明细</strong><small>{financeAccruals.dates.length} 天 · 来源 {financeAccruals.source}</small></div> : null}<textarea value={actualFeeCsv} onChange={(event) => setActualFeeCsv(event.target.value)} placeholder="或粘贴实际费用 CSV…" rows={5} aria-label="实际费用 CSV" /><button className="secondary-button" disabled={!actualFeeCsv.trim() || busy !== ""} onClick={() => void previewActualFees()} type="button">{busy === "reconcile" ? "对账中…" : "预览 CSV 对账"}</button>{reconciliation ? <div className={`csv-preview ${reconciliation.errors.length ? "has-errors" : ""}`}><strong>{reconciliation.rows.length} 条对账记录</strong><small>{reconciliation.errors.length ? `${reconciliation.errors.length} 个问题：${reconciliation.errors[0]}` : "预计与实际费用均已标准化"}</small></div> : null}</section>
       </aside>
     </div>
+    {catalogModalOpen ? <div className="catalog-modal-backdrop" role="presentation"><section className="catalog-modal" role="dialog" aria-modal="true" aria-labelledby="catalog-modal-title"><div className="catalog-modal-head"><div><p className="eyebrow">OZON CATALOG</p><h2 id="catalog-modal-title">选择要导入的商品</h2></div><button className="text-button" onClick={() => setCatalogModalOpen(false)} type="button">关闭</button></div>{busy === "sync" ? <div className="catalog-modal-empty"><strong>正在读取 Ozon 商品…</strong><span>请稍候，系统正在获取商品、价格和规格。</span></div> : offers.length ? <><label className="catalog-modal-search">搜索商品<input value={catalogQuery} onChange={(event) => setCatalogQuery(event.target.value)} placeholder="SKU、Offer ID、商品名称或类目" /></label><div className="catalog-modal-list">{filteredOffers.map((offer) => <label className="catalog-modal-item" key={offer.offer_id}><input type="checkbox" checked={selectedOfferIds.includes(offer.offer_id)} onChange={() => toggleOffer(offer.offer_id)} /><span><strong>{offer.offer_id}</strong><small>{offer.name} · {offer.category_id ?? "类目待确认"}</small></span><b>{offer.price_minor === null ? "价格待确认" : `${(offer.price_minor / 100).toFixed(2)} ${offer.currency}`}</b></label>)}</div><div className="catalog-modal-actions"><small>共 {offers.length} 个商品，已选 {selectedOfferIds.length} 个</small><button className="primary-button" disabled={!selectedOfferIds.length} onClick={importSelectedOffers} type="button">导入已选商品</button></div></> : <div className="catalog-modal-empty"><strong>没有读取到商品</strong><span>接口返回 0 个商品。请确认 Seller 凭据具备商品读取权限，并检查 Ozon 店铺是否已有商品。</span><button className="secondary-button" onClick={() => void syncCatalog()} type="button">重新同步</button></div>}</section></div> : null}
     <p className="form-message profit-message">{message}</p>
   </div>;
 }
