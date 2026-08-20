@@ -111,7 +111,24 @@
 
 自动化测试使用 HTTP Mock，不访问真实账户。实际 Seller 验证方法在实现/验收前核对官方文档，不在内部契约中固化未经验证的上游路径。
 
-## 5. 商品报价（已实现本地切片）
+## 5. 商品报价与 Ozon 只读目录
+
+本地切片接口保留用于开发和离线演示；生产利润测算页面优先调用后端 Ozon 只读目录接口。后端负责从工作区读取并解密凭据，浏览器端不会接触 Client ID、Api-Key 或 Token。
+
+`GET /v1/seller/products/store-workspaces/{workspace_id}/catalog`
+
+该接口只读取商品列表、商品属性和价格信息，并统一展开为 SKU 事实。规格、类目或佣金字段在上游缺失时返回 `null`，前端必须阻止无依据的自动计算或明确提示人工补录。接口不执行商品、价格、库存、订单或广告写操作。
+
+| 参数 | 类型 | 默认 | 约束 |
+|---|---|---:|---|
+| `cursor` | string | 空 | 由上游返回的分页游标 |
+| `limit` | integer | 50 | 1～100 |
+
+响应字段包括 `offer_id`、`ozon_product_id`、`product_group_id`、`category_id`、`price_minor`、`weight_g`、`length_mm`、`width_mm`、`height_mm`、`commission_rate_bps` 和 `source`。金额使用最小货币单位，重量使用克，尺寸使用毫米，佣金使用万分比。
+
+当前适配器按 Seller API 的只读商品列表、属性和价格契约进行组合；上线前仍需用目标店铺的脱敏响应完成一次契约验收，确认字段版本和权限，不把未经验证的上游字段当作计算事实。
+
+### 5.1 本地商品报价切片
 
 `GET /v1/store-workspaces/{workspace_id}/product-offers`
 
@@ -300,3 +317,19 @@ Agent 接口不接受任意 SQL、任意工具名、文件系统路径、模型�
 - 商品、库存、订单和履约快照历史查询接口已形成 Stub/PostgreSQL 闭环，默认使用稳定分页并限制最大页大小。
 - ERP 导入边界要求金额与币种成对出现；缺少币种的金额请求在预览/边界校验阶段拒绝，不写入业务事实。
 - Seller 同步 API 当前不调用真实 Ozon；真实适配需在确认官方接口契约和账号授权后接入，禁止从示例路径猜测。
+
+# SKU 自动利润计算
+
+`POST /v1/selection/profit-model/calculate-skus`
+
+提交一个商品、一个或多个 SKU，以及本次允许使用的版本化佣金规则和 FBS 物流模板。后端按 `category_id` 和 `logistics_template_id` 精确匹配规则，返回每个 SKU 的费用瀑布、计费重量、贡献利润、贡献利润率、盈亏平衡售价和规则追溯信息。
+
+- 金额均使用最小货币单位整数；RUB 场景下为戈比。
+- 比例均使用基点整数，`100 bp = 1%`。
+- 尺寸使用毫米，重量使用克。
+- 规则缺失、重复、分档非法或无法覆盖计费重量时返回 `422 profit_calculation_invalid`。
+- 该接口只做推导估算，不读取凭据、不调用 Ozon，也不修改商品价格或其他外部状态。
+
+`POST /v1/selection/profit-model/logistics-templates/preview`
+
+提交物流模板 CSV 文本，返回行数、错误摘要和按模板版本聚合后的标准化预览。该接口只校验，不写入配置；模板必须包含履约方式、仓库、线路、区域、生效日期、体积重系数和重量分档。

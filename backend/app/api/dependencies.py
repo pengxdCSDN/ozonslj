@@ -43,6 +43,7 @@ from backend.app.domain.listing_title_draft import ListingTitleDraftGateway
 from backend.app.domain.listing_version import ListingVersionGateway
 from backend.app.domain.manual_approval import ManualApprovalGateway
 from backend.app.domain.model_adapter import ModelAdapterGateway
+from backend.app.domain.ozon_product_catalog import OzonProductCatalogGateway
 from backend.app.domain.parser_alert import ParserAlertGateway
 from backend.app.domain.performance_credentials import PerformanceCredentialGateway
 from backend.app.domain.posting import PostingGateway
@@ -84,6 +85,7 @@ from backend.app.infrastructure.ozon.account_verifier import (
 from backend.app.infrastructure.ozon.gateway import (
     ProductOfferGateway,
 )
+from backend.app.infrastructure.ozon.product_catalog import HttpOzonProductCatalogGateway
 from backend.app.infrastructure.postgres.model_budgets import PostgresModelBudgetGateway
 from backend.app.infrastructure.postgresql.advertising_analysis import (
     PostgresAdvertisingAnalysisGateway,
@@ -549,6 +551,15 @@ Args:
 Returns:
     返回调用完成后的领域结果。"""
     return PostgresProductOfferGateway(sessions, context)
+
+
+def get_ozon_product_catalog_gateway() -> OzonProductCatalogGateway:
+    """创建只读 Ozon 商品目录适配器，基地址只能来自服务端配置。
+
+    Returns:
+        使用配置的 Seller API 地址创建的商品目录网关。
+    """
+    return HttpOzonProductCatalogGateway(str(get_settings().ozon_base_url))
 
 
 def get_customer_order_gateway(

@@ -154,6 +154,28 @@ export interface ProductOffer {
   available_stock: number;
 }
 
+export interface OzonProductSkuFact {
+  offer_id: string;
+  ozon_product_id: string | null;
+  product_group_id: string | null;
+  name: string;
+  category_id: string | null;
+  price_minor: number | null;
+  currency: string;
+  weight_g: number | null;
+  length_mm: number | null;
+  width_mm: number | null;
+  height_mm: number | null;
+  commission_rate_bps: number | null;
+  source: string;
+}
+
+export interface OzonProductCatalogPage {
+  items: OzonProductSkuFact[];
+  next_cursor: string | null;
+  source: string;
+}
+
 export interface ProductOfferPage {
   items: ProductOffer[];
   total: number;
@@ -703,6 +725,79 @@ export function listCompetitionAnalyses(workspaceId: string): Promise<Competitio
 export interface ProfitScenario { fulfillment_type: string; contribution_profit_minor: number; contribution_margin_percent: number; roi_percent: number; break_even_units: number | null; ad_cost_plus_20_profit_minor: number; purchase_cost_plus_20_profit_minor: number; logistics_cost_plus_20_profit_minor: number; }
 export function calculateProfitModel(payload: Record<string, unknown>): Promise<ProfitScenario[]> { return requestJson("/v1/selection/profit-model/calculate", { method: "POST", body: JSON.stringify(payload) }); }
 export function calculateAndSaveProfitModel(workspaceId: string, payload: Record<string, unknown>): Promise<ProfitScenario[]> { return requestJson(`/v1/selection/profit-model/store-workspaces/${encodeURIComponent(workspaceId)}/calculate-and-save`, { method: "POST", body: JSON.stringify(payload) }); }
+
+export interface SkuProfitResult {
+  sku_id: string;
+  transaction_price_minor: number;
+  net_revenue_minor: number;
+  landed_cost_minor: number;
+  commission_minor: number;
+  logistics_minor: number;
+  packaging_minor: number;
+  payment_fee_minor: number;
+  ad_cost_minor: number;
+  return_loss_minor: number;
+  other_variable_cost_minor: number;
+  contribution_profit_minor: number;
+  contribution_margin_percent: number | null;
+  break_even_price_minor: number;
+  actual_weight_g: number;
+  volumetric_weight_g: number;
+  chargeable_weight_g: number;
+  is_negative: boolean;
+  commission_rate_bps: number;
+  commission_trace: { version: string; source: string; effective_at: string };
+  logistics_trace: { version: string; source: string; effective_at: string };
+  algorithm_version: string;
+}
+
+export function calculateSkuProfits(payload: Record<string, unknown>): Promise<SkuProfitResult[]> {
+  return requestJson("/v1/selection/profit-model/calculate-skus", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface LogisticsTemplatePreview {
+  row_count: number;
+  errors: string[];
+  templates: Array<{
+    template_id: string;
+    fulfillment_type: string;
+    warehouse_id: string | null;
+    route_id: string | null;
+    region_id: string | null;
+    version: string;
+    effective_at: string;
+    bands: Array<{ max_chargeable_weight_g: number; fee_minor: number }>;
+  }>;
+}
+
+export function previewLogisticsTemplates(content: string): Promise<LogisticsTemplatePreview> {
+  return requestJson("/v1/selection/profit-model/logistics-templates/preview", {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+}
+
+export interface ProductOffer {
+  offer_id: string;
+  ozon_product_id: string | null;
+  name: string;
+  price: string;
+  currency: string;
+  available_stock: number;
+}
+
+export function listProductOffers(workspaceId: string, limit = 100): Promise<{ items: ProductOffer[]; total: number; next_cursor: string | null; source: string }> {
+  return requestJson(`/v1/store-workspaces/${encodeURIComponent(workspaceId)}/product-offers?limit=${limit}`, { method: "GET" });
+}
+
+export function listOzonProductCatalog(workspaceId: string, cursor?: string, limit = 50): Promise<OzonProductCatalogPage> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set("cursor", cursor);
+  return requestJson(`/v1/seller/products/store-workspaces/${encodeURIComponent(workspaceId)}/catalog?${params.toString()}`, { method: "GET" });
+}
 
 export interface CostSensitivityScenario { label: string; change_percent: number; profit_minor: number; margin_percent: number; }
 export function analyzeCostSensitivity(payload: Record<string, unknown>): Promise<CostSensitivityScenario[]> { return requestJson("/v1/selection/cost-sensitivity/analyze", { method: "POST", body: JSON.stringify(payload) }); }

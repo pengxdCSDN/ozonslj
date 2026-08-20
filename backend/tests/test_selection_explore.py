@@ -1,4 +1,9 @@
-from backend.app.domain.selection_explore import ExploreFilters, ExploreInput, explore_opportunities, filter_opportunities
+from backend.app.domain.selection_explore import (
+    ExploreFilters,
+    ExploreInput,
+    explore_opportunities,
+    filter_opportunities,
+)
 
 
 def test_explore_fuses_sources_and_marks_estimate() -> None:
