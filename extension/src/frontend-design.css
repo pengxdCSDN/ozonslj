@@ -778,6 +778,8 @@ body { font-size: 12px; }
 .source-switch button.is-active { border-color: rgba(161,132,255,.28); color: var(--fd-text); background: rgba(91,68,152,.42); }
 .source-switch button.is-disabled { cursor: not-allowed; opacity: .45; }
 .source-switch small { margin-left: 4px; color: var(--fd-orange); font-size: 8px; font-weight: 500; }
+.source-sync-button { margin-left: auto; border-color: rgba(82,217,232,.2) !important; color: var(--fd-cyan) !important; background: rgba(20,52,59,.32) !important; }
+.source-sync-button:hover:not(:disabled) { border-color: rgba(82,217,232,.45) !important; background: rgba(20,70,78,.46) !important; }
 .offer-picker { display: grid; gap: 6px; margin: 12px 20px 0; padding: 11px; border: 1px solid rgba(82,217,232,.16); border-radius: 10px; background: rgba(20,52,59,.28); }
 .offer-picker label { display: grid; gap: 6px; color: var(--fd-text-soft); font-size: 9px; font-weight: 800; }
 .offer-picker select { min-height: 34px; padding: 7px 9px; border: 1px solid rgba(82,217,232,.2); border-radius: 7px; color: var(--fd-text); background: rgba(8,8,20,.7); font-size: 9px; }

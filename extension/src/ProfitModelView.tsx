@@ -55,7 +55,7 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
   const [financeAccruals, setFinanceAccruals] = useState<FinanceAccrualPage | null>(null);
   const [financeDateFrom, setFinanceDateFrom] = useState(() => new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10));
   const [financeDateTo, setFinanceDateTo] = useState(() => new Date().toISOString().slice(0, 10));
-  const [busy, setBusy] = useState<"calculate" | "preview" | "reconcile" | "">("");
+  const [busy, setBusy] = useState<"calculate" | "preview" | "reconcile" | "sync" | "">("");
   const [message, setMessage] = useState("先确认规则，再运行本次预计利润测算。");
 
   useEffect(() => {
@@ -74,6 +74,19 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
     if (offer.category_id) setCategoryId(offer.category_id);
     setSkus([{ ...initialSku(1), skuId: offer.offer_id, priceRub: offer.price_minor === null ? 1000 : offer.price_minor / 100, weightG: offer.weight_g ?? initialSku(1).weightG, lengthMm: offer.length_mm ?? initialSku(1).lengthMm, widthMm: offer.width_mm ?? initialSku(1).widthMm, heightMm: offer.height_mm ?? initialSku(1).heightMm }]);
     setMessage(`已载入 ${offer.offer_id} 的 Ozon 只读资料；到岸成本和缺失费率仍需确认。`);
+  };
+
+  const syncCatalog = async () => {
+    setBusy("sync");
+    try {
+      const page = await listOzonProductCatalog(_workspaceId);
+      setOffers(page.items);
+      setMessage(`已同步 ${page.items.length} 个 Ozon 商品，可选择商品自动填充 SKU。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Ozon 商品同步失败，请先检查 Seller 凭据");
+    } finally {
+      setBusy("");
+    }
   };
 
   const summary = useMemo(() => {
@@ -217,6 +230,7 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
           <div className="source-switch" role="tablist" aria-label="商品来源">
             <button className={source === "manual" ? "is-active" : ""} onClick={() => setSource("manual")} type="button">手动新品</button>
             <button className={source === "ozon" ? "is-active" : ""} disabled={!offers.length} onClick={() => setSource("ozon")} title={offers.length ? "选择已同步商品" : "暂无已同步商品"} type="button">Ozon 商品 <small>{offers.length ? `${offers.length} 个可用` : "等待同步"}</small></button>
+            <button className="source-sync-button" disabled={busy !== ""} onClick={() => void syncCatalog()} type="button">{busy === "sync" ? "同步中…" : "同步 Ozon 商品"}</button>
           </div>
           {source === "ozon" && offers.length ? <div className="offer-picker"><label>选择已同步商品<select defaultValue="" onChange={(event) => { const offer = offers.find((item) => item.offer_id === event.target.value); if (offer) selectOffer(offer); }}><option value="">选择商品报价…</option>{offers.map((offer) => <option key={offer.offer_id} value={offer.offer_id}>{offer.offer_id} · {offer.name}</option>)}</select></label><small>当前同步提供报价；规格字段缺失时会保留为待确认。</small></div> : null}
           <div className="form-grid profit-form-grid">
