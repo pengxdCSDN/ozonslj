@@ -11,7 +11,14 @@ class PostgresStockPositionGateway:
     """读取 PostgreSQL 中按内部组织和店铺工作区隔离的库存事实。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
@@ -22,7 +29,15 @@ class PostgresStockPositionGateway:
         cursor: str | None,
         limit: int,
     ) -> StockPositionPage:
-        """执行 list_stock_positions 的业务流程并返回该流程的结果。"""
+        """执行 list_stock_positions 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._list_stock_positions,
             workspace_id,
@@ -37,7 +52,15 @@ class PostgresStockPositionGateway:
         limit: int,
     ) -> StockPositionPage:
         # SQL 显式限定内部组织与工作区，RLS 同时作为不可绕过的数据库隔离边界。
-        """执行内部步骤 _list_stock_positions，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_stock_positions，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    offset: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             count_row = connection.execute(
                 """
@@ -70,7 +93,13 @@ class PostgresStockPositionGateway:
 
 
 def _stock_position_from_row(row: dict[str, Any]) -> StockPosition:
-    """将已由数据库约束校验的库存行映射为只读领域模型。"""
+    """将已由数据库约束校验的库存行映射为只读领域模型。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return StockPosition(
         offer_id=str(row["offer_id"]),
         warehouse_id=str(row["warehouse_id"]),

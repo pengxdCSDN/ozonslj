@@ -43,7 +43,13 @@ class ExplorePayload(BaseModel):
 
 
 def _run(payload: ExplorePayload) -> list[ExploreOpportunity]:
-    """执行内部步骤 _run，供同一模块的公开流程复用。"""
+    """执行内部步骤 _run，供同一模块的公开流程复用。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     scored = explore_opportunities([ExploreInput(**item.model_dump()) for item in payload.items])
     return filter_opportunities(
         scored,
@@ -58,7 +64,13 @@ def _run(payload: ExplorePayload) -> list[ExploreOpportunity]:
 
 @router.post("/run", response_model=list[ExploreOpportunity])
 async def run_explore(payload: ExplorePayload) -> list[ExploreOpportunity]:
-    """执行 run_explore 的业务流程并返回该流程的结果。"""
+    """执行 run_explore 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return _run(payload)
 
 
@@ -72,7 +84,20 @@ async def run_and_save_explore(
     gateway: Annotated[ExploreOpportunityGateway, Depends(get_explore_opportunity_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[ExploreOpportunity]:
-    """执行 run_and_save_explore 的业务流程并返回该流程的结果。"""
+    """执行 run_and_save_explore 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     opportunities = _run(payload)
@@ -86,7 +111,20 @@ async def list_explore_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[ExploreOpportunity]:
-    """执行 list_explore_history 的业务流程并返回该流程的结果。"""
+    """执行 list_explore_history 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 200:

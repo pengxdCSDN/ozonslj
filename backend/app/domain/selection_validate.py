@@ -47,16 +47,37 @@ class ValidateResultGateway(Protocol):
     async def save_validation(
         self, *, workspace_id: str, assumptions: dict[str, object], result: ValidateResult
     ) -> ValidateResult:
-        """执行 save_validation 的业务流程并返回该流程的结果。"""
+        """执行 save_validation 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    assumptions: 参数语义、输入边界和安全约束。
+    result: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_validations(
         self, *, workspace_id: str, limit: int
     ) -> list[ValidateResult]:
-        """执行 list_validations 的业务流程并返回该流程的结果。"""
+        """执行 list_validations 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def validate_product(item: ValidateInput) -> ValidateResult:
-    """按输入假设评估 SKU；缺少成本时只输出不完整估算，不隐藏默认值。"""
+    """按输入假设评估 SKU；缺少成本时只输出不完整估算，不隐藏默认值。
+
+Args:
+    item: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     fbo = _profit("FBO", item, item.logistics_cost_minor)
     fbs = _profit("FBS", item, item.logistics_cost_minor)
     risks: list[str] = []
@@ -89,7 +110,15 @@ def validate_product(item: ValidateInput) -> ValidateResult:
 
 
 def _profit(kind: str, item: ValidateInput, logistics: int) -> FulfillmentProfit:
-    """执行内部步骤 _profit，供同一模块的公开流程复用。"""
+    """执行内部步骤 _profit，供同一模块的公开流程复用。
+
+Args:
+    kind: 参数语义、输入边界和安全约束。
+    item: 参数语义、输入边界和安全约束。
+    logistics: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     cost = (
         item.purchase_cost_minor
         + logistics

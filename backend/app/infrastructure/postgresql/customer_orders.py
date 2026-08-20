@@ -16,7 +16,14 @@ class PostgresCustomerOrderGateway:
     """读取 PostgreSQL 中按内部组织和店铺工作区隔离的脱敏订单摘要。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
@@ -27,7 +34,15 @@ class PostgresCustomerOrderGateway:
         cursor: str | None,
         limit: int,
     ) -> CustomerOrderPage:
-        """执行 list_customer_orders 的业务流程并返回该流程的结果。"""
+        """执行 list_customer_orders 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._list_customer_orders,
             workspace_id,
@@ -42,7 +57,15 @@ class PostgresCustomerOrderGateway:
         limit: int,
     ) -> CustomerOrderPage:
         # raw_summary 可能包含上游扩展字段，运营列表不得选择或返回该列。
-        """执行内部步骤 _list_customer_orders，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_customer_orders，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    offset: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             count_row = connection.execute(
                 """
@@ -75,7 +98,13 @@ class PostgresCustomerOrderGateway:
 
 
 def _customer_order_from_row(row: dict[str, Any]) -> CustomerOrder:
-    """金额由最小货币单位精确转换，禁止使用浮点数。"""
+    """金额由最小货币单位精确转换，禁止使用浮点数。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return CustomerOrder(
         order_id=str(row["id"]),
         ozon_order_id=str(row["ozon_order_id"]),
@@ -90,7 +119,18 @@ def _customer_order_from_row(row: dict[str, Any]) -> CustomerOrder:
 
 
 def _required_datetime(value: object, field_name: str) -> datetime:
-    """数据库时间字段异常时立即失败，避免生成时间线不可追溯的订单。"""
+    """数据库时间字段异常时立即失败，避免生成时间线不可追溯的订单。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+    field_name: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if not isinstance(value, datetime):
         raise ValueError(f"订单字段 {field_name!r} 不是有效时间")
     return value

@@ -15,7 +15,14 @@ class MoneyInventoryFinding:
 def check_money_inventory(
     record: dict[str, object], *, allowed_currencies: set[str] | None = None
 ) -> list[MoneyInventoryFinding]:
-    """执行 check_money_inventory 的业务流程并返回该流程的结果。"""
+    """执行 check_money_inventory 的业务流程并返回该流程的结果。
+
+Args:
+    record: 参数语义、输入边界和安全约束。
+    allowed_currencies: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     currencies = allowed_currencies or {"RUB", "CNY", "USD", "EUR"}
     findings: list[MoneyInventoryFinding] = []
     currency = record.get("currency")

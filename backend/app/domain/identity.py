@@ -37,7 +37,19 @@ class AuthenticatedUser:
         workspace_ids: tuple[str, ...] = (),
         role: str | None = None,
     ) -> None:
-        """兼容旧的 role/workspace_ids 构造方式，同时保留组织级权限字段。"""
+        """兼容旧的 role/workspace_ids 构造方式，同时保留组织级权限字段。
+
+Args:
+    id: 参数语义、输入边界和安全约束。
+    email: 参数语义、输入边界和安全约束。
+    display_name: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    organization_role: 参数语义、输入边界和安全约束。
+    workspace_ids: 参数语义、输入边界和安全约束。
+    role: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
         resolved_role = organization_role or role or "readonly_analyst"
         object.__setattr__(self, "id", id)
@@ -49,7 +61,9 @@ class AuthenticatedUser:
 
     @property
     def role(self) -> str:
-        """执行 role 的业务流程并返回该流程的结果。"""
+        """执行 role 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         return self.organization_role
 
 
@@ -69,7 +83,14 @@ class IdentityGateway(Protocol):
         email: str,
         organization_id: str,
     ) -> tuple[AuthenticatedUser, str] | None:
-        """执行 find_login_identity 的业务流程并返回该流程的结果。"""
+        """执行 find_login_identity 的业务流程并返回该流程的结果。
+
+Args:
+    email: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def create_session(
         self,
@@ -78,13 +99,34 @@ class IdentityGateway(Protocol):
         token_hash: str,
         expires_at: datetime,
     ) -> None:
-        """执行 create_session 的业务流程并返回该流程的结果。"""
+        """执行 create_session 的业务流程并返回该流程的结果。
+
+Args:
+    user_id: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    token_hash: 参数语义、输入边界和安全约束。
+    expires_at: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def find_user_by_session_hash(
         self,
         token_hash: str,
     ) -> AuthenticatedUser | None:
-        """执行 find_user_by_session_hash 的业务流程并返回该流程的结果。"""
+        """执行 find_user_by_session_hash 的业务流程并返回该流程的结果。
+
+Args:
+    token_hash: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def revoke_session(self, token_hash: str) -> None:
-        """执行 revoke_session 的业务流程并返回该流程的结果。"""
+        """执行 revoke_session 的业务流程并返回该流程的结果。
+
+Args:
+    token_hash: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""

@@ -13,20 +13,43 @@ class PostgresListingVersionGateway:
     """保存原文、人工修改文本、差异和审核状态，供后续受控发布使用。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def save_version(
         self, *, workspace_id: str, product_scope: str, version: ListingVersion
     ) -> ListingVersion:
-        """执行 save_version 的业务流程并返回该流程的结果。"""
+        """执行 save_version 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._save, workspace_id, product_scope, version)
 
     def _save(
         self, workspace_id: str, product_scope: str, version: ListingVersion
     ) -> ListingVersion:
-        """执行内部步骤 _save，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -46,13 +69,29 @@ class PostgresListingVersionGateway:
     async def list_versions(
         self, *, workspace_id: str, product_scope: str, limit: int
     ) -> list[ListingVersion]:
-        """执行 list_versions 的业务流程并返回该流程的结果。"""
+        """执行 list_versions 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_versions, workspace_id, product_scope, limit)
 
     def _list_versions(
         self, workspace_id: str, product_scope: str, limit: int
     ) -> list[ListingVersion]:
-        """执行内部步骤 _list_versions，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_versions，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT version_no, original_text, edited_text, status, diff

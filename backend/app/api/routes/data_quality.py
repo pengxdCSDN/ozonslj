@@ -34,7 +34,13 @@ class QualityCheckResponse(BaseModel):
 
 @router.post("/check", response_model=QualityCheckResponse)
 async def check_quality(payload: Annotated[QualityCheckRequest, Body()]) -> QualityCheckResponse:
-    """执行 check_quality 的业务流程并返回该流程的结果。"""
+    """执行 check_quality 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     findings = check_required_and_enum(
         payload.record,
         required_fields=payload.required_fields,

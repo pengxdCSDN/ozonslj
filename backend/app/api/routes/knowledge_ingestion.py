@@ -41,7 +41,17 @@ class IngestionResponse(BaseModel):
 
 @router.post("/run", response_model=IngestionResponse)
 async def run_knowledge_ingestion(payload: IngestionPayload) -> IngestionResponse:
-    """执行 run_knowledge_ingestion 的业务流程并返回该流程的结果。"""
+    """执行 run_knowledge_ingestion 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         result = ingest_and_chunk(
             document_id=payload.document_id, document_version_id=payload.document_version_id,

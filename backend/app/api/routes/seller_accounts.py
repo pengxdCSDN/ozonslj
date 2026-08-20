@@ -31,7 +31,19 @@ async def create_seller_account(
     service: Annotated[SellerAccountService, Depends(get_seller_account_service)],
     user: Annotated[AuthenticatedUser, Depends(get_current_user)],
 ) -> CreatedSellerAccount:
-    """执行 create_seller_account 的业务流程并返回该流程的结果。"""
+    """执行 create_seller_account 的业务流程并返回该流程的结果。
+
+Args:
+    request_body: 参数语义、输入边界和安全约束。
+    service: 参数语义、输入边界和安全约束。
+    user: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="仅管理员可添加卖家账号")
     try:

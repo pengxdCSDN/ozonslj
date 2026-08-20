@@ -20,7 +20,16 @@ def check_sampling_policy(
     rate_limited: bool = False,
     stop_requested: bool = False,
 ) -> SamplingPolicyDecision:
-    """在发送公开采样请求前执行不可绕过的合规检查。"""
+    """在发送公开采样请求前执行不可绕过的合规检查。
+
+Args:
+    url: 参数语义、输入边界和安全约束。
+    robots_allowed: 参数语义、输入边界和安全约束。
+    rate_limited: 参数语义、输入边界和安全约束。
+    stop_requested: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     parsed = urlparse(url.strip())
     if parsed.scheme != "https" or not parsed.hostname:
         return SamplingPolicyDecision(False, "https_required", "仅允许公开 HTTPS 页面")

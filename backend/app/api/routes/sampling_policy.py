@@ -23,7 +23,13 @@ class SamplingPolicyRequest(BaseModel):
 
 @router.post("/check", response_model=SamplingPolicyDecision)
 async def check_policy(payload: SamplingPolicyRequest) -> SamplingPolicyDecision:
-    """执行 check_policy 的业务流程并返回该流程的结果。"""
+    """执行 check_policy 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return check_sampling_policy(
         payload.url,
         robots_allowed=payload.robots_allowed,
@@ -42,7 +48,20 @@ async def check_and_record_policy(
     gateway: Annotated[QualityFindingGateway, Depends(get_quality_finding_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> SamplingPolicyDecision:
-    """请求前执行合规检查；禁止原因写入质量隔离区，调用方不得继续发请求。"""
+    """请求前执行合规检查；禁止原因写入质量隔离区，调用方不得继续发请求。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     decision = await check_policy(payload)

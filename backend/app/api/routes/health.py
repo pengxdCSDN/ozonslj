@@ -35,7 +35,9 @@ class OpsHealthResponse(BaseModel):
 
 @router.get("/live", response_model=HealthResponse)
 async def liveness() -> HealthResponse:
-    """执行 liveness 的业务流程并返回该流程的结果。"""
+    """执行 liveness 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
     return HealthResponse(status="ok")
 
 
@@ -43,7 +45,17 @@ async def liveness() -> HealthResponse:
 async def readiness(
     probe: Annotated[ReadinessProbe, Depends(get_readiness_probe)],
 ) -> HealthResponse:
-    """执行 readiness 的业务流程并返回该流程的结果。"""
+    """执行 readiness 的业务流程并返回该流程的结果。
+
+Args:
+    probe: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         await probe.check()
     except Exception as error:
@@ -56,7 +68,13 @@ async def readiness(
 
 @router.get("/rag", response_model=RagHealthResponse)
 async def rag_health() -> RagHealthResponse:
-    """报告 Chroma 状态；未配置时不阻塞核心 API，配置后故障返回 503。"""
+    """报告 Chroma 状态；未配置时不阻塞核心 API，配置后故障返回 503。
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
 
     result = await ChromaHealthProbe(os.getenv("CHROMA_URL")).check()
     if result.state == "unhealthy":
@@ -73,7 +91,9 @@ async def rag_health() -> RagHealthResponse:
 
 @router.get("/ops", response_model=OpsHealthResponse)
 async def operations_health() -> OpsHealthResponse:
-    """发布后资源门禁；阈值只用于告警，不阻断登录和业务只读页面。"""
+    """发布后资源门禁；阈值只用于告警，不阻断登录和业务只读页面。
+Returns:
+    返回调用完成后的领域结果。"""
     snapshot = update_resource_metrics()
     warning = snapshot.disk_used_ratio is not None and snapshot.disk_used_ratio >= 0.85
     return OpsHealthResponse(

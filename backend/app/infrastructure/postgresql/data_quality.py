@@ -16,26 +16,55 @@ class PostgresQualityFindingGateway:
     """质量隔离记录的 PostgreSQL 适配器；查询始终带组织和工作区条件。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def list_findings(
         self, *, workspace_id: str, status: QualityFindingStatus | None, limit: int
     ) -> list[QualityFindingRecord]:
-        """执行 list_findings 的业务流程并返回该流程的结果。"""
+        """执行 list_findings 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_findings, workspace_id, status, limit)
 
     async def create_findings(
         self, *, workspace_id: str, findings: list[QualityFinding]
     ) -> list[QualityFindingRecord]:
-        """执行 create_findings 的业务流程并返回该流程的结果。"""
+        """执行 create_findings 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    findings: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._create_findings, workspace_id, findings)
 
     def _create_findings(
         self, workspace_id: str, findings: list[QualityFinding]
     ) -> list[QualityFindingRecord]:
-        """执行内部步骤 _create_findings，供同一模块的公开流程复用。"""
+        """执行内部步骤 _create_findings，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    findings: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         from uuid import uuid4
 
         with self._sessions.transaction(self._context) as connection:
@@ -76,7 +105,15 @@ class PostgresQualityFindingGateway:
     def _list_findings(
         self, workspace_id: str, status: QualityFindingStatus | None, limit: int
     ) -> list[QualityFindingRecord]:
-        """执行内部步骤 _list_findings，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_findings，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             select_sql = """
                 SELECT id, workspace_id, rule_code, field_name, severity, message,
@@ -106,13 +143,27 @@ class PostgresQualityFindingGateway:
     async def update_status(
         self, *, finding_id: str, status: QualityFindingStatus
     ) -> QualityFindingRecord | None:
-        """执行 update_status 的业务流程并返回该流程的结果。"""
+        """执行 update_status 的业务流程并返回该流程的结果。
+
+Args:
+    finding_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._update_status, finding_id, status)
 
     def _update_status(
         self, finding_id: str, status: QualityFindingStatus
     ) -> QualityFindingRecord | None:
-        """执行内部步骤 _update_status，供同一模块的公开流程复用。"""
+        """执行内部步骤 _update_status，供同一模块的公开流程复用。
+
+Args:
+    finding_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """
@@ -130,7 +181,17 @@ class PostgresQualityFindingGateway:
 
 
 def _record_from_row(row: dict[str, Any]) -> QualityFindingRecord:
-    """执行内部步骤 _record_from_row，供同一模块的公开流程复用。"""
+    """执行内部步骤 _record_from_row，供同一模块的公开流程复用。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     created_at = row["created_at"]
     if not isinstance(created_at, datetime):
         raise ValueError("质量记录 created_at 必须是有效时间")

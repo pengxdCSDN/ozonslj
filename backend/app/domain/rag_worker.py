@@ -28,7 +28,18 @@ class RagWorkerQueue:
     """单进程内的确定性队列替身；生产环境可由 Redis/DB 队列适配。"""
 
     def __init__(self, *, max_concurrency: int = 1, lease_seconds: int = 300) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    max_concurrency: 参数语义、输入边界和安全约束。
+    lease_seconds: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if max_concurrency < 1 or lease_seconds < 1:
             raise ValueError("Worker 并发和租约时间必须为正数")
         self._max_concurrency = max_concurrency
@@ -36,14 +47,27 @@ class RagWorkerQueue:
         self._tasks: dict[str, RagWorkerTask] = {}
 
     def enqueue(self, task: RagWorkerTask) -> RagWorkerTask:
-        """执行 enqueue 的业务流程并返回该流程的结果。"""
+        """执行 enqueue 的业务流程并返回该流程的结果。
+
+Args:
+    task: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         if task.task_id in self._tasks:
             return self._tasks[task.task_id]
         self._tasks[task.task_id] = task
         return task
 
     def claim(self, *, organization_id: str, now: datetime | None = None) -> RagWorkerTask | None:
-        """执行 claim 的业务流程并返回该流程的结果。"""
+        """执行 claim 的业务流程并返回该流程的结果。
+
+Args:
+    organization_id: 参数语义、输入边界和安全约束。
+    now: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         current = now or datetime.now(UTC)
         active = sum(task.status == "running" for task in self._tasks.values())
         if active >= self._max_concurrency:
@@ -64,7 +88,19 @@ class RagWorkerQueue:
     def finish(
         self, task_id: str, *, status: WorkerTaskStatus, error_code: str | None = None
     ) -> RagWorkerTask:
-        """执行 finish 的业务流程并返回该流程的结果。"""
+        """执行 finish 的业务流程并返回该流程的结果。
+
+Args:
+    task_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+    error_code: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         task = self._tasks[task_id]
         if task.status != "running":
             raise ValueError("只有 running 任务可以结束")
@@ -73,11 +109,23 @@ class RagWorkerQueue:
         return finished
 
     def get(self, task_id: str) -> RagWorkerTask:
-        """执行 get 的业务流程并返回该流程的结果。"""
+        """执行 get 的业务流程并返回该流程的结果。
+
+Args:
+    task_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return self._tasks[task_id]
 
     def list(self, *, organization_id: str | None = None) -> tuple[RagWorkerTask, ...]:
-        """按组织读取任务快照；返回不可变副本，避免 API 修改队列内部状态。"""
+        """按组织读取任务快照；返回不可变副本，避免 API 修改队列内部状态。
+
+Args:
+    organization_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
         tasks = tuple(self._tasks.values())
         if organization_id is None:

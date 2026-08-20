@@ -45,7 +45,13 @@ class EvidenceDecision:
 
 
 def classify_intents(question: str) -> tuple[IntentSegment, ...]:
-    """先执行确定性安全规则，再进行最小关键词分类；低置信度绝不猜测。"""
+    """先执行确定性安全规则，再进行最小关键词分类；低置信度绝不猜测。
+
+Args:
+    question: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     if not question.strip():
         return (IntentSegment("", "unknown_or_mixed", 0.0, "unknown", True),)
@@ -76,7 +82,13 @@ def classify_intents(question: str) -> tuple[IntentSegment, ...]:
 
 
 def rewrite_query(segment: IntentSegment) -> RewriteResult:
-    """只做术语空白和大小写规范化；无法明确路由时回退并标记降级。"""
+    """只做术语空白和大小写规范化；无法明确路由时回退并标记降级。
+
+Args:
+    segment: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     normalized = re.sub(r"\s+", " ", segment.text).strip()
     if segment.intent == "unknown_or_mixed" or segment.needs_clarification:
@@ -87,7 +99,15 @@ def rewrite_query(segment: IntentSegment) -> RewriteResult:
 def gate_evidence(
     segment: IntentSegment, hits: list[RetrievalHit], *, min_hits: int = 1
 ) -> EvidenceDecision:
-    """证据不足时返回不知道；实时和写操作不允许由知识 RAG 代答。"""
+    """证据不足时返回不知道；实时和写操作不允许由知识 RAG 代答。
+
+Args:
+    segment: 参数语义、输入边界和安全约束。
+    hits: 参数语义、输入边界和安全约束。
+    min_hits: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     if segment.intent == "restricted_action":
         return EvidenceDecision("refused", (), "知识 RAG 不执行外部写操作")

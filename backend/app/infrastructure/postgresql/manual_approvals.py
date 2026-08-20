@@ -12,7 +12,14 @@ class PostgresManualApprovalGateway:
     """保存人工审批状态；本适配器只改变审批记录，不执行任何外部写入。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
@@ -21,7 +28,16 @@ class PostgresManualApprovalGateway:
         *, workspace_id: str, command_type: str, payload: dict[str, object],
         idempotency_key: str,
     ) -> ManualApproval:
-        """执行 create 的业务流程并返回该流程的结果。"""
+        """执行 create 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    command_type: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    idempotency_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._create, workspace_id, command_type, payload, idempotency_key
         )
@@ -29,7 +45,20 @@ class PostgresManualApprovalGateway:
     def _create(
         self, workspace_id: str, command_type: str, payload: dict[str, object], idempotency_key: str
     ) -> ManualApproval:
-        """执行内部步骤 _create，供同一模块的公开流程复用。"""
+        """执行内部步骤 _create，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    command_type: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    idempotency_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         approval_id = str(uuid4())
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute("""INSERT INTO manual_approvals
@@ -51,15 +80,36 @@ class PostgresManualApprovalGateway:
         )
 
     async def approve(self, *, approval_id: str, reviewer: str) -> ManualApproval | None:
-        """执行 approve 的业务流程并返回该流程的结果。"""
+        """执行 approve 的业务流程并返回该流程的结果。
+
+Args:
+    approval_id: 参数语义、输入边界和安全约束。
+    reviewer: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._approve, approval_id, reviewer)
 
     async def list_pending(self, *, workspace_id: str, limit: int) -> list[ManualApproval]:
-        """执行 list_pending 的业务流程并返回该流程的结果。"""
+        """执行 list_pending 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_pending, workspace_id, limit)
 
     def _list_pending(self, workspace_id: str, limit: int) -> list[ManualApproval]:
-        """执行内部步骤 _list_pending，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_pending，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT approval_id, workspace_id, command_type, payload, status,
@@ -78,7 +128,14 @@ class PostgresManualApprovalGateway:
         ]
 
     def _approve(self, approval_id: str, reviewer: str) -> ManualApproval | None:
-        """执行内部步骤 _approve，供同一模块的公开流程复用。"""
+        """执行内部步骤 _approve，供同一模块的公开流程复用。
+
+Args:
+    approval_id: 参数语义、输入边界和安全约束。
+    reviewer: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute("""UPDATE manual_approvals SET status='approved',
                 reviewer=%s, decided_at=NOW()

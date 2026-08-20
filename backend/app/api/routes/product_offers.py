@@ -26,7 +26,21 @@ async def list_product_offers(
     cursor: Annotated[str | None, Query(pattern=r"^\d+$")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> ProductOfferPage:
-    """执行 list_product_offers 的业务流程并返回该流程的结果。"""
+    """执行 list_product_offers 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(

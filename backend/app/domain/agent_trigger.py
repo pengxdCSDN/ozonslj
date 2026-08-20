@@ -20,19 +20,47 @@ class AgentTriggerGateway(Protocol):
     async def save_trigger(
         self, *, workspace_id: str, trigger: AgentTrigger
     ) -> AgentTrigger:
-        """执行 save_trigger 的业务流程并返回该流程的结果。"""
+        """执行 save_trigger 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    trigger: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_triggers(
         self, *, workspace_id: str, limit: int
     ) -> list[AgentTrigger]:
-        """执行 list_triggers 的业务流程并返回该流程的结果。"""
+        """执行 list_triggers 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def create_agent_trigger(
     *, trigger_type: str, target: str, schedule: str | None,
     event_name: str | None, enabled: bool,
 ) -> AgentTrigger:
-    """执行 create_agent_trigger 的业务流程并返回该流程的结果。"""
+    """执行 create_agent_trigger 的业务流程并返回该流程的结果。
+
+Args:
+    trigger_type: 参数语义、输入边界和安全约束。
+    target: 参数语义、输入边界和安全约束。
+    schedule: 参数语义、输入边界和安全约束。
+    event_name: 参数语义、输入边界和安全约束。
+    enabled: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     normalized = trigger_type.strip().lower()
     if normalized not in {"scheduled", "event", "manual"} or not target.strip():
         raise ValueError("触发类型必须是 scheduled、event 或 manual，目标不能为空")

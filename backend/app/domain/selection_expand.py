@@ -30,16 +30,40 @@ class ExpandResult:
 class ExpandResultGateway(Protocol):
     """说明 ExpandResultGateway 的职责、状态边界和对外协作关系。"""
     async def save_expansion(self, *, workspace_id: str, result: ExpandResult) -> ExpandResult:
-        """执行 save_expansion 的业务流程并返回该流程的结果。"""
+        """执行 save_expansion 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    result: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_expansions(
         self, *, workspace_id: str, limit: int
     ) -> list[ExpandResult]:
-        """执行 list_expansions 的业务流程并返回该流程的结果。"""
+        """执行 list_expansions 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def expand_product(item: ExpandInput) -> ExpandResult:
-    """对输入词去重并分层，结果仅作为进入 Validate 的候选，不自动上架。"""
+    """对输入词去重并分层，结果仅作为进入 Validate 的候选，不自动上架。
+
+Args:
+    item: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if not item.seed_product.strip():
         raise ValueError("扩展必须包含种子商品")
     core = _unique(item.core_keywords + item.related_keywords)
@@ -68,7 +92,13 @@ def expand_product(item: ExpandInput) -> ExpandResult:
 
 
 def _unique(values: tuple[str, ...]) -> tuple[str, ...]:
-    """执行内部步骤 _unique，供同一模块的公开流程复用。"""
+    """执行内部步骤 _unique，供同一模块的公开流程复用。
+
+Args:
+    values: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     seen: set[str] = set()
     output: list[str] = []
     for value in values:

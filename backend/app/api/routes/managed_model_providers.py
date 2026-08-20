@@ -109,7 +109,13 @@ class ConnectivityTestResponse(BaseModel):
 async def model_provider_catalog(
     _account_manager: Annotated[object, Depends(require_account_manager)],
 ) -> dict[str, object]:
-    """返回官方默认地址和已确认模型，页面不必手填容易出错的 URL。"""
+    """返回官方默认地址和已确认模型，页面不必手填容易出错的 URL。
+
+Args:
+    _account_manager: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return {
         "embedding": [
             {"adapter_type": "dashscope", "name": "阿里云百炼", "model": "text-embedding-v4",
@@ -133,7 +139,20 @@ async def test_model_provider_connectivity(
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
     credentials: Annotated[ModelCredentialStore, Depends(get_model_credential_store)],
 ) -> ConnectivityTestResponse:
-    """用最小请求探测地址、鉴权和模型能力，不落库、不写日志、不保存 API Key。"""
+    """用最小请求探测地址、鉴权和模型能力，不落库、不写日志、不保存 API Key。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+    _account_manager: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    credentials: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     api_key = payload.api_key.strip() if payload.api_key else None
     if payload.provider_id:
         # 先从当前组织的元数据中确认供应商归属，再读取 Secret，防止跨租户猜测文件名。
@@ -236,7 +255,13 @@ async def test_model_provider_connectivity(
 
 
 def _connectivity_error_message(error: CloudModelError | ValueError) -> str:
-    """把失败阶段和安全的 HTTP 状态提供给页面，不传播供应商响应正文。"""
+    """把失败阶段和安全的 HTTP 状态提供给页面，不传播供应商响应正文。
+
+Args:
+    error: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     if isinstance(error, ValueError):
         return f"本地校验未通过，尚未调用外部模型：{error}"
     if error.status_code is not None:
@@ -249,7 +274,12 @@ def _normalize_model_base_url(base_url: str) -> str:
 
     页面字段语义是供应商 API 根地址；历史数据若保存了 ``/embeddings`` 或
     ``/chat/completions``，测试时剥离该后缀后交给客户端统一拼接，避免产生错误 URL。
-    """
+
+Args:
+    base_url: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     value = base_url.strip().rstrip("/")
     # 百炼 Workspace 的 /api/v1 是原生接口路径；OpenAI 兼容模型调用必须使用
     # /compatible-mode/v1，否则 text-embedding-v4 会返回 404。仅对百炼域名做转换。
@@ -274,7 +304,18 @@ def _validate_connectivity_target(adapter_type: str, base_url: str, api_key: str
     连接测试必须验证真实供应商的鉴权和模型响应；因此不能把 ``example.com``、
     本地地址或 ``test`` 一类占位值当作生产供应商。内置适配器还必须使用其官方域名，
     防止把密钥发送到名称伪装的第三方地址。
-    """
+
+Args:
+    adapter_type: 参数语义、输入边界和安全约束。
+    base_url: 参数语义、输入边界和安全约束。
+    api_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     parsed = urlparse(base_url.strip())
     hostname = (parsed.hostname or "").lower().rstrip(".")
     if hostname in {"example.com", "example.test", "localhost", "127.0.0.1", "::1"}:
@@ -294,7 +335,13 @@ def _validate_connectivity_target(adapter_type: str, base_url: str, api_key: str
 
 
 def _response(item: dict[str, object]) -> ManagedProviderResponse:
-    """执行内部步骤 _response，供同一模块的公开流程复用。"""
+    """执行内部步骤 _response，供同一模块的公开流程复用。
+
+Args:
+    item: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     suffix = str(item.get("credential_suffix") or "")
     return ManagedProviderResponse(
         provider_id=str(item["id"]), name=str(item["name"]),
@@ -312,7 +359,14 @@ async def list_managed_model_providers(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
 ) -> list[ManagedProviderResponse]:
-    """执行 list_managed_model_providers 的业务流程并返回该流程的结果。"""
+    """执行 list_managed_model_providers 的业务流程并返回该流程的结果。
+
+Args:
+    _account_manager: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return [_response(item) for item in await gateway.list_provider_metadata()]
 
 
@@ -323,7 +377,20 @@ async def create_managed_model_provider(
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
     credentials: Annotated[ModelCredentialStore, Depends(get_model_credential_store)],
 ) -> ManagedProviderResponse:
-    """执行 create_managed_model_provider 的业务流程并返回该流程的结果。"""
+    """执行 create_managed_model_provider 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+    _account_manager: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    credentials: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if not payload.api_key:
         raise HTTPException(status_code=422, detail="首次配置供应商必须提交 API Key")
     provider_id = str(uuid4())
@@ -352,7 +419,21 @@ async def update_managed_model_provider(
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
     credentials: Annotated[ModelCredentialStore, Depends(get_model_credential_store)],
 ) -> ManagedProviderResponse:
-    """执行 update_managed_model_provider 的业务流程并返回该流程的结果。"""
+    """执行 update_managed_model_provider 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    _account_manager: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    credentials: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     credential_ref = None
     suffix = None
     if payload.api_key:
@@ -387,7 +468,19 @@ async def delete_managed_model_provider(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
 ) -> None:
-    """删除未被用途绑定的配置，避免自动降级链出现悬挂引用。"""
+    """删除未被用途绑定的配置，避免自动降级链出现悬挂引用。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    _account_manager: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         deleted = await gateway.delete_provider(provider_id)
     except ValueError as error:
@@ -407,7 +500,20 @@ async def bind_managed_model_purpose(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
 ) -> ManagedBindingResponse:
-    """执行 bind_managed_model_purpose 的业务流程并返回该流程的结果。"""
+    """执行 bind_managed_model_purpose 的业务流程并返回该流程的结果。
+
+Args:
+    purpose: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    _account_manager: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         await gateway.bind_purpose(
             purpose=purpose,
@@ -441,7 +547,14 @@ async def list_managed_model_bindings(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
 ) -> list[ManagedBindingResponse]:
-    """执行 list_managed_model_bindings 的业务流程并返回该流程的结果。"""
+    """执行 list_managed_model_bindings 的业务流程并返回该流程的结果。
+
+Args:
+    _account_manager: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return [ManagedBindingResponse(
         purpose=cast(ManagedPurpose, str(item["purpose"])),
         primary_provider_id=str(item["primary_provider_id"]),
@@ -458,7 +571,19 @@ async def disable_managed_model_provider(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
 ) -> ManagedProviderResponse:
-    """执行 disable_managed_model_provider 的业务流程并返回该流程的结果。"""
+    """执行 disable_managed_model_provider 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    _account_manager: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     await gateway.disable_provider(provider_id)
     item = next(
         (entry for entry in await gateway.list_provider_metadata()

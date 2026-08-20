@@ -11,7 +11,14 @@ router = APIRouter(prefix="/v1/knowledge-chunk-strategies", tags=["knowledge-chu
 async def list_knowledge_chunk_strategies(
     source_type: str | None = None, business_domain: str | None = None
 ) -> list[dict[str, object]]:
-    """只返回服务端注册策略及参数边界，不接受客户端上传代码或模块路径。"""
+    """只返回服务端注册策略及参数边界，不接受客户端上传代码或模块路径。
+
+Args:
+    source_type: 参数语义、输入边界和安全约束。
+    business_domain: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     registry = build_default_chunk_registry()
     strategies: list[dict[str, object]] = []

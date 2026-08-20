@@ -38,7 +38,14 @@ class BudgetDecision:
 
 
 def decide_budget(policy: ModelBudgetPolicy, usage: ModelBudgetUsage) -> BudgetDecision:
-    """执行 decide_budget 的业务流程并返回该流程的结果。"""
+    """执行 decide_budget 的业务流程并返回该流程的结果。
+
+Args:
+    policy: 参数语义、输入边界和安全约束。
+    usage: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     ratios = [
         usage.daily_tokens / max(policy.daily_token_limit, 1),
         usage.monthly_tokens / max(policy.monthly_token_limit, 1),

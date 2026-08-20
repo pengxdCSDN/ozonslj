@@ -58,22 +58,45 @@ class CredentialProtector(Protocol):
 
     @property
     def key_version(self) -> int:
-        """执行 key_version 的业务流程并返回该流程的结果。"""
+        """执行 key_version 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
     def protect(self, plaintext: str) -> bytes:
-        """执行 protect 的业务流程并返回该流程的结果。"""
+        """执行 protect 的业务流程并返回该流程的结果。
+
+Args:
+    plaintext: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     def unprotect(self, ciphertext: bytes, *, credential_version: int) -> str:
-        """执行 unprotect 的业务流程并返回该流程的结果。"""
+        """执行 unprotect 的业务流程并返回该流程的结果。
+
+Args:
+    ciphertext: 参数语义、输入边界和安全约束。
+    credential_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class StoreWorkspaceGateway(Protocol):
     """定义账户与工作区持久化所需的最小端口。"""
 
     async def list_workspaces(self) -> list[StoreWorkspace]:
-        """执行 list_workspaces 的业务流程并返回该流程的结果。"""
+        """执行 list_workspaces 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def get_workspace(self, workspace_id: str) -> StoreWorkspace | None:
-        """执行 get_workspace 的业务流程并返回该流程的结果。"""
+        """执行 get_workspace 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def create_workspace(
         self,
@@ -83,7 +106,16 @@ class StoreWorkspaceGateway(Protocol):
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> StoreWorkspace:
-        """执行 create_workspace 的业务流程并返回该流程的结果。"""
+        """执行 create_workspace 的业务流程并返回该流程的结果。
+
+Args:
+    display_name: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    encrypted_api_key: 参数语义、输入边界和安全约束。
+    credential_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def replace_credentials(
         self,
@@ -93,13 +125,28 @@ class StoreWorkspaceGateway(Protocol):
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> StoreWorkspace | None:
-        """执行 replace_credentials 的业务流程并返回该流程的结果。"""
+        """执行 replace_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    encrypted_api_key: 参数语义、输入边界和安全约束。
+    credential_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def load_credentials(
         self,
         workspace_id: str,
     ) -> tuple[str, bytes, int] | None:
-        """执行 load_credentials 的业务流程并返回该流程的结果。"""
+        """执行 load_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def set_verification_status(
         self,
@@ -110,14 +157,30 @@ class StoreWorkspaceGateway(Protocol):
         audit_result: Literal["success", "failed"],
         audit_detail: dict[str, str] | None = None,
     ) -> StoreWorkspace | None:
-        """执行 set_verification_status 的业务流程并返回该流程的结果。"""
+        """执行 set_verification_status 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+    verified_at: 参数语义、输入边界和安全约束。
+    audit_result: 参数语义、输入边界和安全约束。
+    audit_detail: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class SellerAccountVerifier(Protocol):
     """验证凭据能否访问当前卖家账户，不向调用方泄漏原始响应。"""
 
     async def verify(self, credentials: OzonCredentials) -> None:
-        """执行 verify 的业务流程并返回该流程的结果。"""
+        """执行 verify 的业务流程并返回该流程的结果。
+
+Args:
+    credentials: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class CredentialProtectionError(RuntimeError):

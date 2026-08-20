@@ -15,7 +15,17 @@ class ErpCsvPreviewPayload(BaseModel):
 
 @router.post("/csv/preview", response_model=list[ErpSupplyRecord])
 async def preview_csv(payload: ErpCsvPreviewPayload) -> list[ErpSupplyRecord]:
-    """执行 preview_csv 的业务流程并返回该流程的结果。"""
+    """执行 preview_csv 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         return parse_erp_csv(payload.content)
     except ValueError as error:

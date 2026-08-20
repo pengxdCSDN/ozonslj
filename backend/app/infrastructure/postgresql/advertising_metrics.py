@@ -13,20 +13,43 @@ class PostgresAdvertisingMetricsGateway:
     """保存带输入快照和统计窗口的广告指标，保证公式结果可回溯。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def save_snapshot(
         self, *, workspace_id: str, inputs: dict[str, object], metrics: AdvertisingMetrics
     ) -> AdvertisingMetrics:
-        """执行 save_snapshot 的业务流程并返回该流程的结果。"""
+        """执行 save_snapshot 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    inputs: 参数语义、输入边界和安全约束。
+    metrics: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._save, workspace_id, inputs, metrics)
 
     def _save(
         self, workspace_id: str, inputs: dict[str, object], metrics: AdvertisingMetrics
     ) -> AdvertisingMetrics:
-        """执行内部步骤 _save，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    inputs: 参数语义、输入边界和安全约束。
+    metrics: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -47,11 +70,25 @@ class PostgresAdvertisingMetricsGateway:
     async def list_snapshots(
         self, *, workspace_id: str, limit: int
     ) -> list[AdvertisingMetrics]:
-        """执行 list_snapshots 的业务流程并返回该流程的结果。"""
+        """执行 list_snapshots 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list, workspace_id, limit)
 
     def _list(self, workspace_id: str, limit: int) -> list[AdvertisingMetrics]:
-        """执行内部步骤 _list，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """

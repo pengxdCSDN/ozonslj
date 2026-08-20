@@ -42,7 +42,18 @@ class OcrDocument:
 
 
 def parse_pdf(path: Path) -> OcrDocument:
-    """把扫描 PDF 按页转换为图片并使用本地 Tesseract 识别。"""
+    """把扫描 PDF 按页转换为图片并使用本地 Tesseract 识别。
+
+Args:
+    path: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    OcrConfigurationError: 业务约束或外部依赖失败时抛出。
+    OcrProviderError: 业务约束或外部依赖失败时抛出。
+"""
 
     pdftoppm = shutil.which("pdftoppm")
     tesseract = shutil.which("tesseract")
@@ -112,7 +123,14 @@ def parse_pdf(path: Path) -> OcrDocument:
 
 
 def _positive_int_env(name: str, default: int) -> int:
-    """执行内部步骤 _positive_int_env，供同一模块的公开流程复用。"""
+    """执行内部步骤 _positive_int_env，供同一模块的公开流程复用。
+
+Args:
+    name: 参数语义、输入边界和安全约束。
+    default: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     try:
         value = int(os.environ.get(name, str(default)).strip())
     except ValueError:
@@ -121,7 +139,14 @@ def _positive_int_env(name: str, default: int) -> int:
 
 
 def _positive_float_env(name: str, default: float) -> float:
-    """执行内部步骤 _positive_float_env，供同一模块的公开流程复用。"""
+    """执行内部步骤 _positive_float_env，供同一模块的公开流程复用。
+
+Args:
+    name: 参数语义、输入边界和安全约束。
+    default: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     try:
         value = float(os.environ.get(name, str(default)).strip())
     except ValueError:

@@ -46,17 +46,39 @@ class QualityFindingGateway(Protocol):
     async def list_findings(
         self, *, workspace_id: str, status: QualityFindingStatus | None, limit: int
     ) -> list[QualityFindingRecord]:
-        """执行 list_findings 的业务流程并返回该流程的结果。"""
+        """执行 list_findings 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def create_findings(
         self, *, workspace_id: str, findings: list[QualityFinding]
     ) -> list[QualityFindingRecord]:
-        """执行 create_findings 的业务流程并返回该流程的结果。"""
+        """执行 create_findings 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    findings: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def update_status(
         self, *, finding_id: str, status: QualityFindingStatus
     ) -> QualityFindingRecord | None:
-        """执行 update_status 的业务流程并返回该流程的结果。"""
+        """执行 update_status 的业务流程并返回该流程的结果。
+
+Args:
+    finding_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def check_required_and_enum(
@@ -65,7 +87,15 @@ def check_required_and_enum(
     required_fields: tuple[str, ...],
     enum_fields: dict[str, frozenset[str]],
 ) -> list[QualityFinding]:
-    """检查必填字段和枚举值，空值不参与业务分析，交由质量中心处理。"""
+    """检查必填字段和枚举值，空值不参与业务分析，交由质量中心处理。
+
+Args:
+    record: 参数语义、输入边界和安全约束。
+    required_fields: 参数语义、输入边界和安全约束。
+    enum_fields: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     findings: list[QualityFinding] = []
     for field_name in required_fields:
@@ -99,7 +129,15 @@ def check_relationship_and_time(
     required_relationships: tuple[tuple[str, str], ...] = (),
     time_order: tuple[str, str] | None = None,
 ) -> list[QualityFinding]:
-    """检查关联键是否成对存在，以及结束时间是否早于开始时间。"""
+    """检查关联键是否成对存在，以及结束时间是否早于开始时间。
+
+Args:
+    record: 参数语义、输入边界和安全约束。
+    required_relationships: 参数语义、输入边界和安全约束。
+    time_order: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     findings: list[QualityFinding] = []
     for parent_field, child_field in required_relationships:
@@ -131,7 +169,13 @@ def check_relationship_and_time(
 
 
 def check_amount_and_inventory(record: dict[str, object]) -> list[QualityFinding]:
-    """拒绝负库存、非正价格和无法解析的金额，避免异常事实进入运营指标。"""
+    """拒绝负库存、非正价格和无法解析的金额，避免异常事实进入运营指标。
+
+Args:
+    record: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     findings: list[QualityFinding] = []
     stock = record.get("available_stock")
@@ -167,7 +211,14 @@ def check_cross_source_consistency(
     *,
     source_pairs: tuple[tuple[str, str], ...],
 ) -> list[QualityFinding]:
-    """比较不同来源的同一事实；官方事实和导入值不一致时只报告冲突。"""
+    """比较不同来源的同一事实；官方事实和导入值不一致时只报告冲突。
+
+Args:
+    record: 参数语义、输入边界和安全约束。
+    source_pairs: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     findings: list[QualityFinding] = []
     for official_field, imported_field in source_pairs:

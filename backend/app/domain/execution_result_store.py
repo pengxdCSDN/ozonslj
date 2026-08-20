@@ -22,9 +22,23 @@ class ExecutionResultGateway(Protocol):
     async def save(
         self, *, workspace_id: str, result: BatchExecutionResult
     ) -> StoredExecutionResult:
-        """执行 save 的业务流程并返回该流程的结果。"""
+        """执行 save 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    result: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_results(
         self, *, workspace_id: str, limit: int
     ) -> list[StoredExecutionResult]:
-        """执行 list_results 的业务流程并返回该流程的结果。"""
+        """执行 list_results 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""

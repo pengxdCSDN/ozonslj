@@ -16,7 +16,17 @@ class RagWorker:
     def __init__(self, tasks: PostgresRagTaskGateway, consumer: RedisRagTaskConsumer,
                  *, worker_id: str, lease_seconds: int = 300,
                  runtime: KnowledgeRuntimePort | None = None) -> None:
-        """注入 PostgreSQL 任务事实、Redis 唤醒消费者和可选知识运行时。"""
+        """注入 PostgreSQL 任务事实、Redis 唤醒消费者和可选知识运行时。
+
+Args:
+    tasks: 参数语义、输入边界和安全约束。
+    consumer: 参数语义、输入边界和安全约束。
+    worker_id: 参数语义、输入边界和安全约束。
+    lease_seconds: 参数语义、输入边界和安全约束。
+    runtime: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._tasks = tasks
         self._consumer = consumer
         self._worker_id = worker_id
@@ -24,7 +34,17 @@ class RagWorker:
         self._runtime = runtime
 
     async def process_one(self, *, block_ms: int = 1_000) -> bool:
-        """消费一条 RAG 任务，按任务类型执行并确认最终状态。"""
+        """消费一条 RAG 任务，按任务类型执行并确认最终状态。
+
+Args:
+    block_ms: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         message = await self._consumer.read_one(block_ms=block_ms)
         if message is None:
             return False
@@ -66,7 +86,13 @@ class RagWorker:
         return finished is not None
 
     async def _heartbeat(self, task_id: str) -> None:
-        """在 RAG 任务运行期间周期性续租，避免长任务被重复领取。"""
+        """在 RAG 任务运行期间周期性续租，避免长任务被重复领取。
+
+Args:
+    task_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         interval = max(1, self._lease_seconds // 3)
         while True:
             await asyncio.sleep(interval)

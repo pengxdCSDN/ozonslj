@@ -26,12 +26,26 @@ class AdvertisingKeywordDiagnosisGateway(Protocol):
     async def save_report(
         self, *, workspace_id: str, diagnoses: list[AdvertisingKeywordDiagnosis]
     ) -> list[AdvertisingKeywordDiagnosis]:
-        """执行 save_report 的业务流程并返回该流程的结果。"""
+        """执行 save_report 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    diagnoses: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
     ) -> list[list[AdvertisingKeywordDiagnosis]]:
-        """执行 list_reports 的业务流程并返回该流程的结果。"""
+        """执行 list_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def diagnose_keywords(
@@ -42,7 +56,21 @@ def diagnose_keywords(
     high_cvr_percent: float = 8.0,
     high_spend_minor: int = 1000,
 ) -> list[AdvertisingKeywordDiagnosis]:
-    """按可解释规则分类关键词；结果只生成诊断建议，不产生广告写操作。"""
+    """按可解释规则分类关键词；结果只生成诊断建议，不产生广告写操作。
+
+Args:
+    rows: 参数语义、输入边界和安全约束。
+    min_impressions: 参数语义、输入边界和安全约束。
+    min_clicks: 参数语义、输入边界和安全约束。
+    high_cvr_percent: 参数语义、输入边界和安全约束。
+    high_spend_minor: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     thresholds = (min_impressions, min_clicks, high_spend_minor)
     if any(
         isinstance(value, bool) or not isinstance(value, int) or value < 0
@@ -87,7 +115,18 @@ def diagnose_keywords(
 
 
 def _integer(row: dict[str, object], name: str) -> int:
-    """执行内部步骤 _integer，供同一模块的公开流程复用。"""
+    """执行内部步骤 _integer，供同一模块的公开流程复用。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+    name: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     value = row.get(name, 0)
     if not isinstance(value, int) or isinstance(value, bool):
         raise ValueError(f"{name} 必须是整数")

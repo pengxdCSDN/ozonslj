@@ -40,7 +40,13 @@ class RagQualityMetrics:
 
 
 def quality_gate_passed(metrics: RagQualityMetrics) -> bool:
-    """应用进入 pilot 前的硬门槛；安全和状态完整性必须 100%。"""
+    """应用进入 pilot 前的硬门槛；安全和状态完整性必须 100%。
+
+Args:
+    metrics: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     return (
         metrics.recall_at_5 >= 0.95
@@ -55,7 +61,13 @@ def quality_gate_passed(metrics: RagQualityMetrics) -> bool:
 
 
 def calculate_metrics(observations: list[EvaluationObservation]) -> RagQualityMetrics:
-    """空样本返回零指标；不把 skipped/error 当作通过。"""
+    """空样本返回零指标；不把 skipped/error 当作通过。
+
+Args:
+    observations: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     if not observations:
         return RagQualityMetrics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
@@ -72,7 +84,13 @@ def calculate_metrics(observations: list[EvaluationObservation]) -> RagQualityMe
     ranked = [item.ranked_retrieved_chunk_ids or tuple(sorted(item.retrieved_chunk_ids))
               for item in observations]
     def recall_at(limit: int) -> float:
-        """执行 recall_at 的业务流程并返回该流程的结果。"""
+        """执行 recall_at 的业务流程并返回该流程的结果。
+
+Args:
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         denominator = sum(bool(item.expected_chunk_ids) for item in observations)
         hits = sum(
             bool(item.expected_chunk_ids & set(items[:limit]))

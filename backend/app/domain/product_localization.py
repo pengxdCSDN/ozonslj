@@ -28,7 +28,13 @@ class LocalizedProductContent:
     translation_source_hash: str | None = None
 
     def __post_init__(self) -> None:
-        """实现特殊方法 __post_init__，遵循该类型的 Python 运行时约定。"""
+        """实现特殊方法 __post_init__，遵循该类型的 Python 运行时约定。
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if not self.title_ru.strip():
             raise ValueError("俄文商品标题不能为空；上游原文必须保留")
         if self.title_zh is not None and not self.title_zh.strip():
@@ -38,7 +44,9 @@ class LocalizedProductContent:
 
     @property
     def source_hash(self) -> str:
-        """计算原始俄文内容指纹，用于幂等翻译和判断是否需要重新翻译。"""
+        """计算原始俄文内容指纹，用于幂等翻译和判断是否需要重新翻译。
+Returns:
+    返回调用完成后的领域结果。"""
 
         source = "\n".join(
             (
@@ -50,7 +58,9 @@ class LocalizedProductContent:
         return sha256(source.encode("utf-8")).hexdigest()
 
     def embedding_text(self) -> str:
-        """构造中俄双语检索文本；数字、SKU 和品牌由调用方作为结构化字段保留。"""
+        """构造中俄双语检索文本；数字、SKU 和品牌由调用方作为结构化字段保留。
+Returns:
+    返回调用完成后的领域结果。"""
 
         parts = [self.title_zh or "", self.title_ru]
         if self.description_zh:
@@ -63,7 +73,13 @@ class LocalizedProductContent:
 
 
 def translation_request_text(content: LocalizedProductContent) -> str:
-    """生成发送给云端翻译服务的纯文本，不包含凭据和无关业务数据。"""
+    """生成发送给云端翻译服务的纯文本，不包含凭据和无关业务数据。
+
+Args:
+    content: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     fields = [f"标题：{content.title_ru}"]
     if content.description_ru:

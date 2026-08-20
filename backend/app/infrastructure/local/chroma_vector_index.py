@@ -21,15 +21,38 @@ class ChromaCollection(Protocol):
         self, *, ids: list[str], documents: list[str], embeddings: list[list[float]],
         metadatas: list[dict[str, str]]
     ) -> None:
-        """执行 upsert 的业务流程并返回该流程的结果。"""
+        """执行 upsert 的业务流程并返回该流程的结果。
+
+Args:
+    ids: 参数语义、输入边界和安全约束。
+    documents: 参数语义、输入边界和安全约束。
+    embeddings: 参数语义、输入边界和安全约束。
+    metadatas: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     def delete(self, *, ids: list[str]) -> None:
-        """执行 delete 的业务流程并返回该流程的结果。"""
+        """执行 delete 的业务流程并返回该流程的结果。
+
+Args:
+    ids: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     def query(
         self, *, query_embeddings: list[list[float]], n_results: int, include: list[str]
     ) -> dict[str, object]:
-        """执行 query 的业务流程并返回该流程的结果。"""
+        """执行 query 的业务流程并返回该流程的结果。
+
+Args:
+    query_embeddings: 参数语义、输入边界和安全约束。
+    n_results: 参数语义、输入边界和安全约束。
+    include: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class HttpChromaCollection:
@@ -43,7 +66,16 @@ class HttpChromaCollection:
         timeout_seconds: float = 10.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    base_url: 参数语义、输入边界和安全约束。
+    collection_id: 参数语义、输入边界和安全约束。
+    timeout_seconds: 参数语义、输入边界和安全约束。
+    transport: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._base_url = base_url.rstrip("/")
         self._collection_id = collection_id
         self._timeout_seconds = timeout_seconds
@@ -58,7 +90,20 @@ class HttpChromaCollection:
         timeout_seconds: float = 10.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> HttpChromaCollection:
-        """获取或创建受控 collection；名称固定，避免每次 API 重启生成新索引。"""
+        """获取或创建受控 collection；名称固定，避免每次 API 重启生成新索引。
+
+Args:
+    base_url: 参数语义、输入边界和安全约束。
+    name: 参数语义、输入边界和安全约束。
+    timeout_seconds: 参数语义、输入边界和安全约束。
+    transport: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         async with httpx.AsyncClient(
             base_url=base_url.rstrip("/"), timeout=timeout_seconds, transport=transport
         ) as client:
@@ -85,7 +130,16 @@ class HttpChromaCollection:
         embeddings: list[list[float]],
         metadatas: list[dict[str, str]],
     ) -> None:
-        """执行 upsert 的业务流程并返回该流程的结果。"""
+        """执行 upsert 的业务流程并返回该流程的结果。
+
+Args:
+    ids: 参数语义、输入边界和安全约束。
+    documents: 参数语义、输入边界和安全约束。
+    embeddings: 参数语义、输入边界和安全约束。
+    metadatas: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._request(
             "POST",
             "upsert",
@@ -93,13 +147,27 @@ class HttpChromaCollection:
         )
 
     async def delete(self, *, ids: list[str]) -> None:
-        """执行 delete 的业务流程并返回该流程的结果。"""
+        """执行 delete 的业务流程并返回该流程的结果。
+
+Args:
+    ids: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._request("POST", "delete", {"ids": ids})
 
     async def query(
         self, *, query_embeddings: list[list[float]], n_results: int, include: list[str]
     ) -> dict[str, object]:
-        """执行 query 的业务流程并返回该流程的结果。"""
+        """执行 query 的业务流程并返回该流程的结果。
+
+Args:
+    query_embeddings: 参数语义、输入边界和安全约束。
+    n_results: 参数语义、输入边界和安全约束。
+    include: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await self._request(
             "POST",
             "query",
@@ -107,7 +175,13 @@ class HttpChromaCollection:
         )
 
     async def count(self) -> int:
-        """读取 collection 中的切片数量，用于幂等索引初始化，不读取正文。"""
+        """读取 collection 中的切片数量，用于幂等索引初始化，不读取正文。
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         path = f"/api/v1/collections/{self._collection_id}/count"
         try:
             async with httpx.AsyncClient(
@@ -125,7 +199,17 @@ class HttpChromaCollection:
         return count
 
     async def existing_ids(self, ids: list[str]) -> set[str]:
-        """读取指定 ID 的存在性，用于断点续传，不读取正文和向量。"""
+        """读取指定 ID 的存在性，用于断点续传，不读取正文和向量。
+
+Args:
+    ids: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         if not ids:
             return set()
         body = await self._request("POST", "get", {"ids": ids, "include": []})
@@ -137,7 +221,19 @@ class HttpChromaCollection:
     async def _request(
         self, method: str, operation: str, payload: dict[str, object]
     ) -> dict[str, object]:
-        """执行内部步骤 _request，供同一模块的公开流程复用。"""
+        """执行内部步骤 _request，供同一模块的公开流程复用。
+
+Args:
+    method: 参数语义、输入边界和安全约束。
+    operation: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         path = f"/api/v1/collections/{self._collection_id}/{operation}"
         try:
             async with httpx.AsyncClient(
@@ -168,12 +264,30 @@ class ChromaVectorIndex(VectorIndexPort):
     """将 Chroma 的距离结果转换为统一的 ``RetrievalHit``。"""
 
     def __init__(self, collection: ChromaCollection, chunks: dict[str, KnowledgeChunk]) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    collection: 参数语义、输入边界和安全约束。
+    chunks: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._collection = collection
         self._chunks = chunks
 
     async def upsert(self, chunks: list[KnowledgeChunk], embeddings: list[list[float]]) -> None:
-        """执行 upsert 的业务流程并返回该流程的结果。"""
+        """执行 upsert 的业务流程并返回该流程的结果。
+
+Args:
+    chunks: 参数语义、输入边界和安全约束。
+    embeddings: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if len(chunks) != len(embeddings):
             raise ValueError("切片和向量数量不一致，禁止写入不完整索引")
         self._chunks.update({chunk.chunk_id: chunk for chunk in chunks})
@@ -185,13 +299,26 @@ class ChromaVectorIndex(VectorIndexPort):
         )
 
     async def delete(self, chunk_ids: list[str]) -> None:
-        """执行 delete 的业务流程并返回该流程的结果。"""
+        """执行 delete 的业务流程并返回该流程的结果。
+
+Args:
+    chunk_ids: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._collection.delete(ids=chunk_ids)
         for chunk_id in chunk_ids:
             self._chunks.pop(chunk_id, None)
 
     async def search(self, embedding: list[float], *, limit: int) -> list[RetrievalHit]:
-        """执行 search 的业务流程并返回该流程的结果。"""
+        """执行 search 的业务流程并返回该流程的结果。
+
+Args:
+    embedding: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         result = self._collection.query(
             query_embeddings=[embedding], n_results=limit,
             include=["distances", "documents", "metadatas"],
@@ -214,12 +341,30 @@ class HttpChromaVectorIndex(VectorIndexPort):
     """将异步 HTTP Collection 转换为统一的向量索引端口。"""
 
     def __init__(self, collection: HttpChromaCollection, chunks: dict[str, KnowledgeChunk]) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    collection: 参数语义、输入边界和安全约束。
+    chunks: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._collection = collection
         self._chunks = chunks
 
     async def upsert(self, chunks: list[KnowledgeChunk], embeddings: list[list[float]]) -> None:
-        """执行 upsert 的业务流程并返回该流程的结果。"""
+        """执行 upsert 的业务流程并返回该流程的结果。
+
+Args:
+    chunks: 参数语义、输入边界和安全约束。
+    embeddings: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if len(chunks) != len(embeddings):
             raise ValueError("切片和向量数量不一致，禁止写入不完整索引")
         await self._collection.upsert(
@@ -231,13 +376,26 @@ class HttpChromaVectorIndex(VectorIndexPort):
         self._chunks.update({chunk.chunk_id: chunk for chunk in chunks})
 
     async def delete(self, chunk_ids: list[str]) -> None:
-        """执行 delete 的业务流程并返回该流程的结果。"""
+        """执行 delete 的业务流程并返回该流程的结果。
+
+Args:
+    chunk_ids: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._collection.delete(ids=chunk_ids)
         for chunk_id in chunk_ids:
             self._chunks.pop(chunk_id, None)
 
     async def search(self, embedding: list[float], *, limit: int) -> list[RetrievalHit]:
-        """执行 search 的业务流程并返回该流程的结果。"""
+        """执行 search 的业务流程并返回该流程的结果。
+
+Args:
+    embedding: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         result = await self._collection.query(
             query_embeddings=[embedding], n_results=limit,
             include=["distances", "documents", "metadatas"],
@@ -257,21 +415,39 @@ class HttpChromaVectorIndex(VectorIndexPort):
 
 
 def _nested_strings(value: object) -> list[str]:
-    """执行内部步骤 _nested_strings，供同一模块的公开流程复用。"""
+    """执行内部步骤 _nested_strings，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     rows = cast(list[object], value) if isinstance(value, list) else []
     first = rows[0] if rows and isinstance(rows[0], list) else rows
     return [item for item in first if isinstance(item, str)]
 
 
 def _nested_numbers(value: object) -> list[float]:
-    """执行内部步骤 _nested_numbers，供同一模块的公开流程复用。"""
+    """执行内部步骤 _nested_numbers，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     rows = cast(list[object], value) if isinstance(value, list) else []
     first = rows[0] if rows and isinstance(rows[0], list) else rows
     return [float(item) for item in first if isinstance(item, (int, float))]
 
 
 def _metadata_for_chunk(chunk: KnowledgeChunk) -> dict[str, str]:
-    """写入引用所需的非敏感元数据，支持 API 重启后从 Chroma 恢复结果。"""
+    """写入引用所需的非敏感元数据，支持 API 重启后从 Chroma 恢复结果。
+
+Args:
+    chunk: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     metadata = chunk.metadata
     return {
         "document_id": metadata.document_id,
@@ -294,7 +470,13 @@ def _metadata_for_chunk(chunk: KnowledgeChunk) -> dict[str, str]:
 
 
 def _nested_metadata(value: object) -> list[dict[str, str]]:
-    """执行内部步骤 _nested_metadata，供同一模块的公开流程复用。"""
+    """执行内部步骤 _nested_metadata，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     rows = cast(list[object], value) if isinstance(value, list) else []
     first = rows[0] if rows and isinstance(rows[0], list) else rows
     return [
@@ -307,7 +489,15 @@ def _nested_metadata(value: object) -> list[dict[str, str]]:
 def _chunk_from_chroma(
     chunk_id: str, content: str, metadata: dict[str, str]
 ) -> KnowledgeChunk | None:
-    """执行内部步骤 _chunk_from_chroma，供同一模块的公开流程复用。"""
+    """执行内部步骤 _chunk_from_chroma，供同一模块的公开流程复用。
+
+Args:
+    chunk_id: 参数语义、输入边界和安全约束。
+    content: 参数语义、输入边界和安全约束。
+    metadata: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     if (
         not content
         or not metadata.get("document_version_id")

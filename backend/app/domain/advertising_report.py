@@ -24,16 +24,40 @@ class AdvertisingReportGateway(Protocol):
     async def save_rows(
         self, *, workspace_id: str, rows: list[AdvertisingReportRow]
     ) -> list[AdvertisingReportRow]:
-        """执行 save_rows 的业务流程并返回该流程的结果。"""
+        """执行 save_rows 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    rows: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_rows(
         self, *, workspace_id: str, limit: int
     ) -> list[AdvertisingReportRow]:
-        """执行 list_rows 的业务流程并返回该流程的结果。"""
+        """执行 list_rows 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def normalize_advertising_report(raw: dict[str, object]) -> AdvertisingReportRow:
-    """将 Performance API 报表行映射为内部模型，并拒绝不可信的指标组合。"""
+    """将 Performance API 报表行映射为内部模型，并拒绝不可信的指标组合。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     campaign_id = str(raw.get("campaign_id", "")).strip()
     if not campaign_id:
         raise ValueError("广告报表必须包含活动标识")

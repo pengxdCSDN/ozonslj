@@ -36,7 +36,19 @@ class PublicSampler:
     def __init__(
         self, fetch_page: FetchPage, *, global_limit: int = 2, max_attempts: int = 3
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    fetch_page: 参数语义、输入边界和安全约束。
+    global_limit: 参数语义、输入边界和安全约束。
+    max_attempts: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if global_limit < 1 or max_attempts < 1:
             raise ValueError("采样并发和重试次数必须为正数")
         self._fetch_page = fetch_page
@@ -45,11 +57,23 @@ class PublicSampler:
         self._max_attempts = max_attempts
 
     async def sample(self, requests: Sequence[SamplingRequest]) -> list[SamplingResult]:
-        """执行 sample 的业务流程并返回该流程的结果。"""
+        """执行 sample 的业务流程并返回该流程的结果。
+
+Args:
+    requests: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return list(await asyncio.gather(*(self._sample_one(item) for item in requests)))
 
     async def _sample_one(self, item: SamplingRequest) -> SamplingResult:
-        """执行内部步骤 _sample_one，供同一模块的公开流程复用。"""
+        """执行内部步骤 _sample_one，供同一模块的公开流程复用。
+
+Args:
+    item: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         decision = check_sampling_policy(
             item.url,
             robots_allowed=item.robots_allowed,
@@ -64,7 +88,13 @@ class PublicSampler:
             return await self._fetch_with_backoff(decision.normalized_url)
 
     async def _fetch_with_backoff(self, url: str) -> SamplingResult:
-        """执行内部步骤 _fetch_with_backoff，供同一模块的公开流程复用。"""
+        """执行内部步骤 _fetch_with_backoff，供同一模块的公开流程复用。
+
+Args:
+    url: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         last_status: int | None = None
         for attempt in range(1, self._max_attempts + 1):
             async with self._global_limit:
@@ -82,5 +112,12 @@ class PublicSampler:
 
 
 def _blocked_result(url: str, decision: SamplingPolicyDecision) -> SamplingResult:
-    """执行内部步骤 _blocked_result，供同一模块的公开流程复用。"""
+    """执行内部步骤 _blocked_result，供同一模块的公开流程复用。
+
+Args:
+    url: 参数语义、输入边界和安全约束。
+    decision: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return SamplingResult(url, False, None, 0, f"{decision.code}: {decision.message}")

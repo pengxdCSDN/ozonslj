@@ -56,7 +56,19 @@ async def preview_keyword_import(
     request: Request,
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> KeywordImportPreview:
-    """执行 preview_keyword_import 的业务流程并返回该流程的结果。"""
+    """执行 preview_keyword_import 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    request: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(
@@ -90,7 +102,19 @@ async def preview_mapped_keyword_import(
     payload: MappedKeywordImportRequest,
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> KeywordImportPreview:
-    """执行 preview_mapped_keyword_import 的业务流程并返回该流程的结果。"""
+    """执行 preview_mapped_keyword_import 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
@@ -117,7 +141,19 @@ async def preview_xlsx_keyword_import(
     request: Request,
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> KeywordImportPreview:
-    """执行 preview_xlsx_keyword_import 的业务流程并返回该流程的结果。"""
+    """执行 preview_xlsx_keyword_import 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    request: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     content = await request.body()
@@ -144,7 +180,19 @@ async def preview_mapped_xlsx_keyword_import(
     payload: MappedXlsxKeywordImportRequest,
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> KeywordImportPreview:
-    """执行 preview_mapped_xlsx_keyword_import 的业务流程并返回该流程的结果。"""
+    """执行 preview_mapped_xlsx_keyword_import 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -173,7 +221,20 @@ async def commit_keyword_import(
     gateway: Annotated[KeywordImportGateway, Depends(get_keyword_import_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> KeywordImportBatch:
-    """执行 commit_keyword_import 的业务流程并返回该流程的结果。"""
+    """执行 commit_keyword_import 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
@@ -192,7 +253,20 @@ async def list_keyword_import_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[KeywordImportBatch]:
-    """返回导入批次指纹历史，支持确认重复文件未生成重复批次。"""
+    """返回导入批次指纹历史，支持确认重复文件未生成重复批次。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_batches(workspace_id=workspace_id, limit=limit)

@@ -22,7 +22,13 @@ class IsolationPayload(BaseModel):
 
 @router.post("/isolate", response_model=IsolationResult)
 async def isolate(payload: IsolationPayload) -> IsolationResult:
-    """执行 isolate 的业务流程并返回该流程的结果。"""
+    """执行 isolate 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return isolate_invalid_records(**payload.model_dump())
 
 
@@ -33,7 +39,20 @@ async def isolate_and_save(
     gateway: Annotated[QualityFindingGateway, Depends(get_quality_finding_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> IsolationResult:
-    """把隔离行写入质量中心，原始记录保持只读且不参与业务分析。"""
+    """把隔离行写入质量中心，原始记录保持只读且不参与业务分析。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     result = await isolate(payload)

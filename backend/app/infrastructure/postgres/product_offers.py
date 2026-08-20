@@ -16,7 +16,13 @@ class PostgresProductOfferGateway:
     """从 PostgreSQL 读取工作区隔离的商品报价。"""
 
     def __init__(self, pool: AsyncConnectionPool) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    pool: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._pool = pool
 
     async def list_product_offers(
@@ -26,7 +32,19 @@ class PostgresProductOfferGateway:
         cursor: str | None,
         limit: int,
     ) -> ProductOfferPage:
-        """执行 list_product_offers 的业务流程并返回该流程的结果。"""
+        """执行 list_product_offers 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    WorkspaceNotFoundError: 业务约束或外部依赖失败时抛出。
+"""
         start = int(cursor) if cursor is not None else 0
         async with (
             self._pool.connection() as connection,
@@ -91,6 +109,12 @@ class PostgresProductOfferGateway:
 
 
 def _minor_to_decimal(amount_minor: int) -> Decimal:
-    """把最小货币单位整数转换为固定两位小数，保持 API 金额格式稳定。"""
+    """把最小货币单位整数转换为固定两位小数，保持 API 金额格式稳定。
+
+Args:
+    amount_minor: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     return (Decimal(amount_minor) / _MINOR_UNITS_PER_MAJOR).quantize(_MONEY_QUANTUM)

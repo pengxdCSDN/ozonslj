@@ -18,12 +18,26 @@ class AdvertisingBoundaryGateway(Protocol):
     async def save_check(
         self, *, workspace_id: str, decision: AdvertisingReadOnlyDecision
     ) -> AdvertisingReadOnlyDecision:
-        """执行 save_check 的业务流程并返回该流程的结果。"""
+        """执行 save_check 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    decision: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_checks(
         self, *, workspace_id: str, limit: int
     ) -> list[AdvertisingReadOnlyDecision]:
-        """执行 list_checks 的业务流程并返回该流程的结果。"""
+        """执行 list_checks 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 READ_ONLY_ACTIONS = frozenset({"diagnose", "build_calendar", "calculate_metrics", "read_report"})
@@ -31,7 +45,13 @@ WRITE_ACTIONS = frozenset({"change_budget", "change_bid", "change_negative_keywo
 
 
 def check_advertising_action(action: str) -> AdvertisingReadOnlyDecision:
-    """执行 check_advertising_action 的业务流程并返回该流程的结果。"""
+    """执行 check_advertising_action 的业务流程并返回该流程的结果。
+
+Args:
+    action: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     normalized = action.strip().lower()
     if normalized in READ_ONLY_ACTIONS:
         return AdvertisingReadOnlyDecision(normalized, True, "广告功能仅生成只读分析结果", False)

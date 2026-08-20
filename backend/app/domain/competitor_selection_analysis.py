@@ -21,12 +21,26 @@ class CompetitorSelectionAnalysisGateway(Protocol):
     async def save_report(
         self, *, workspace_id: str, report: CompetitorSelectionAnalysis
     ) -> CompetitorSelectionAnalysis:
-        """执行 save_report 的业务流程并返回该流程的结果。"""
+        """执行 save_report 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    report: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
     ) -> list[CompetitorSelectionAnalysis]:
-        """执行 list_reports 的业务流程并返回该流程的结果。"""
+        """执行 list_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def analyze_competitor_selection(
@@ -34,7 +48,21 @@ def analyze_competitor_selection(
     median_price_minor: int | None, top_competitor_rating: float | None,
     source_window: str,
 ) -> CompetitorSelectionAnalysis:
-    """执行 analyze_competitor_selection 的业务流程并返回该流程的结果。"""
+    """执行 analyze_competitor_selection 的业务流程并返回该流程的结果。
+
+Args:
+    sample_count: 参数语义、输入边界和安全约束。
+    opportunity_count: 参数语义、输入边界和安全约束。
+    median_price_minor: 参数语义、输入边界和安全约束。
+    top_competitor_rating: 参数语义、输入边界和安全约束。
+    source_window: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if (
         isinstance(sample_count, bool) or not isinstance(sample_count, int)
         or isinstance(opportunity_count, bool) or not isinstance(opportunity_count, int)

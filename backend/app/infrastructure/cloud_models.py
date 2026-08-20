@@ -32,7 +32,14 @@ class CloudModelError(RuntimeError):
     """云端模型调用失败，已去除凭据和完整响应正文。"""
 
     def __init__(self, message: str, *, status_code: int | None = None) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    message: 参数语义、输入边界和安全约束。
+    status_code: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         super().__init__(message)
         # 仅保留 HTTP 状态码，禁止保存或传播供应商原始响应和请求头。
         self.status_code = status_code
@@ -54,7 +61,17 @@ class CloudTranslationPort:
     """翻译端口；实现必须返回与输入顺序一致的中文译文。"""
 
     async def translate(self, texts: Sequence[str]) -> list[str]:
-        """执行 translate 的业务流程并返回该流程的结果。"""
+        """执行 translate 的业务流程并返回该流程的结果。
+
+Args:
+    texts: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    NotImplementedError: 业务约束或外部依赖失败时抛出。
+"""
         raise NotImplementedError
 
 
@@ -63,7 +80,21 @@ class OpenAICompatibleRerankClient:
 
     def __init__(self, *, api_key: str, model: str, base_url: str, timeout_seconds: float = 30.0,
                  transport: httpx.AsyncBaseTransport | None = None) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    api_key: 参数语义、输入边界和安全约束。
+    model: 参数语义、输入边界和安全约束。
+    base_url: 参数语义、输入边界和安全约束。
+    timeout_seconds: 参数语义、输入边界和安全约束。
+    transport: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if not api_key.strip() or not model.strip() or not base_url.strip():
             raise ValueError("重排序供应商必须配置 API Key、模型和 HTTPS 地址")
         _validate_cloud_base_url(base_url)
@@ -76,7 +107,22 @@ class OpenAICompatibleRerankClient:
         self.last_usage = CloudModelUsage()
 
     async def rerank(self, *, query: str, documents: list[str]) -> list[dict[str, Any]]:
-        """执行 rerank 的业务流程并返回该流程的结果。"""
+        """执行 rerank 的业务流程并返回该流程的结果。
+
+Args:
+    query: 参数语义、输入边界和安全约束。
+    documents: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+    CloudModelQuotaError: 业务约束或外部依赖失败时抛出。
+    CloudModelNotFoundError: 业务约束或外部依赖失败时抛出。
+    CloudModelError: 业务约束或外部依赖失败时抛出。
+    CloudModelTimeoutError: 业务约束或外部依赖失败时抛出。
+"""
         if not query.strip() or not documents or any(not item.strip() for item in documents):
             raise ValueError("重排序请求的 query 和 documents 不能为空")
         payload = {
@@ -145,7 +191,21 @@ class OpenAICompatibleTextClient:
     def __init__(self, *, api_key: str, model: str, base_url: str,
                  timeout_seconds: float = 45.0,
                  transport: httpx.AsyncBaseTransport | None = None) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    api_key: 参数语义、输入边界和安全约束。
+    model: 参数语义、输入边界和安全约束。
+    base_url: 参数语义、输入边界和安全约束。
+    timeout_seconds: 参数语义、输入边界和安全约束。
+    transport: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if not api_key.strip() or not model.strip() or not base_url.strip():
             raise ValueError("文本供应商必须配置 API Key、模型和 HTTPS 地址")
         _validate_cloud_base_url(base_url)
@@ -158,7 +218,22 @@ class OpenAICompatibleTextClient:
         self.last_usage = CloudModelUsage()
 
     async def complete(self, *, system: str, user: str) -> str:
-        """执行 complete 的业务流程并返回该流程的结果。"""
+        """执行 complete 的业务流程并返回该流程的结果。
+
+Args:
+    system: 参数语义、输入边界和安全约束。
+    user: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+    CloudModelQuotaError: 业务约束或外部依赖失败时抛出。
+    CloudModelNotFoundError: 业务约束或外部依赖失败时抛出。
+    CloudModelError: 业务约束或外部依赖失败时抛出。
+    CloudModelTimeoutError: 业务约束或外部依赖失败时抛出。
+"""
         if not system.strip() or not user.strip():
             raise ValueError("文本模型请求不能为空")
         payload = {"model": self.model_id, "temperature": 0, "messages": [
@@ -225,7 +300,25 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         send_dimensions: bool = True,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    api_key: 参数语义、输入边界和安全约束。
+    model: 参数语义、输入边界和安全约束。
+    dimension: 参数语义、输入边界和安全约束。
+    auto_detect_dimension: 参数语义、输入边界和安全约束。
+    base_url: 参数语义、输入边界和安全约束。
+    timeout_seconds: 参数语义、输入边界和安全约束。
+    retry_alternate_input: 参数语义、输入边界和安全约束。
+    send_dimensions: 参数语义、输入边界和安全约束。
+    transport: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if not api_key.strip():
             raise ValueError("Embedding API Key 不能为空")
         # 不在客户端硬编码供应商维度白名单；不同模型支持的维度集合不同。
@@ -254,7 +347,18 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         self.last_usage = CloudModelUsage()
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        """执行 embed 的业务流程并返回该流程的结果。"""
+        """执行 embed 的业务流程并返回该流程的结果。
+
+Args:
+    texts: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+    CloudModelError: 业务约束或外部依赖失败时抛出。
+"""
         if not texts:
             return []
         if any(not text.strip() for text in texts):
@@ -295,7 +399,20 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         return vectors
 
     async def _post(self, payload: dict[str, object]) -> dict[str, Any]:
-        """执行内部步骤 _post，供同一模块的公开流程复用。"""
+        """执行内部步骤 _post，供同一模块的公开流程复用。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    CloudModelQuotaError: 业务约束或外部依赖失败时抛出。
+    CloudModelNotFoundError: 业务约束或外部依赖失败时抛出。
+    CloudModelError: 业务约束或外部依赖失败时抛出。
+    CloudModelTimeoutError: 业务约束或外部依赖失败时抛出。
+"""
         started = time.perf_counter()
         try:
             async with httpx.AsyncClient(
@@ -353,7 +470,21 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
         timeout_seconds: float = 45.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    api_key: 参数语义、输入边界和安全约束。
+    model: 参数语义、输入边界和安全约束。
+    base_url: 参数语义、输入边界和安全约束。
+    timeout_seconds: 参数语义、输入边界和安全约束。
+    transport: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if not api_key.strip() or not model.strip() or not base_url.strip():
             raise ValueError("翻译供应商必须配置 API Key、模型和 HTTPS 地址")
         _validate_cloud_base_url(base_url)
@@ -365,7 +496,17 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
         self._transport = transport
 
     async def translate(self, texts: Sequence[str]) -> list[str]:
-        """执行 translate 的业务流程并返回该流程的结果。"""
+        """执行 translate 的业务流程并返回该流程的结果。
+
+Args:
+    texts: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         results: list[str] = []
         for text in texts:
             if not text.strip():
@@ -374,7 +515,20 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
         return results
 
     async def _translate_one(self, text: str) -> str:
-        """执行内部步骤 _translate_one，供同一模块的公开流程复用。"""
+        """执行内部步骤 _translate_one，供同一模块的公开流程复用。
+
+Args:
+    text: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    CloudModelQuotaError: 业务约束或外部依赖失败时抛出。
+    CloudModelNotFoundError: 业务约束或外部依赖失败时抛出。
+    CloudModelError: 业务约束或外部依赖失败时抛出。
+    CloudModelTimeoutError: 业务约束或外部依赖失败时抛出。
+"""
         payload = {
             "model": self.model_id,
             "temperature": 0,
@@ -437,7 +591,17 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
 
 
 def _validate_cloud_base_url(base_url: str) -> None:
-    """拒绝明文外部地址，避免模型 Key 被发送到意外的私网或环回服务。"""
+    """拒绝明文外部地址，避免模型 Key 被发送到意外的私网或环回服务。
+
+Args:
+    base_url: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
 
     parsed = urlparse(base_url.strip())
     if parsed.scheme not in {"https", "http"} or not parsed.netloc:
@@ -447,7 +611,14 @@ def _validate_cloud_base_url(base_url: str) -> None:
 
 
 def _normalize_endpoint(base_url: str, suffix: str) -> str:
-    """兼容管理页面保存基础地址或完整资源地址两种配置形态。"""
+    """兼容管理页面保存基础地址或完整资源地址两种配置形态。
+
+Args:
+    base_url: 参数语义、输入边界和安全约束。
+    suffix: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     normalized = base_url.rstrip("/")
     if normalized.endswith(suffix):
@@ -455,7 +626,14 @@ def _normalize_endpoint(base_url: str, suffix: str) -> str:
     return f"{normalized}{suffix}"
 
 def _safe_upstream_error_message(response: httpx.Response, fallback: str) -> str:
-    """提取上游可诊断的错误摘要，但禁止把响应正文或凭据返回给浏览器。"""
+    """提取上游可诊断的错误摘要，但禁止把响应正文或凭据返回给浏览器。
+
+Args:
+    response: 参数语义、输入边界和安全约束。
+    fallback: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     try:
         body = response.json()
     except (json.JSONDecodeError, ValueError):
@@ -483,7 +661,13 @@ def _safe_upstream_error_message(response: httpx.Response, fallback: str) -> str
     return f"{fallback}：{detail[:240]}"
 
 def _usage_from_response(response: dict[str, Any]) -> CloudModelUsage:
-    """兼容 OpenAI-compatible usage 结构，缺失时保守记为零 token。"""
+    """兼容 OpenAI-compatible usage 结构，缺失时保守记为零 token。
+
+Args:
+    response: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     raw = response.get("usage")
     if not isinstance(raw, dict):
         return CloudModelUsage()
@@ -494,5 +678,11 @@ def _usage_from_response(response: dict[str, Any]) -> CloudModelUsage:
 
 
 def _non_negative_int(value: object) -> int:
-    """执行内部步骤 _non_negative_int，供同一模块的公开流程复用。"""
+    """执行内部步骤 _non_negative_int，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return value if isinstance(value, int) and value >= 0 else 0

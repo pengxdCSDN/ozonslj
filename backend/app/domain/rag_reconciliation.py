@@ -14,7 +14,9 @@ class IndexReconciliationPlan:
 
     @property
     def safe_to_publish(self) -> bool:
-        """执行 safe_to_publish 的业务流程并返回该流程的结果。"""
+        """执行 safe_to_publish 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         return not self.missing_metadata_ids
 
 
@@ -22,7 +24,15 @@ def build_reconciliation_plan(
     published_chunk_ids: set[str], indexed_chunk_ids: set[str],
     *, metadata_ids: set[str] | None = None,
 ) -> IndexReconciliationPlan:
-    """只允许已发布目录进入索引；孤立向量必须删除，缺元数据则阻断发布。"""
+    """只允许已发布目录进入索引；孤立向量必须删除，缺元数据则阻断发布。
+
+Args:
+    published_chunk_ids: 参数语义、输入边界和安全约束。
+    indexed_chunk_ids: 参数语义、输入边界和安全约束。
+    metadata_ids: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     metadata = metadata_ids if metadata_ids is not None else published_chunk_ids
     return IndexReconciliationPlan(

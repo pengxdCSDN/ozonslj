@@ -13,14 +13,29 @@ class PostgresKeywordImportGateway:
     """搜索词导入批次适配器；唯一指纹冲突时返回原批次。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def create_batch(
         self, *, workspace_id: str, fingerprint: str, rows: list[KeywordImportRow]
     ) -> KeywordImportBatch:
-        """执行 create_batch 的业务流程并返回该流程的结果。"""
+        """执行 create_batch 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    fingerprint: 参数语义、输入边界和安全约束。
+    rows: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._create_batch, workspace_id, fingerprint, rows
         )
@@ -28,7 +43,19 @@ class PostgresKeywordImportGateway:
     def _create_batch(
         self, workspace_id: str, fingerprint: str, rows: list[KeywordImportRow]
     ) -> KeywordImportBatch:
-        """执行内部步骤 _create_batch，供同一模块的公开流程复用。"""
+        """执行内部步骤 _create_batch，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    fingerprint: 参数语义、输入边界和安全约束。
+    rows: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         with self._sessions.transaction(self._context) as connection:
             existing = connection.execute(
                 """
@@ -71,12 +98,26 @@ class PostgresKeywordImportGateway:
         return _batch_from_row(row, reused=existing is not None)
 
     async def list_batches(self, *, workspace_id: str, limit: int = 50) -> list[KeywordImportBatch]:
-        """执行 list_batches 的业务流程并返回该流程的结果。"""
+        """执行 list_batches 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_batches, workspace_id, limit)
 
     def _list_batches(self, workspace_id: str, limit: int) -> list[KeywordImportBatch]:
         # 指纹历史只按组织和工作区读取，便于确认重复提交复用的是哪一批事实。
-        """执行内部步骤 _list_batches，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_batches，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """
@@ -92,7 +133,18 @@ class PostgresKeywordImportGateway:
 
 
 def _batch_from_row(row: dict[str, Any], *, reused: bool = False) -> KeywordImportBatch:
-    """执行内部步骤 _batch_from_row，供同一模块的公开流程复用。"""
+    """执行内部步骤 _batch_from_row，供同一模块的公开流程复用。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+    reused: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     created_at = row["created_at"]
     if not isinstance(created_at, datetime):
         raise ValueError("导入批次 created_at 必须是有效时间")

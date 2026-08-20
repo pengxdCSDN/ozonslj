@@ -25,7 +25,14 @@ class KnowledgeParser(Protocol):
     def parse(
         self, raw: RawKnowledgeDocument, *, document_version_id: str
     ) -> ParsedKnowledgeDocument:
-        """执行 parse 的业务流程并返回该流程的结果。"""
+        """执行 parse 的业务流程并返回该流程的结果。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+    document_version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class KnowledgeIngestionError(ValueError):
@@ -41,7 +48,14 @@ class MarkdownKnowledgeParser:
     def parse(
         self, raw: RawKnowledgeDocument, *, document_version_id: str
     ) -> ParsedKnowledgeDocument:
-        """执行 parse 的业务流程并返回该流程的结果。"""
+        """执行 parse 的业务流程并返回该流程的结果。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+    document_version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         _require_source(raw, "markdown")
         return ParsedKnowledgeDocument(
             document_id=raw.document_id,
@@ -62,7 +76,14 @@ class PostgresSchemaTextParser:
     def parse(
         self, raw: RawKnowledgeDocument, *, document_version_id: str
     ) -> ParsedKnowledgeDocument:
-        """执行 parse 的业务流程并返回该流程的结果。"""
+        """执行 parse 的业务流程并返回该流程的结果。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+    document_version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         _require_source(raw, "postgres_schema")
         nodes = tuple(
             ParsedNode(kind="table", text=block, locator=f"schema://{raw.filename}#{index}")
@@ -85,7 +106,18 @@ class PdfTextLayerParser:
     def parse(
         self, raw: RawKnowledgeDocument, *, document_version_id: str
     ) -> ParsedKnowledgeDocument:
-        """执行 parse 的业务流程并返回该流程的结果。"""
+        """执行 parse 的业务流程并返回该流程的结果。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+    document_version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KnowledgeIngestionError: 业务约束或外部依赖失败时抛出。
+"""
         _require_source(raw, "pdf")
         pages = raw.content.split("\f")
         nodes = tuple(
@@ -109,7 +141,18 @@ class PdfTextLayerParser:
 def clean_knowledge_document(
     parsed: ParsedKnowledgeDocument, *, cleaner_version: str = "1"
 ) -> CleanKnowledgeDocument:
-    """清洗 Unicode、模板噪声和提示注入；检测失败时阻断发布，不静默放行。"""
+    """清洗 Unicode、模板噪声和提示注入；检测失败时阻断发布，不静默放行。
+
+Args:
+    parsed: 参数语义、输入边界和安全约束。
+    cleaner_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KnowledgeIngestionError: 业务约束或外部依赖失败时抛出。
+"""
 
     cleaned: list[ParsedNode] = []
     for node in parsed.nodes:
@@ -133,7 +176,17 @@ def clean_knowledge_document(
 
 
 def parser_for(source_type: SourceType) -> KnowledgeParser:
-    """根据受控来源类型选择解析器；未知来源立即失败。"""
+    """根据受控来源类型选择解析器；未知来源立即失败。
+
+Args:
+    source_type: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KnowledgeIngestionError: 业务约束或外部依赖失败时抛出。
+"""
 
     parsers: dict[SourceType, KnowledgeParser] = {
         "markdown": MarkdownKnowledgeParser(),
@@ -147,7 +200,18 @@ def parser_for(source_type: SourceType) -> KnowledgeParser:
 
 
 def _require_source(raw: RawKnowledgeDocument, expected: SourceType) -> None:
-    """执行内部步骤 _require_source，供同一模块的公开流程复用。"""
+    """执行内部步骤 _require_source，供同一模块的公开流程复用。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+    expected: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KnowledgeIngestionError: 业务约束或外部依赖失败时抛出。
+"""
     if raw.source_type != expected:
         raise KnowledgeIngestionError(f"解析器要求 source_type={expected}")
     if not raw.filename.strip() or not raw.content.strip():
@@ -157,7 +221,13 @@ def _require_source(raw: RawKnowledgeDocument, expected: SourceType) -> None:
 
 
 def _parse_markdown_nodes(content: str) -> tuple[ParsedNode, ...]:
-    """执行内部步骤 _parse_markdown_nodes，供同一模块的公开流程复用。"""
+    """执行内部步骤 _parse_markdown_nodes，供同一模块的公开流程复用。
+
+Args:
+    content: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     nodes: list[ParsedNode] = []
     headings: list[str] = []
     in_code = False
@@ -165,7 +235,9 @@ def _parse_markdown_nodes(content: str) -> tuple[ParsedNode, ...]:
     kind: ParsedNodeKind = "paragraph"
 
     def flush() -> None:
-        """执行 flush 的业务流程并返回该流程的结果。"""
+        """执行 flush 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         text = "\n".join(buffer).strip()
         if text:
             nodes.append(
@@ -215,7 +287,13 @@ def _parse_markdown_nodes(content: str) -> tuple[ParsedNode, ...]:
 
 
 def _normalize_text(text: str) -> str:
-    """执行内部步骤 _normalize_text，供同一模块的公开流程复用。"""
+    """执行内部步骤 _normalize_text，供同一模块的公开流程复用。
+
+Args:
+    text: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     text = text.replace("\u00a0", " ")
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
@@ -223,7 +301,13 @@ def _normalize_text(text: str) -> str:
 
 
 def _looks_like_prompt_injection(text: str) -> bool:
-    """执行内部步骤 _looks_like_prompt_injection，供同一模块的公开流程复用。"""
+    """执行内部步骤 _looks_like_prompt_injection，供同一模块的公开流程复用。
+
+Args:
+    text: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     patterns = (
         r"忽略(?:之前|以上|所有).{0,20}(?:指令|规则|提示)",
         r"ignore\s+(?:all|previous)\s+instructions",

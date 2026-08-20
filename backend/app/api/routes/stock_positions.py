@@ -25,7 +25,21 @@ async def list_stock_positions(
     cursor: Annotated[str | None, Query(pattern=r"^\d+$")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> StockPositionPage:
-    """返回已同步库存，未验证或停用工作区不得读取业务事实。"""
+    """返回已同步库存，未验证或停用工作区不得读取业务事实。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(

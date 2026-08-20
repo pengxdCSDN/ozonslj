@@ -27,12 +27,27 @@ class SearchAttributesGateway(Protocol):
     async def save_report(
         self, *, workspace_id: str, product_scope: str, report: SearchAttributesReport
     ) -> SearchAttributesReport:
-        """执行 save_report 的业务流程并返回该流程的结果。"""
+        """执行 save_report 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    report: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int = 50
     ) -> list[SearchAttributesReport]:
-        """执行 list_reports 的业务流程并返回该流程的结果。"""
+        """执行 list_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def build_search_attributes(
@@ -40,7 +55,19 @@ def build_search_attributes(
     current: dict[str, str],
     keyword_terms: dict[str, str] | None = None,
 ) -> SearchAttributesReport:
-    """执行 build_search_attributes 的业务流程并返回该流程的结果。"""
+    """执行 build_search_attributes 的业务流程并返回该流程的结果。
+
+Args:
+    required: 参数语义、输入边界和安全约束。
+    current: 参数语义、输入边界和安全约束。
+    keyword_terms: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if any(not name.strip() for name in required):
         raise ValueError("Search Attributes 必填属性名不能为空")
     keyword_terms = keyword_terms or {}

@@ -29,7 +29,19 @@ def check_required_and_enums(
     required_fields: list[str],
     enum_fields: dict[str, list[str]],
 ) -> QualitySchemaResult:
-    """执行 check_required_and_enums 的业务流程并返回该流程的结果。"""
+    """执行 check_required_and_enums 的业务流程并返回该流程的结果。
+
+Args:
+    rows: 参数语义、输入边界和安全约束。
+    required_fields: 参数语义、输入边界和安全约束。
+    enum_fields: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if any(not field.strip() for field in required_fields) or any(
         not field.strip() or not values for field, values in enum_fields.items()
     ):

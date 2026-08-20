@@ -21,29 +21,75 @@ class ModelCredentialStore:
     _provider_id_pattern = re.compile(r"^[0-9a-fA-F-]{16,80}$")
 
     def __init__(self, root: Path) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    root: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._root = root
 
     async def put(self, provider_id: str, api_key: str) -> str:
-        """执行 put 的业务流程并返回该流程的结果。"""
+        """执行 put 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    api_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._put, provider_id, api_key)
 
     async def get(self, provider_id: str) -> str | None:
-        """执行 get 的业务流程并返回该流程的结果。"""
+        """执行 get 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._get, provider_id)
 
     async def exists(self, provider_id: str) -> bool:
-        """执行 exists 的业务流程并返回该流程的结果。"""
+        """执行 exists 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._get, provider_id) is not None
 
     def _path(self, provider_id: str) -> Path:
-        """执行内部步骤 _path，供同一模块的公开流程复用。"""
+        """执行内部步骤 _path，供同一模块的公开流程复用。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if not self._provider_id_pattern.fullmatch(provider_id):
             raise ValueError("供应商 ID 格式无效")
         return self._root / f"{provider_id}.key"
 
     def _put(self, provider_id: str, api_key: str) -> str:
-        """执行内部步骤 _put，供同一模块的公开流程复用。"""
+        """执行内部步骤 _put，供同一模块的公开流程复用。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    api_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         value = api_key.strip()
         if not value:
             raise ValueError("API Key 不能为空")
@@ -68,7 +114,17 @@ class ModelCredentialStore:
         return f"file:{path.name}"
 
     def _get(self, provider_id: str) -> str | None:
-        """执行内部步骤 _get，供同一模块的公开流程复用。"""
+        """执行内部步骤 _get，供同一模块的公开流程复用。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         path = self._path(provider_id)
         try:
             value = path.read_text(encoding="utf-8").strip()

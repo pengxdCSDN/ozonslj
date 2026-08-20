@@ -37,22 +37,49 @@ class KeywordImportGateway(Protocol):
     async def create_batch(
         self, *, workspace_id: str, fingerprint: str, rows: list[KeywordImportRow]
     ) -> KeywordImportBatch:
-        """执行 create_batch 的业务流程并返回该流程的结果。"""
+        """执行 create_batch 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    fingerprint: 参数语义、输入边界和安全约束。
+    rows: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_batches(
         self, *, workspace_id: str, limit: int = 50
     ) -> list[KeywordImportBatch]:
-        """执行 list_batches 的业务流程并返回该流程的结果。"""
+        """执行 list_batches 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def keyword_import_fingerprint(content: str) -> str:
-    """生成原始导入内容的稳定指纹，供 PostgreSQL 幂等键使用。"""
+    """生成原始导入内容的稳定指纹，供 PostgreSQL 幂等键使用。
+
+Args:
+    content: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     return hashlib.sha256(content.encode("utf-8-sig")).hexdigest()
 
 
 def keyword_import_bytes_fingerprint(content: bytes) -> str:
-    """对 XLSX 原始字节计算指纹，保证重复上传命中同一幂等键。"""
+    """对 XLSX 原始字节计算指纹，保证重复上传命中同一幂等键。
+
+Args:
+    content: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return hashlib.sha256(content).hexdigest()
 
 
@@ -63,7 +90,18 @@ class KeywordImportError(ValueError):
 def parse_keyword_csv(
     content: str, column_mapping: dict[str, str] | None = None
 ) -> list[KeywordImportRow]:
-    """解析 UTF-8 CSV 搜索词报告，拒绝空关键词和非法数字。"""
+    """解析 UTF-8 CSV 搜索词报告，拒绝空关键词和非法数字。
+
+Args:
+    content: 参数语义、输入边界和安全约束。
+    column_mapping: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KeywordImportError: 业务约束或外部依赖失败时抛出。
+"""
 
     reader = csv.DictReader(StringIO(content))
     if column_mapping:
@@ -90,7 +128,18 @@ def parse_keyword_csv(
 def parse_keyword_xlsx(
     content: bytes, column_mapping: dict[str, str] | None = None
 ) -> list[KeywordImportRow]:
-    """使用标准库读取首个工作表，避免把上传文件交给任意外部执行器。"""
+    """使用标准库读取首个工作表，避免把上传文件交给任意外部执行器。
+
+Args:
+    content: 参数语义、输入边界和安全约束。
+    column_mapping: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KeywordImportError: 业务约束或外部依赖失败时抛出。
+"""
     try:
         with zipfile.ZipFile(BytesIO(content)) as archive:
             shared = _xlsx_shared_strings(archive)
@@ -119,7 +168,13 @@ def parse_keyword_xlsx(
 
 
 def _xlsx_shared_strings(archive: zipfile.ZipFile) -> list[str]:
-    """执行内部步骤 _xlsx_shared_strings，供同一模块的公开流程复用。"""
+    """执行内部步骤 _xlsx_shared_strings，供同一模块的公开流程复用。
+
+Args:
+    archive: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     try:
         raw = archive.read("xl/sharedStrings.xml").decode("utf-8")
     except KeyError:
@@ -130,7 +185,18 @@ def _xlsx_shared_strings(archive: zipfile.ZipFile) -> list[str]:
 def _map_columns(
     reader: csv.DictReader[str], column_mapping: dict[str, str]
 ) -> csv.DictReader[str]:
-    """将外部列名映射为内部列名，映射目标必须唯一。"""
+    """将外部列名映射为内部列名，映射目标必须唯一。
+
+Args:
+    reader: 参数语义、输入边界和安全约束。
+    column_mapping: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KeywordImportError: 业务约束或外部依赖失败时抛出。
+"""
 
     targets = list(column_mapping.values())
     if len(targets) != len(set(targets)):
@@ -142,7 +208,18 @@ def _map_columns(
 
 
 def _parse_non_negative_int(value: str | None, row_number: int) -> int | None:
-    """执行内部步骤 _parse_non_negative_int，供同一模块的公开流程复用。"""
+    """执行内部步骤 _parse_non_negative_int，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+    row_number: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KeywordImportError: 业务约束或外部依赖失败时抛出。
+"""
     normalized = (value or "").strip()
     if not normalized:
         return None
@@ -156,7 +233,18 @@ def _parse_non_negative_int(value: str | None, row_number: int) -> int | None:
 
 
 def _parse_conversion_rate(value: str | None, row_number: int) -> str | None:
-    """校验转化率为 0～100 的百分比，保留原始展示文本便于回溯导入口径。"""
+    """校验转化率为 0～100 的百分比，保留原始展示文本便于回溯导入口径。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+    row_number: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KeywordImportError: 业务约束或外部依赖失败时抛出。
+"""
     normalized = (value or "").strip()
     if not normalized:
         return None

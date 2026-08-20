@@ -13,18 +13,39 @@ class PostgresSelectionDecisionBookGateway:
     """保存固定章节的商品立项决策书，不触发采购、上架或广告写入。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def save_book(
         self, *, workspace_id: str, book: SelectionDecisionBook
     ) -> SelectionDecisionBook:
-        """执行 save_book 的业务流程并返回该流程的结果。"""
+        """执行 save_book 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    book: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._save, workspace_id, book)
 
     def _save(self, workspace_id: str, book: SelectionDecisionBook) -> SelectionDecisionBook:
-        """执行内部步骤 _save，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    book: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -42,11 +63,25 @@ class PostgresSelectionDecisionBookGateway:
     async def list_books(
         self, *, workspace_id: str, limit: int
     ) -> list[SelectionDecisionBook]:
-        """执行 list_books 的业务流程并返回该流程的结果。"""
+        """执行 list_books 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_books, workspace_id, limit)
 
     def _list_books(self, workspace_id: str, limit: int) -> list[SelectionDecisionBook]:
-        """执行内部步骤 _list_books，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_books，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT content FROM selection_decision_books
@@ -58,7 +93,17 @@ class PostgresSelectionDecisionBookGateway:
 
 
 def _book_from_content(content: object) -> SelectionDecisionBook:
-    """执行内部步骤 _book_from_content，供同一模块的公开流程复用。"""
+    """执行内部步骤 _book_from_content，供同一模块的公开流程复用。
+
+Args:
+    content: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
     if not isinstance(content, dict):
         raise RuntimeError("选品决策书内容结构无效")
     return SelectionDecisionBook(

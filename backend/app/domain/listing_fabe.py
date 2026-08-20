@@ -29,16 +29,42 @@ class ListingFabeGateway(Protocol):
     async def save_draft(
         self, *, workspace_id: str, product_scope: str, draft: ListingFabeDraft
     ) -> ListingFabeDraft:
-        """执行 save_draft 的业务流程并返回该流程的结果。"""
+        """执行 save_draft 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    draft: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_drafts(
         self, *, workspace_id: str, limit: int = 50
     ) -> list[ListingFabeDraft]:
-        """执行 list_drafts 的业务流程并返回该流程的结果。"""
+        """执行 list_drafts 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def generate_fabe_draft(points: list[FabePoint], *, product_name: str) -> ListingFabeDraft:
-    """执行 generate_fabe_draft 的业务流程并返回该流程的结果。"""
+    """执行 generate_fabe_draft 的业务流程并返回该流程的结果。
+
+Args:
+    points: 参数语义、输入边界和安全约束。
+    product_name: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if not product_name.strip():
         raise ValueError("FABE 草稿必须包含商品名称")
     normalized = tuple(

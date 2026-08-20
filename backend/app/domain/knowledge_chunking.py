@@ -98,7 +98,15 @@ class ChunkQualityReport:
 def assess_chunk_quality(
     chunks: Sequence[KnowledgeChunk], *, max_tokens: int, token_counter: TokenCounter | None = None
 ) -> ChunkQualityReport:
-    """检查空正文、超限、重复正文和引用定位；失败时不得进入发布。"""
+    """检查空正文、超限、重复正文和引用定位；失败时不得进入发布。
+
+Args:
+    chunks: 参数语义、输入边界和安全约束。
+    max_tokens: 参数语义、输入边界和安全约束。
+    token_counter: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     counter = token_counter or approximate_token_count
     contents = [chunk.content for chunk in chunks]
@@ -189,13 +197,23 @@ class ChunkStrategy(Protocol):
     """定义普通文本切片策略的名称、版本和执行接口。"""
 
     @property
-    def name(self) -> str: """返回切片策略的稳定名称。"""
+    def name(self) -> str: """返回切片策略的稳定名称。
+Returns:
+    返回调用完成后的领域结果。"""
 
     @property
-    def version(self) -> str: """返回切片策略的版本标识。"""
+    def version(self) -> str: """返回切片策略的版本标识。
+Returns:
+    返回调用完成后的领域结果。"""
 
     def chunk(self, request: ChunkingRequest) -> list[KnowledgeChunk]:
-        """按策略将知识请求切分为有边界的片段。"""
+        """按策略将知识请求切分为有边界的片段。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class PdfChunkStrategy(Protocol):
@@ -203,21 +221,37 @@ class PdfChunkStrategy(Protocol):
 
     @property
     def name(self) -> str:
-        """返回 PDF 切片策略的稳定名称。"""
+        """返回 PDF 切片策略的稳定名称。
+Returns:
+    返回调用完成后的领域结果。"""
 
     @property
     def version(self) -> str:
-        """返回 PDF 切片策略的版本标识。"""
+        """返回 PDF 切片策略的版本标识。
+Returns:
+    返回调用完成后的领域结果。"""
 
     def chunk_pdf(self, request: PdfChunkingRequest) -> list[KnowledgeChunk]:
-        """按页面结构将 PDF 请求切分为知识片段。"""
+        """按页面结构将 PDF 请求切分为知识片段。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 TokenCounter = Callable[[str], int]
 
 
 def approximate_token_count(text: str) -> int:
-    """在模型 tokenizer 未装配时提供确定性预算；中文字符和英文词分别计数。"""
+    """在模型 tokenizer 未装配时提供确定性预算；中文字符和英文词分别计数。
+
+Args:
+    text: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     cjk_count = len(re.findall(r"[\u3400-\u9fff]", text))
     other_words = len(re.findall(r"[A-Za-z0-9_./:-]+", text))
@@ -228,7 +262,9 @@ class ChunkStrategyRegistry:
     """按业务域、来源类型和显式策略名选择版本化切片器。"""
 
     def __init__(self) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+Returns:
+    返回调用完成后的领域结果。"""
         self._strategies: dict[tuple[BusinessDomain, SourceType, str], ChunkStrategy] = {}
         self._pdf_strategies: dict[tuple[BusinessDomain, str], PdfChunkStrategy] = {}
 
@@ -239,7 +275,19 @@ class ChunkStrategyRegistry:
         source_type: SourceType,
         strategy: ChunkStrategy,
     ) -> None:
-        """执行 register 的业务流程并返回该流程的结果。"""
+        """执行 register 的业务流程并返回该流程的结果。
+
+Args:
+    business_domain: 参数语义、输入边界和安全约束。
+    source_type: 参数语义、输入边界和安全约束。
+    strategy: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         key = (business_domain, source_type, strategy.name)
         if key in self._strategies:
             raise ValueError(f"切片策略已注册：{key!r}")
@@ -248,14 +296,35 @@ class ChunkStrategyRegistry:
     def register_pdf(
         self, *, business_domain: BusinessDomain, strategy: PdfChunkStrategy
     ) -> None:
-        """执行 register_pdf 的业务流程并返回该流程的结果。"""
+        """执行 register_pdf 的业务流程并返回该流程的结果。
+
+Args:
+    business_domain: 参数语义、输入边界和安全约束。
+    strategy: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         key = (business_domain, strategy.name)
         if key in self._pdf_strategies:
             raise ValueError(f"PDF 切片策略已注册：{key!r}")
         self._pdf_strategies[key] = strategy
 
     def chunk(self, request: ChunkingRequest) -> list[KnowledgeChunk]:
-        """执行 chunk 的业务流程并返回该流程的结果。"""
+        """执行 chunk 的业务流程并返回该流程的结果。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         key = (
             request.metadata.business_domain,
             request.metadata.source_type,
@@ -267,7 +336,17 @@ class ChunkStrategyRegistry:
         return strategy.chunk(request)
 
     def chunk_pdf(self, request: PdfChunkingRequest) -> list[KnowledgeChunk]:
-        """执行 chunk_pdf 的业务流程并返回该流程的结果。"""
+        """执行 chunk_pdf 的业务流程并返回该流程的结果。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if request.metadata.source_type != "pdf":
             raise ValueError("PDF 切片请求的 source_type 必须为 pdf")
         key = (request.metadata.business_domain, request.metadata.chunk_strategy)
@@ -286,7 +365,13 @@ class MarkdownSectionStrategy:
     token_counter: TokenCounter = field(default=approximate_token_count, compare=False)
 
     def chunk(self, request: ChunkingRequest) -> list[KnowledgeChunk]:
-        """执行 chunk 的业务流程并返回该流程的结果。"""
+        """执行 chunk 的业务流程并返回该流程的结果。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         _validate_request(request)
         sections = _markdown_sections(request.content, request.metadata.title_path)
         pieces: list[tuple[str, tuple[str, ...], str]] = []
@@ -309,7 +394,13 @@ class SqlSchemaStrategy:
     version: str = "1"
 
     def chunk(self, request: ChunkingRequest) -> list[KnowledgeChunk]:
-        """执行 chunk 的业务流程并返回该流程的结果。"""
+        """执行 chunk 的业务流程并返回该流程的结果。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         _validate_request(request)
         blocks = [block.strip() for block in re.split(r"\n\s*\n", request.content) if block.strip()]
         if not blocks:
@@ -335,7 +426,13 @@ class PdfPageStrategy:
     version: str = "1"
 
     def chunk_pdf(self, request: PdfChunkingRequest) -> list[KnowledgeChunk]:
-        """执行 chunk_pdf 的业务流程并返回该流程的结果。"""
+        """执行 chunk_pdf 的业务流程并返回该流程的结果。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         pieces = [
             (
                 page.text.strip(),
@@ -359,7 +456,13 @@ class PdfParagraphStrategy:
     token_counter: TokenCounter = field(default=approximate_token_count, compare=False)
 
     def chunk_pdf(self, request: PdfChunkingRequest) -> list[KnowledgeChunk]:
-        """执行 chunk_pdf 的业务流程并返回该流程的结果。"""
+        """执行 chunk_pdf 的业务流程并返回该流程的结果。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         pieces: list[tuple[str, tuple[str, ...], str, int, int]] = []
         for page in request.pages:
             for piece in _split_paragraphs(
@@ -388,7 +491,13 @@ class PdfLayoutStrategy:
     version: str = "1"
 
     def chunk_pdf(self, request: PdfChunkingRequest) -> list[KnowledgeChunk]:
-        """执行 chunk_pdf 的业务流程并返回该流程的结果。"""
+        """执行 chunk_pdf 的业务流程并返回该流程的结果。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         pieces: list[tuple[str, tuple[str, ...], str, int, int]] = []
         for page in request.pages:
             blocks = page.layout_blocks or tuple(
@@ -411,7 +520,9 @@ class PdfLayoutStrategy:
 
 
 def build_default_chunk_registry() -> ChunkStrategyRegistry:
-    """创建首期默认策略注册表；业务新增策略必须显式注册并版本化。"""
+    """创建首期默认策略注册表；业务新增策略必须显式注册并版本化。
+Returns:
+    返回调用完成后的领域结果。"""
 
     registry = ChunkStrategyRegistry()
     markdown = MarkdownSectionStrategy()
@@ -452,7 +563,17 @@ def build_default_chunk_registry() -> ChunkStrategyRegistry:
 
 
 def _validate_request(request: ChunkingRequest) -> None:
-    """执行内部步骤 _validate_request，供同一模块的公开流程复用。"""
+    """执行内部步骤 _validate_request，供同一模块的公开流程复用。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if not request.content.strip():
         raise ValueError("知识正文不能为空")
     if request.target_tokens < 50 or request.max_tokens < request.target_tokens:
@@ -464,14 +585,23 @@ def _validate_request(request: ChunkingRequest) -> None:
 def _markdown_sections(
     content: str, base_path: tuple[str, ...]
 ) -> list[tuple[tuple[str, ...], str, str]]:
-    """执行内部步骤 _markdown_sections，供同一模块的公开流程复用。"""
+    """执行内部步骤 _markdown_sections，供同一模块的公开流程复用。
+
+Args:
+    content: 参数语义、输入边界和安全约束。
+    base_path: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     heading_pattern = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
     headings: list[str] = list(base_path)
     current_lines: list[str] = []
     sections: list[tuple[tuple[str, ...], str, str]] = []
 
     def flush() -> None:
-        """执行 flush 的业务流程并返回该流程的结果。"""
+        """执行 flush 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         body = "\n".join(current_lines).strip()
         if body:
             locator = "#" + "/".join(headings) if headings else "#document"
@@ -501,7 +631,16 @@ def _split_paragraphs(
     overlap_tokens: int,
     token_counter: TokenCounter,
 ) -> list[str]:
-    """执行内部步骤 _split_paragraphs，供同一模块的公开流程复用。"""
+    """执行内部步骤 _split_paragraphs，供同一模块的公开流程复用。
+
+Args:
+    text: 参数语义、输入边界和安全约束。
+    max_tokens: 参数语义、输入边界和安全约束。
+    overlap_tokens: 参数语义、输入边界和安全约束。
+    token_counter: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     paragraphs = [item.strip() for item in re.split(r"\n\s*\n", text) if item.strip()]
     if not paragraphs:
         return []
@@ -533,7 +672,15 @@ def _split_paragraphs(
 def _split_atomic_text(
     text: str, *, max_tokens: int, token_counter: TokenCounter
 ) -> list[str]:
-    """拆分无法再按段落拆分的超长块，优先保留句子边界，最后才按词切分。"""
+    """拆分无法再按段落拆分的超长块，优先保留句子边界，最后才按词切分。
+
+Args:
+    text: 参数语义、输入边界和安全约束。
+    max_tokens: 参数语义、输入边界和安全约束。
+    token_counter: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     units = [unit.strip() for unit in re.split(r"(?<=[。！？.!?])\s+|\n+", text) if unit.strip()]
     if not units:
@@ -566,7 +713,15 @@ def _split_atomic_text(
 def _overlap_tail(
     paragraphs: Sequence[str], overlap_tokens: int, token_counter: TokenCounter
 ) -> list[str]:
-    """执行内部步骤 _overlap_tail，供同一模块的公开流程复用。"""
+    """执行内部步骤 _overlap_tail，供同一模块的公开流程复用。
+
+Args:
+    paragraphs: 参数语义、输入边界和安全约束。
+    overlap_tokens: 参数语义、输入边界和安全约束。
+    token_counter: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     if overlap_tokens == 0:
         return []
     tail: list[str] = []
@@ -582,7 +737,14 @@ def _build_chunks(
     metadata: ChunkMetadata,
     pieces: Iterable[tuple[str, tuple[str, ...], str]],
 ) -> list[KnowledgeChunk]:
-    """执行内部步骤 _build_chunks，供同一模块的公开流程复用。"""
+    """执行内部步骤 _build_chunks，供同一模块的公开流程复用。
+
+Args:
+    metadata: 参数语义、输入边界和安全约束。
+    pieces: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     chunks: list[KnowledgeChunk] = []
     for ordinal, (content, title_path, locator) in enumerate(pieces):
         normalized = content.strip()
@@ -601,7 +763,14 @@ def _build_pdf_chunks(
     metadata: ChunkMetadata,
     pieces: Iterable[tuple[str, tuple[str, ...], str, int, int]],
 ) -> list[KnowledgeChunk]:
-    """执行内部步骤 _build_pdf_chunks，供同一模块的公开流程复用。"""
+    """执行内部步骤 _build_pdf_chunks，供同一模块的公开流程复用。
+
+Args:
+    metadata: 参数语义、输入边界和安全约束。
+    pieces: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     chunks: list[KnowledgeChunk] = []
     for ordinal, (content, title_path, locator, page_from, page_to) in enumerate(pieces):
         normalized = content.strip()
@@ -628,7 +797,17 @@ def _replace_metadata(
     page_from: int | None = None,
     page_to: int | None = None,
 ) -> ChunkMetadata:
-    """执行内部步骤 _replace_metadata，供同一模块的公开流程复用。"""
+    """执行内部步骤 _replace_metadata，供同一模块的公开流程复用。
+
+Args:
+    metadata: 参数语义、输入边界和安全约束。
+    title_path: 参数语义、输入边界和安全约束。
+    source_locator: 参数语义、输入边界和安全约束。
+    page_from: 参数语义、输入边界和安全约束。
+    page_to: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return ChunkMetadata(
         document_id=metadata.document_id,
         document_version_id=metadata.document_version_id,
@@ -657,7 +836,16 @@ def _chunk_id(
     ordinal: int,
     content_hash: str,
 ) -> str:
-    """执行内部步骤 _chunk_id，供同一模块的公开流程复用。"""
+    """执行内部步骤 _chunk_id，供同一模块的公开流程复用。
+
+Args:
+    metadata: 参数语义、输入边界和安全约束。
+    title_path: 参数语义、输入边界和安全约束。
+    ordinal: 参数语义、输入边界和安全约束。
+    content_hash: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     identity = "|".join(
         (
             metadata.document_id,

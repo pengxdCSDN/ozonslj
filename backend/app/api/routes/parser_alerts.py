@@ -21,7 +21,13 @@ class ParserComparisonPayload(BaseModel):
 
 @router.post("/compare", response_model=list[ParserChange])
 async def compare_parser_results(payload: ParserComparisonPayload) -> list[ParserChange]:
-    """执行 compare_parser_results 的业务流程并返回该流程的结果。"""
+    """执行 compare_parser_results 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return detect_parser_changes(payload.previous, payload.current)
 
 
@@ -32,7 +38,20 @@ async def compare_and_save_parser_results(
     gateway: Annotated[ParserAlertGateway, Depends(get_parser_alert_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[ParserChange]:
-    """执行 compare_and_save_parser_results 的业务流程并返回该流程的结果。"""
+    """执行 compare_and_save_parser_results 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     changes = detect_parser_changes(payload.previous, payload.current)
@@ -46,7 +65,20 @@ async def list_parser_alert_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[ParserChange]:
-    """返回字段级解析告警历史，不返回原始页面内容。"""
+    """返回字段级解析告警历史，不返回原始页面内容。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_alerts(workspace_id=workspace_id, limit=limit)

@@ -13,20 +13,43 @@ class PostgresValidateResultGateway:
     """保存 FBO/FBS 验证假设和结果快照，确保利润结论可回溯。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def save_validation(
         self, *, workspace_id: str, assumptions: dict[str, object], result: ValidateResult
     ) -> ValidateResult:
-        """执行 save_validation 的业务流程并返回该流程的结果。"""
+        """执行 save_validation 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    assumptions: 参数语义、输入边界和安全约束。
+    result: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._save, workspace_id, assumptions, result)
 
     def _save(
         self, workspace_id: str, assumptions: dict[str, object], result: ValidateResult
     ) -> ValidateResult:
-        """执行内部步骤 _save，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    assumptions: 参数语义、输入边界和安全约束。
+    result: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -46,11 +69,25 @@ class PostgresValidateResultGateway:
     async def list_validations(
         self, *, workspace_id: str, limit: int
     ) -> list[ValidateResult]:
-        """执行 list_validations 的业务流程并返回该流程的结果。"""
+        """执行 list_validations 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_validations, workspace_id, limit)
 
     def _list_validations(self, workspace_id: str, limit: int) -> list[ValidateResult]:
-        """执行内部步骤 _list_validations，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_validations，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT result_snapshot FROM selection_validations

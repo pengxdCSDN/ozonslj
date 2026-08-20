@@ -23,7 +23,14 @@ class ReadbackVerification:
 def verify_readback(
     *, expected: dict[str, object], actual: dict[str, object]
 ) -> ReadbackVerification:
-    """执行 verify_readback 的业务流程并返回该流程的结果。"""
+    """执行 verify_readback 的业务流程并返回该流程的结果。
+
+Args:
+    expected: 参数语义、输入边界和安全约束。
+    actual: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     names = list(dict.fromkeys([*expected, *actual]))
     fields = [
         ReadbackField(

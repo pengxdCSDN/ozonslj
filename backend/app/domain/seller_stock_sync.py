@@ -25,7 +25,17 @@ class SellerStockSyncPreview:
 
 
 def map_seller_stock_response(payload: dict[str, object]) -> SellerStockSyncPreview:
-    """执行 map_seller_stock_response 的业务流程并返回该流程的结果。"""
+    """执行 map_seller_stock_response 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     raw_items = payload.get("items", [])
     if not isinstance(raw_items, list):
         raise ValueError("Seller 库存响应 items 必须是数组")
@@ -55,7 +65,18 @@ def map_seller_stock_response(payload: dict[str, object]) -> SellerStockSyncPrev
 
 
 def _text(raw: dict[str, object], field: str) -> str:
-    """执行内部步骤 _text，供同一模块的公开流程复用。"""
+    """执行内部步骤 _text，供同一模块的公开流程复用。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+    field: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     value = raw.get(field)
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"Seller 库存字段 {field} 无效")
@@ -63,7 +84,18 @@ def _text(raw: dict[str, object], field: str) -> str:
 
 
 def _quantity(raw: dict[str, object], field: str) -> int:
-    """执行内部步骤 _quantity，供同一模块的公开流程复用。"""
+    """执行内部步骤 _quantity，供同一模块的公开流程复用。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+    field: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     value = raw.get(field)
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise ValueError(f"Seller 库存字段 {field} 必须是非负整数")

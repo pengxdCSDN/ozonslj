@@ -13,7 +13,14 @@ class PostgresProfitModelGateway:
     """保存利润输入假设和 FBO/FBS 结果，供后续敏感性分析回溯。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
@@ -24,7 +31,15 @@ class PostgresProfitModelGateway:
         assumptions: dict[str, object],
         scenarios: tuple[ProfitScenario, ProfitScenario],
     ) -> tuple[ProfitScenario, ProfitScenario]:
-        """执行 save_model 的业务流程并返回该流程的结果。"""
+        """执行 save_model 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    assumptions: 参数语义、输入边界和安全约束。
+    scenarios: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._save, workspace_id, assumptions, scenarios)
 
     def _save(
@@ -33,7 +48,15 @@ class PostgresProfitModelGateway:
         assumptions: dict[str, object],
         scenarios: tuple[ProfitScenario, ProfitScenario],
     ) -> tuple[ProfitScenario, ProfitScenario]:
-        """执行内部步骤 _save，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    assumptions: 参数语义、输入边界和安全约束。
+    scenarios: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             version_row = connection.execute(
                 """

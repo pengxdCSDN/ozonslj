@@ -33,7 +33,20 @@ async def create_quality_findings(
     gateway: Annotated[QualityFindingGateway, Depends(get_quality_finding_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[QualityFindingRecord]:
-    """执行 create_quality_findings 的业务流程并返回该流程的结果。"""
+    """执行 create_quality_findings 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
@@ -48,7 +61,21 @@ async def list_quality_findings(
     finding_status: Annotated[QualityFindingStatus | None, Query(alias="status")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> list[QualityFindingRecord]:
-    """执行 list_quality_findings 的业务流程并返回该流程的结果。"""
+    """执行 list_quality_findings 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    finding_status: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
@@ -67,7 +94,20 @@ async def update_quality_finding(
     payload: UpdateFindingRequest,
     gateway: Annotated[QualityFindingGateway, Depends(get_quality_finding_gateway)],
 ) -> QualityFindingRecord:
-    """执行 update_quality_finding 的业务流程并返回该流程的结果。"""
+    """执行 update_quality_finding 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    finding_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     record = await gateway.update_status(finding_id=finding_id, status=payload.status)
     if record is None or record.workspace_id != workspace_id:
         raise HTTPException(

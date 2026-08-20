@@ -51,7 +51,14 @@ from backend.app.infrastructure.postgres.knowledge_keyword_search import (
 class _ExecutableConnection(Protocol):
     """说明 _ExecutableConnection 的职责、状态边界和对外协作关系。"""
     async def execute(self, query: str, params: tuple[object, ...]) -> object:
-        """执行 execute 的业务流程并返回该流程的结果。"""
+        """执行 execute 的业务流程并返回该流程的结果。
+
+Args:
+    query: 参数语义、输入边界和安全约束。
+    params: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class _ManagedEmbeddingRouter(EmbeddingPort):
@@ -70,7 +77,17 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
         fallback: EmbeddingPort,
         configured_dimension: int,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    pool: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    credentials: 参数语义、输入边界和安全约束。
+    fallback: 参数语义、输入边界和安全约束。
+    configured_dimension: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._pool = pool
         self._organization_id = organization_id
         self._credentials = credentials
@@ -81,7 +98,17 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
         self.dimension = configured_dimension
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        """执行 embed 的业务流程并返回该流程的结果。"""
+        """执行 embed 的业务流程并返回该流程的结果。
+
+Args:
+    texts: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         candidates = await self._candidates()
         errors: list[str] = []
         for provider_id, model, base_url, _credential_ref in candidates:
@@ -118,7 +145,13 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
         return await self._fallback.embed(texts)
 
     async def _budget_allows(self, provider_id: str) -> bool:
-        """调用前读取同一组织、同一用途的预算门禁，超限不再消耗供应商额度。"""
+        """调用前读取同一组织、同一用途的预算门禁，超限不再消耗供应商额度。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         period_start = _period_start()
         async with self._pool.connection() as connection, connection.cursor(
             row_factory=dict_row
@@ -157,7 +190,14 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
         return decide_budget(policy, usage).allowed
 
     async def _record_usage(self, provider_id: str, total_tokens: int) -> None:
-        """将真实响应 token 和一次请求原子累加到应用台账。"""
+        """将真实响应 token 和一次请求原子累加到应用台账。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    total_tokens: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         period_start = _period_start()
         async with self._pool.connection() as connection, connection.transaction():
             await _set_scope(connection, self._organization_id)
@@ -178,7 +218,9 @@ class _ManagedEmbeddingRouter(EmbeddingPort):
             )
 
     async def _candidates(self) -> list[tuple[str, str, str, str | None]]:
-        """执行内部步骤 _candidates，供同一模块的公开流程复用。"""
+        """执行内部步骤 _candidates，供同一模块的公开流程复用。
+Returns:
+    返回调用完成后的领域结果。"""
         async with self._pool.connection() as connection, connection.cursor(
             row_factory=dict_row
         ) as cursor:
@@ -226,11 +268,30 @@ class _ManagedRerankerRouter(RerankerPort):
 
     def __init__(self, *, pool: AsyncConnectionPool, organization_id: str,
                  credentials: ModelCredentialStore) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    pool: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    credentials: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._pool, self._organization_id, self._credentials = pool, organization_id, credentials
 
     async def rerank(self, query: str, hits: list[RetrievalHit]) -> list[RetrievalHit]:
-        """执行 rerank 的业务流程并返回该流程的结果。"""
+        """执行 rerank 的业务流程并返回该流程的结果。
+
+Args:
+    query: 参数语义、输入边界和安全约束。
+    hits: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         candidates = await _bound_candidates(self._pool, self._organization_id, "rerank", "rerank")
         if not candidates:
             return hits
@@ -270,11 +331,30 @@ class _ManagedAnswerGenerator(AnswerGeneratorPort):
 
     def __init__(self, *, pool: AsyncConnectionPool, organization_id: str,
                  credentials: ModelCredentialStore) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    pool: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    credentials: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._pool, self._organization_id, self._credentials = pool, organization_id, credentials
 
     async def generate(self, question: str, evidence: tuple[KnowledgeCitation, ...]) -> str | None:
-        """执行 generate 的业务流程并返回该流程的结果。"""
+        """执行 generate 的业务流程并返回该流程的结果。
+
+Args:
+    question: 参数语义、输入边界和安全约束。
+    evidence: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         candidates = await _bound_candidates(
             self._pool, self._organization_id, "answer_generation", "text"
         )
@@ -319,11 +399,29 @@ class _ManagedTranslationRouter:
 
     def __init__(self, *, pool: AsyncConnectionPool, organization_id: str,
                  credentials: ModelCredentialStore) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    pool: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    credentials: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._pool, self._organization_id, self._credentials = pool, organization_id, credentials
 
     async def translate(self, texts: list[str]) -> list[str]:
-        """执行 translate 的业务流程并返回该流程的结果。"""
+        """执行 translate 的业务流程并返回该流程的结果。
+
+Args:
+    texts: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         candidates = await _bound_candidates(
             self._pool, self._organization_id, "translation", "text"
         )
@@ -364,7 +462,16 @@ class _ManagedTranslationRouter:
 
 async def _bound_candidates(pool: AsyncConnectionPool, organization_id: str,
                             purpose: str, model_kind: str) -> list[tuple[str, str, str]]:
-    """解析用途绑定并再次校验模型类型，防止错误用途调用错误模型。"""
+    """解析用途绑定并再次校验模型类型，防止错误用途调用错误模型。
+
+Args:
+    pool: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    purpose: 参数语义、输入边界和安全约束。
+    model_kind: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     async with pool.connection() as connection, connection.cursor(row_factory=dict_row) as cursor:
         await _set_scope(connection, organization_id)
         await cursor.execute(
@@ -394,7 +501,16 @@ async def _bound_candidates(pool: AsyncConnectionPool, organization_id: str,
 
 async def _budget_allows(pool: AsyncConnectionPool, organization_id: str,
                          provider_id: str, purpose: str) -> bool:
-    """执行内部步骤 _budget_allows，供同一模块的公开流程复用。"""
+    """执行内部步骤 _budget_allows，供同一模块的公开流程复用。
+
+Args:
+    pool: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    provider_id: 参数语义、输入边界和安全约束。
+    purpose: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     period_start = _period_start()
     async with pool.connection() as connection, connection.cursor(row_factory=dict_row) as cursor:
         await _set_scope(connection, organization_id)
@@ -429,7 +545,17 @@ async def _budget_allows(pool: AsyncConnectionPool, organization_id: str,
 
 async def _record_usage(pool: AsyncConnectionPool, organization_id: str, provider_id: str,
                         purpose: str, total_tokens: int) -> None:
-    """执行内部步骤 _record_usage，供同一模块的公开流程复用。"""
+    """执行内部步骤 _record_usage，供同一模块的公开流程复用。
+
+Args:
+    pool: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    provider_id: 参数语义、输入边界和安全约束。
+    purpose: 参数语义、输入边界和安全约束。
+    total_tokens: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     period_start = _period_start()
     async with pool.connection() as connection, connection.transaction():
         await _set_scope(connection, organization_id)
@@ -449,7 +575,9 @@ async def _record_usage(pool: AsyncConnectionPool, organization_id: str, provide
 
 
 def _period_start() -> date:
-    """执行内部步骤 _period_start，供同一模块的公开流程复用。"""
+    """执行内部步骤 _period_start，供同一模块的公开流程复用。
+Returns:
+    返回调用完成后的领域结果。"""
     today = date.today()
     return today.replace(day=1)
 
@@ -465,7 +593,17 @@ class PostgresChromaKnowledgeRuntime:
     persistent = True
 
     def __init__(self, settings: Settings) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    settings: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if settings.database_url is None:
             raise ValueError("生产 RAG 运行时需要 PostgreSQL 连接")
         if settings.chroma_url is None:
@@ -508,7 +646,9 @@ class PostgresChromaKnowledgeRuntime:
         self._evaluation_indexed = False
 
     async def _ensure(self) -> None:
-        """执行内部步骤 _ensure，供同一模块的公开流程复用。"""
+        """执行内部步骤 _ensure，供同一模块的公开流程复用。
+Returns:
+    返回调用完成后的领域结果。"""
         if not self._pool_open:
             await self._pool.open(wait=True)
             self._pool_open = True
@@ -518,13 +658,21 @@ class PostgresChromaKnowledgeRuntime:
             )
 
     async def close(self) -> None:
-        """释放 API 进程持有的 PostgreSQL 连接池。"""
+        """释放 API 进程持有的 PostgreSQL 连接池。
+Returns:
+    返回调用完成后的领域结果。"""
         if self._pool_open:
             await self._pool.close()
             self._pool_open = False
 
     async def create_source(self, source: KnowledgeSource) -> KnowledgeSource:
-        """执行 create_source 的业务流程并返回该流程的结果。"""
+        """执行 create_source 的业务流程并返回该流程的结果。
+
+Args:
+    source: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         async with self._pool.connection() as connection, connection.transaction():
             await _set_scope(connection, self.organization_id)
@@ -550,7 +698,9 @@ class PostgresChromaKnowledgeRuntime:
         return replace(source, organization_id=self.organization_id)
 
     async def list_sources(self) -> list[KnowledgeSource]:
-        """执行 list_sources 的业务流程并返回该流程的结果。"""
+        """执行 list_sources 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         async with self._pool.connection() as connection:
             await _set_scope(connection, self.organization_id)
@@ -569,14 +719,31 @@ class PostgresChromaKnowledgeRuntime:
         return [_source(row) for row in rows]
 
     async def source(self, source_id: str) -> KnowledgeSource | None:
-        """执行 source 的业务流程并返回该流程的结果。"""
+        """执行 source 的业务流程并返回该流程的结果。
+
+Args:
+    source_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return next(
             (source for source in await self.list_sources() if source.id == source_id),
             None,
         )
 
     async def set_source_status(self, source_id: str, status: str) -> KnowledgeSource:
-        """执行 set_source_status 的业务流程并返回该流程的结果。"""
+        """执行 set_source_status 的业务流程并返回该流程的结果。
+
+Args:
+    source_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KeyError: 业务约束或外部依赖失败时抛出。
+"""
         await self._ensure()
         async with self._pool.connection() as connection, connection.transaction():
             await _set_scope(connection, self.organization_id)
@@ -625,7 +792,13 @@ class PostgresChromaKnowledgeRuntime:
         return updated
 
     async def create_version(self, version: KnowledgeVersion) -> KnowledgeVersion:
-        """执行 create_version 的业务流程并返回该流程的结果。"""
+        """执行 create_version 的业务流程并返回该流程的结果。
+
+Args:
+    version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         async with self._pool.connection() as connection, connection.transaction():
             await _set_scope(connection, self.organization_id)
@@ -651,7 +824,13 @@ class PostgresChromaKnowledgeRuntime:
         return replace(version, organization_id=self.organization_id)
 
     async def next_version_number(self, source_id: str) -> int:
-        """执行 next_version_number 的业务流程并返回该流程的结果。"""
+        """执行 next_version_number 的业务流程并返回该流程的结果。
+
+Args:
+    source_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         async with self._pool.connection() as connection:
             await _set_scope(connection, self.organization_id)
@@ -668,7 +847,13 @@ class PostgresChromaKnowledgeRuntime:
         return int(row[0]) if row is not None else 1
 
     async def list_versions(self, source_id: str) -> list[KnowledgeVersion]:
-        """执行 list_versions 的业务流程并返回该流程的结果。"""
+        """执行 list_versions 的业务流程并返回该流程的结果。
+
+Args:
+    source_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         async with self._pool.connection() as connection:
             await _set_scope(connection, self.organization_id)
@@ -687,7 +872,13 @@ class PostgresChromaKnowledgeRuntime:
         return [_version(row) for row in rows]
 
     async def version(self, version_id: str) -> KnowledgeVersion | None:
-        """执行 version 的业务流程并返回该流程的结果。"""
+        """执行 version 的业务流程并返回该流程的结果。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         async with self._pool.connection() as connection:
             await _set_scope(connection, self.organization_id)
@@ -705,7 +896,18 @@ class PostgresChromaKnowledgeRuntime:
         return _version(row) if row is not None else None
 
     async def set_version_status(self, version_id: str, status: str) -> KnowledgeVersion:
-        """更新无切片目录版本的状态，供治理接口保持数据库为唯一事实源。"""
+        """更新无切片目录版本的状态，供治理接口保持数据库为唯一事实源。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KeyError: 业务约束或外部依赖失败时抛出。
+"""
         await self._ensure()
         async with self._pool.connection() as connection, connection.transaction():
             await _set_scope(connection, self.organization_id)
@@ -727,7 +929,14 @@ class PostgresChromaKnowledgeRuntime:
         return _version(row)
 
     async def stage(self, version_id: str, chunks: tuple[KnowledgeChunk, ...]) -> None:
-        """幂等写入草稿切片；发布前不更新 Chroma。"""
+        """幂等写入草稿切片；发布前不更新 Chroma。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+    chunks: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         async with self._pool.connection() as connection, connection.transaction():
             await _set_scope(connection, self.organization_id)
@@ -773,16 +982,30 @@ class PostgresChromaKnowledgeRuntime:
                 )
 
     async def has_staged(self, version_id: str) -> bool:
-        """执行 has_staged 的业务流程并返回该流程的结果。"""
+        """执行 has_staged 的业务流程并返回该流程的结果。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return bool(await self._chunks(version_id, status="draft"))
 
     async def has_published_version(self, version_id: str) -> bool:
-        """执行 has_published_version 的业务流程并返回该流程的结果。"""
+        """执行 has_published_version 的业务流程并返回该流程的结果。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         version = await self.version(version_id)
         return version is not None and version.status == "published"
 
     async def has_published(self) -> bool:
-        """执行 has_published 的业务流程并返回该流程的结果。"""
+        """执行 has_published 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         async with self._pool.connection() as connection:
             await _set_scope(connection, self.organization_id)
@@ -802,7 +1025,14 @@ class PostgresChromaKnowledgeRuntime:
     async def _chunks(
         self, version_id: str, *, status: str | None = None
     ) -> list[KnowledgeChunk]:
-        """执行内部步骤 _chunks，供同一模块的公开流程复用。"""
+        """执行内部步骤 _chunks，供同一模块的公开流程复用。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         query = """
             SELECT c.id, c.content, c.content_hash, c.ordinal, c.document_version_id,
@@ -828,7 +1058,13 @@ class PostgresChromaKnowledgeRuntime:
         return [_chunk(row) for row in rows]
 
     async def _chunks_by_status(self, status: str | None) -> list[KnowledgeChunk]:
-        """读取当前组织的全部 RAG 切片，重建时只把发布事实写入 Chroma。"""
+        """读取当前组织的全部 RAG 切片，重建时只把发布事实写入 Chroma。
+
+Args:
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         query = """
             SELECT c.id, c.content, c.content_hash, c.ordinal, c.document_version_id,
                    c.source_locator, c.title_path, c.language, c.chunk_strategy,
@@ -853,7 +1089,18 @@ class PostgresChromaKnowledgeRuntime:
         return [_chunk(row) for row in rows]
 
     async def publish(self, version_id: str) -> int:
-        """执行 publish 的业务流程并返回该流程的结果。"""
+        """执行 publish 的业务流程并返回该流程的结果。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    KeyError: 业务约束或外部依赖失败时抛出。
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         await self._ensure()
         version = await self.version(version_id)
         chunks = await self._chunks(version_id)
@@ -915,7 +1162,13 @@ class PostgresChromaKnowledgeRuntime:
         return len(published)
 
     async def withdraw(self, version_id: str) -> int:
-        """执行 withdraw 的业务流程并返回该流程的结果。"""
+        """执行 withdraw 的业务流程并返回该流程的结果。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         chunks = await self._chunks(version_id)
         async with self._pool.connection() as connection, connection.transaction():
@@ -941,7 +1194,13 @@ class PostgresChromaKnowledgeRuntime:
         return len(chunks)
 
     async def delete(self, version_id: str) -> int:
-        """执行 delete 的业务流程并返回该流程的结果。"""
+        """执行 delete 的业务流程并返回该流程的结果。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         chunks = await self._chunks(version_id)
         async with self._pool.connection() as connection, connection.transaction():
@@ -967,7 +1226,9 @@ class PostgresChromaKnowledgeRuntime:
         return len(chunks)
 
     async def rebuild(self) -> int:
-        """按 PostgreSQL 当前发布事实重建 Chroma，避免索引成为唯一真相源。"""
+        """按 PostgreSQL 当前发布事实重建 Chroma，避免索引成为唯一真相源。
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         chunks = await self._chunks_by_status("published")
         all_chunks = await self._chunks_by_status(None)
@@ -984,7 +1245,9 @@ class PostgresChromaKnowledgeRuntime:
         return len(chunks)
 
     async def engine(self) -> KnowledgeQueryEngine:
-        """执行 engine 的业务流程并返回该流程的结果。"""
+        """执行 engine 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         assert self._collection is not None
         return KnowledgeQueryEngine(
@@ -1012,7 +1275,12 @@ class PostgresChromaKnowledgeRuntime:
         这样质量评测能验证真实 Embedding、Chroma、Reranker 和文本模型，又不会把
         评测问题或人工标注证据污染用户的生产知识问答。collection 数量一致时不重复
         发送 Embedding，避免重复点击评测无意义地消耗供应商额度。
-        """
+
+Args:
+    suite: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         if self._evaluation_collection is None:
             self._evaluation_collection = await HttpChromaCollection.ensure(
@@ -1062,7 +1330,13 @@ class PostgresChromaKnowledgeRuntime:
         )
 
     async def translate(self, texts: list[str]) -> list[str]:
-        """通过 translation 用途绑定执行翻译；该入口供 Worker/API 共用。"""
+        """通过 translation 用途绑定执行翻译；该入口供 Worker/API 共用。
+
+Args:
+    texts: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._ensure()
         return await _ManagedTranslationRouter(
             pool=self._pool,
@@ -1072,14 +1346,27 @@ class PostgresChromaKnowledgeRuntime:
 
 
 async def _set_scope(connection: _ExecutableConnection, organization_id: str) -> None:
-    """在每个连接事务中设置 RLS 组织上下文，防止连接池串租户。"""
+    """在每个连接事务中设置 RLS 组织上下文，防止连接池串租户。
+
+Args:
+    connection: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     await connection.execute(
         "SELECT set_config('app.organization_id', %s, true)", (organization_id,)
     )
 
 
 def _source(row: dict[str, object]) -> KnowledgeSource:
-    """执行内部步骤 _source，供同一模块的公开流程复用。"""
+    """执行内部步骤 _source，供同一模块的公开流程复用。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return KnowledgeSource(
         id=str(row["id"]),
         organization_id=str(row["organization_id"]),
@@ -1100,7 +1387,13 @@ def _source(row: dict[str, object]) -> KnowledgeSource:
 
 
 def _version(row: dict[str, object]) -> KnowledgeVersion:
-    """执行内部步骤 _version，供同一模块的公开流程复用。"""
+    """执行内部步骤 _version，供同一模块的公开流程复用。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return KnowledgeVersion(
         id=str(row["id"]),
         organization_id=str(row["organization_id"]),
@@ -1118,7 +1411,13 @@ def _version(row: dict[str, object]) -> KnowledgeVersion:
 
 
 def _chunk(row: dict[str, object]) -> KnowledgeChunk:
-    """执行内部步骤 _chunk，供同一模块的公开流程复用。"""
+    """执行内部步骤 _chunk，供同一模块的公开流程复用。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     title_path_value = row["title_path"]
     title_path = (
         tuple(str(item) for item in title_path_value)
@@ -1158,5 +1457,11 @@ def _chunk(row: dict[str, object]) -> KnowledgeChunk:
 
 
 def _optional_int(value: object) -> int | None:
-    """执行内部步骤 _optional_int，供同一模块的公开流程复用。"""
+    """执行内部步骤 _optional_int，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return int(str(value)) if value is not None else None

@@ -21,7 +21,20 @@ class AdvertisingBudgetAnalysis:
 def analyze_advertising_budget(
     *, budget_minor: int, spend_minor: int, days_elapsed: int, days_total: int,
 ) -> AdvertisingBudgetAnalysis:
-    """执行 analyze_advertising_budget 的业务流程并返回该流程的结果。"""
+    """执行 analyze_advertising_budget 的业务流程并返回该流程的结果。
+
+Args:
+    budget_minor: 参数语义、输入边界和安全约束。
+    spend_minor: 参数语义、输入边界和安全约束。
+    days_elapsed: 参数语义、输入边界和安全约束。
+    days_total: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     values = (budget_minor, spend_minor, days_elapsed, days_total)
     if any(isinstance(value, bool) or not isinstance(value, int) for value in values):
         raise ValueError("广告预算分析输入无效")

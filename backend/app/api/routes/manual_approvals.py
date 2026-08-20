@@ -35,7 +35,20 @@ async def create_approval(
     gateway: Annotated[ManualApprovalGateway, Depends(get_manual_approval_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> ManualApproval:
-    """执行 create_approval 的业务流程并返回该流程的结果。"""
+    """执行 create_approval 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     validate_approval_request(**payload.model_dump())
@@ -48,7 +61,19 @@ async def approve(
     decision: ApprovalDecision,
     gateway: Annotated[ManualApprovalGateway, Depends(get_manual_approval_gateway)],
 ) -> ManualApproval:
-    """执行 approve 的业务流程并返回该流程的结果。"""
+    """执行 approve 的业务流程并返回该流程的结果。
+
+Args:
+    approval_id: 参数语义、输入边界和安全约束。
+    decision: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     result = await gateway.approve(approval_id=approval_id, reviewer=decision.reviewer)
     if result is None:
         raise HTTPException(
@@ -67,7 +92,20 @@ async def list_pending_approvals(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[ManualApproval]:
-    """执行 list_pending_approvals 的业务流程并返回该流程的结果。"""
+    """执行 list_pending_approvals 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

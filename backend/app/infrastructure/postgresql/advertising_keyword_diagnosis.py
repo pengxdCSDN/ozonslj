@@ -13,20 +13,41 @@ class PostgresAdvertisingKeywordDiagnosisGateway:
     """保存广告关键词诊断快照；诊断结果只读，不产生预算或出价写入。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def save_report(
         self, *, workspace_id: str, diagnoses: list[AdvertisingKeywordDiagnosis]
     ) -> list[AdvertisingKeywordDiagnosis]:
-        """执行 save_report 的业务流程并返回该流程的结果。"""
+        """执行 save_report 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    diagnoses: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._save, workspace_id, diagnoses)
 
     def _save(
         self, workspace_id: str, diagnoses: list[AdvertisingKeywordDiagnosis]
     ) -> list[AdvertisingKeywordDiagnosis]:
-        """执行内部步骤 _save，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    diagnoses: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -44,13 +65,27 @@ class PostgresAdvertisingKeywordDiagnosisGateway:
     async def list_reports(
         self, *, workspace_id: str, limit: int
     ) -> list[list[AdvertisingKeywordDiagnosis]]:
-        """执行 list_reports 的业务流程并返回该流程的结果。"""
+        """执行 list_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_reports, workspace_id, limit)
 
     def _list_reports(
         self, workspace_id: str, limit: int
     ) -> list[list[AdvertisingKeywordDiagnosis]]:
-        """执行内部步骤 _list_reports，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_reports，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT diagnoses FROM advertising_keyword_diagnosis_reports

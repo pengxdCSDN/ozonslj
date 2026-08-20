@@ -29,7 +29,17 @@ class LoginRequest(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: str) -> str:
-        """执行 validate_email 的业务流程并返回该流程的结果。"""
+        """执行 validate_email 的业务流程并返回该流程的结果。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         normalized = value.strip().lower()
         if normalized.count("@") != 1 or normalized.startswith("@") or normalized.endswith("@"):
             raise ValueError("邮箱格式不正确")
@@ -45,7 +55,13 @@ class CurrentUserResponse(BaseModel):
 
     @classmethod
     def from_domain(cls, user: AuthenticatedUser) -> "CurrentUserResponse":
-        """执行 from_domain 的业务流程并返回该流程的结果。"""
+        """执行 from_domain 的业务流程并返回该流程的结果。
+
+Args:
+    user: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return cls(
             id=user.id,
             email=user.email,
@@ -69,7 +85,23 @@ async def login(
     secure_cookie: Annotated[bool, Depends(get_session_cookie_secure)],
     organization_id: Annotated[str, Depends(get_default_organization_id)],
 ) -> LoginResponse:
-    """执行 login 的业务流程并返回该流程的结果。"""
+    """执行 login 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+    request: 参数语义、输入边界和安全约束。
+    response: 参数语义、输入边界和安全约束。
+    service: 参数语义、输入边界和安全约束。
+    limiter: 参数语义、输入边界和安全约束。
+    secure_cookie: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     client_key = request.client.host if request.client else "unknown"
     retry_after = await limiter.retry_after(payload.email, client_key)
     if retry_after is not None:
@@ -114,7 +146,19 @@ async def me(
     service: Annotated[IdentityService, Depends(get_identity_service)],
     token: Annotated[str | None, Depends(get_request_session_token)],
 ) -> CurrentUserResponse:
-    """执行 me 的业务流程并返回该流程的结果。"""
+    """执行 me 的业务流程并返回该流程的结果。
+
+Args:
+    response: 参数语义、输入边界和安全约束。
+    service: 参数语义、输入边界和安全约束。
+    token: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     user = await service.authenticate(token) if token else None
     if user is None:
         raise HTTPException(
@@ -131,7 +175,15 @@ async def logout(
     service: Annotated[IdentityService, Depends(get_identity_service)],
     token: Annotated[str | None, Depends(get_request_session_token)],
 ) -> None:
-    """执行 logout 的业务流程并返回该流程的结果。"""
+    """执行 logout 的业务流程并返回该流程的结果。
+
+Args:
+    response: 参数语义、输入边界和安全约束。
+    service: 参数语义、输入边界和安全约束。
+    token: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     if token:
         await service.logout(token)
     response.delete_cookie("ozonslj_session", path="/", httponly=True, samesite="lax")

@@ -32,7 +32,9 @@ class MetricsRegistry:
     """进程内聚合指标注册表，标签值必须来自受控枚举，禁止接收用户输入。"""
 
     def __init__(self) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+Returns:
+    返回调用完成后的领域结果。"""
         self._lock = threading.Lock()
         self._counters: dict[tuple[str, tuple[tuple[str, str], ...]], int] = defaultdict(int)
         self._gauges: dict[tuple[str, tuple[tuple[str, str], ...]], float] = {}
@@ -41,19 +43,43 @@ class MetricsRegistry:
         )
 
     def inc(self, name: str, *, labels: dict[str, str] | None = None, value: int = 1) -> None:
-        """执行 inc 的业务流程并返回该流程的结果。"""
+        """执行 inc 的业务流程并返回该流程的结果。
+
+Args:
+    name: 参数语义、输入边界和安全约束。
+    labels: 参数语义、输入边界和安全约束。
+    value: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         key = (name, _labels(labels))
         with self._lock:
             self._counters[key] += value
 
     def set_gauge(self, name: str, value: float, *, labels: dict[str, str] | None = None) -> None:
-        """执行 set_gauge 的业务流程并返回该流程的结果。"""
+        """执行 set_gauge 的业务流程并返回该流程的结果。
+
+Args:
+    name: 参数语义、输入边界和安全约束。
+    value: 参数语义、输入边界和安全约束。
+    labels: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         key = (name, _labels(labels))
         with self._lock:
             self._gauges[key] = value
 
     def observe(self, name: str, value: float, *, labels: dict[str, str] | None = None) -> None:
-        """执行 observe 的业务流程并返回该流程的结果。"""
+        """执行 observe 的业务流程并返回该流程的结果。
+
+Args:
+    name: 参数语义、输入边界和安全约束。
+    value: 参数语义、输入边界和安全约束。
+    labels: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         key = (name, _labels(labels))
         with self._lock:
             buckets = self._histograms[key]
@@ -63,7 +89,9 @@ class MetricsRegistry:
             buckets[-1] += 1
 
     def render(self) -> str:
-        """渲染 Prometheus 文本格式；输出只包含聚合数据。"""
+        """渲染 Prometheus 文本格式；输出只包含聚合数据。
+Returns:
+    返回调用完成后的领域结果。"""
         with self._lock:
             counters = list(self._counters.items())
             gauges = list(self._gauges.items())
@@ -91,12 +119,24 @@ METRICS = MetricsRegistry()
 
 
 def _labels(labels: dict[str, str] | None) -> tuple[tuple[str, str], ...]:
-    """执行内部步骤 _labels，供同一模块的公开流程复用。"""
+    """执行内部步骤 _labels，供同一模块的公开流程复用。
+
+Args:
+    labels: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return tuple(sorted((key, value) for key, value in (labels or {}).items()))
 
 
 def _format_labels(labels: tuple[tuple[str, str], ...]) -> str:
-    """执行内部步骤 _format_labels，供同一模块的公开流程复用。"""
+    """执行内部步骤 _format_labels，供同一模块的公开流程复用。
+
+Args:
+    labels: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     if not labels:
         return ""
     escaped = (
@@ -108,7 +148,17 @@ def _format_labels(labels: tuple[tuple[str, str], ...]) -> str:
 
 def record_model_call(*, model_kind: str, provider: str, duration_seconds: float, success: bool,
                       status: str = "ok") -> None:
-    """记录模型调用耗时和结果；provider/model_kind 由服务端配置传入，不接受请求原文。"""
+    """记录模型调用耗时和结果；provider/model_kind 由服务端配置传入，不接受请求原文。
+
+Args:
+    model_kind: 参数语义、输入边界和安全约束。
+    provider: 参数语义、输入边界和安全约束。
+    duration_seconds: 参数语义、输入边界和安全约束。
+    success: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     labels = {"model_kind": model_kind, "provider": provider, "status": status}
     METRICS.inc("ozonslj_model_calls_total", labels=labels)
     if not success:
@@ -122,7 +172,14 @@ def record_model_call(*, model_kind: str, provider: str, duration_seconds: float
 
 @contextmanager
 def model_call_timer(*, model_kind: str, provider: str) -> Iterator[None]:
-    """为模型适配器提供统一计时；异常分类由调用方作为 status 补充。"""
+    """为模型适配器提供统一计时；异常分类由调用方作为 status 补充。
+
+Args:
+    model_kind: 参数语义、输入边界和安全约束。
+    provider: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     started = time.perf_counter()
     try:
         yield
@@ -140,7 +197,13 @@ def model_call_timer(*, model_kind: str, provider: str) -> Iterator[None]:
 
 
 def collect_resource_snapshot(*, path: str = "/") -> ResourceSnapshot:
-    """读取 Linux 容器可见资源；Windows/测试环境安全返回可用子集。"""
+    """读取 Linux 容器可见资源；Windows/测试环境安全返回可用子集。
+
+Args:
+    path: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     memory_bytes = _read_meminfo("MemAvailable")
     swap_bytes = _read_meminfo("SwapFree")
     try:
@@ -152,7 +215,9 @@ def collect_resource_snapshot(*, path: str = "/") -> ResourceSnapshot:
 
 
 def update_resource_metrics() -> ResourceSnapshot:
-    """执行 update_resource_metrics 的业务流程并返回该流程的结果。"""
+    """执行 update_resource_metrics 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
     snapshot = collect_resource_snapshot()
     if snapshot.memory_bytes is not None:
         METRICS.set_gauge("ozonslj_memory_available_bytes", snapshot.memory_bytes)
@@ -164,7 +229,13 @@ def update_resource_metrics() -> ResourceSnapshot:
 
 
 def _read_meminfo(field: str) -> int | None:
-    """执行内部步骤 _read_meminfo，供同一模块的公开流程复用。"""
+    """执行内部步骤 _read_meminfo，供同一模块的公开流程复用。
+
+Args:
+    field: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     try:
         with open("/proc/meminfo", encoding="ascii") as meminfo:
             for line in meminfo:

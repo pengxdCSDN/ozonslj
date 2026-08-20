@@ -24,7 +24,13 @@ class PriceBatchPayload(BaseModel):
 
 @router.post("/validate", response_model=PriceBatchValidation)
 async def validate_batch(payload: PriceBatchPayload) -> PriceBatchValidation:
-    """执行 validate_batch 的业务流程并返回该流程的结果。"""
+    """执行 validate_batch 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return validate_price_batch(
         [PriceChange(**item.model_dump()) for item in payload.items],
         max_change_percent=payload.max_change_percent,

@@ -46,7 +46,22 @@ def ingest_and_chunk(
     max_tokens: int = 520,
     overlap_tokens: int = 60,
 ) -> KnowledgePipelineResult:
-    """执行解析、清洗、切片和质量门禁；门禁失败时仍返回草稿切片但禁止发布。"""
+    """执行解析、清洗、切片和质量门禁；门禁失败时仍返回草稿切片但禁止发布。
+
+Args:
+    document_id: 参数语义、输入边界和安全约束。
+    document_version_id: 参数语义、输入边界和安全约束。
+    source_type: 参数语义、输入边界和安全约束。
+    business_domain: 参数语义、输入边界和安全约束。
+    filename: 参数语义、输入边界和安全约束。
+    content: 参数语义、输入边界和安全约束。
+    strategy: 参数语义、输入边界和安全约束。
+    source_locator: 参数语义、输入边界和安全约束。
+    max_tokens: 参数语义、输入边界和安全约束。
+    overlap_tokens: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     raw = RawKnowledgeDocument(
         document_id=document_id, source_type=source_type, filename=filename,

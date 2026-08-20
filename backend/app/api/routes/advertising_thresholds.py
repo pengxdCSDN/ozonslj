@@ -30,7 +30,17 @@ class AdvertisingThresholdsPayload(BaseModel):
 
 @router.post("/validate", response_model=AdvertisingThresholds)
 async def validate_thresholds(payload: AdvertisingThresholdsPayload) -> AdvertisingThresholds:
-    """执行 validate_thresholds 的业务流程并返回该流程的结果。"""
+    """执行 validate_thresholds 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         return create_advertising_thresholds(**payload.model_dump())
     except ValueError as error:
@@ -50,7 +60,20 @@ async def validate_and_save_thresholds(
     gateway: Annotated[AdvertisingThresholdGateway, Depends(get_advertising_threshold_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> AdvertisingThresholds:
-    """执行 validate_and_save_thresholds 的业务流程并返回该流程的结果。"""
+    """执行 validate_and_save_thresholds 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     thresholds = await validate_thresholds(payload)
@@ -67,7 +90,20 @@ async def list_threshold_versions(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[AdvertisingThresholds]:
-    """执行 list_threshold_versions 的业务流程并返回该流程的结果。"""
+    """执行 list_threshold_versions 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

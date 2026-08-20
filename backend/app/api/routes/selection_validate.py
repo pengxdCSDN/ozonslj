@@ -36,7 +36,13 @@ class ValidatePayload(BaseModel):
 
 @router.post("/run", response_model=ValidateResult)
 async def run_validate(payload: ValidatePayload) -> ValidateResult:
-    """执行 run_validate 的业务流程并返回该流程的结果。"""
+    """执行 run_validate 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return validate_product(ValidateInput(**payload.model_dump()))
 
 
@@ -47,7 +53,20 @@ async def run_and_save_validate(
     gateway: Annotated[ValidateResultGateway, Depends(get_validate_result_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> ValidateResult:
-    """执行 run_and_save_validate 的业务流程并返回该流程的结果。"""
+    """执行 run_and_save_validate 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     assumptions = payload.model_dump()
@@ -65,7 +84,20 @@ async def list_validation_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[ValidateResult]:
-    """执行 list_validation_history 的业务流程并返回该流程的结果。"""
+    """执行 list_validation_history 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

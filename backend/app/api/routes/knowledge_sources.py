@@ -57,7 +57,13 @@ class KnowledgeVersionResponse(BaseModel):
 
 
 def _response(source: KnowledgeSource) -> KnowledgeSourceResponse:
-    """执行内部步骤 _response，供同一模块的公开流程复用。"""
+    """执行内部步骤 _response，供同一模块的公开流程复用。
+
+Args:
+    source: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return KnowledgeSourceResponse(
         id=source.id,
         title=source.title,
@@ -71,7 +77,13 @@ def _response(source: KnowledgeSource) -> KnowledgeSourceResponse:
 
 
 def _version_response(version: KnowledgeVersion) -> KnowledgeVersionResponse:
-    """执行内部步骤 _version_response，供同一模块的公开流程复用。"""
+    """执行内部步骤 _version_response，供同一模块的公开流程复用。
+
+Args:
+    version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return KnowledgeVersionResponse(
         id=version.id,
         source_id=version.source_id,
@@ -83,7 +95,17 @@ def _version_response(version: KnowledgeVersion) -> KnowledgeVersionResponse:
 
 @router.post("", response_model=KnowledgeSourceResponse, status_code=201)
 async def create_knowledge_source(payload: KnowledgeSourceCreate) -> KnowledgeSourceResponse:
-    """执行 create_knowledge_source 的业务流程并返回该流程的结果。"""
+    """执行 create_knowledge_source 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     runtime = get_knowledge_runtime()
     source = KnowledgeSource(
         id=str(uuid4()),
@@ -105,14 +127,26 @@ async def create_knowledge_source(payload: KnowledgeSourceCreate) -> KnowledgeSo
 
 @router.get("", response_model=list[KnowledgeSourceResponse])
 async def list_knowledge_sources() -> list[KnowledgeSourceResponse]:
-    """执行 list_knowledge_sources 的业务流程并返回该流程的结果。"""
+    """执行 list_knowledge_sources 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
     runtime = get_knowledge_runtime()
     return [_response(source) for source in await runtime.list_sources()]
 
 
 @router.post("/{source_id}/withdraw", response_model=KnowledgeSourceResponse)
 async def withdraw_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
-    """执行 withdraw_knowledge_source 的业务流程并返回该流程的结果。"""
+    """执行 withdraw_knowledge_source 的业务流程并返回该流程的结果。
+
+Args:
+    source_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     runtime = get_knowledge_runtime()
     source = await runtime.source(source_id)
     if source is None:
@@ -125,7 +159,17 @@ async def withdraw_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
 
 @router.post("/{source_id}/pause", response_model=KnowledgeSourceResponse)
 async def pause_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
-    """执行 pause_knowledge_source 的业务流程并返回该流程的结果。"""
+    """执行 pause_knowledge_source 的业务流程并返回该流程的结果。
+
+Args:
+    source_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     runtime = get_knowledge_runtime()
     source = await runtime.source(source_id)
     if source is None:
@@ -137,7 +181,17 @@ async def pause_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
 
 @router.post("/{source_id}/resume", response_model=KnowledgeSourceResponse)
 async def resume_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
-    """执行 resume_knowledge_source 的业务流程并返回该流程的结果。"""
+    """执行 resume_knowledge_source 的业务流程并返回该流程的结果。
+
+Args:
+    source_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     runtime = get_knowledge_runtime()
     source = await runtime.source(source_id)
     if source is None:
@@ -149,7 +203,17 @@ async def resume_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
 
 @router.delete("/{source_id}", response_model=KnowledgeSourceResponse)
 async def delete_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
-    """执行 delete_knowledge_source 的业务流程并返回该流程的结果。"""
+    """执行 delete_knowledge_source 的业务流程并返回该流程的结果。
+
+Args:
+    source_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     runtime = get_knowledge_runtime()
     source = await runtime.source(source_id)
     if source is None:
@@ -163,7 +227,18 @@ async def delete_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
 async def create_knowledge_version(
     source_id: str, payload: KnowledgeVersionCreate
 ) -> KnowledgeVersionResponse:
-    """执行 create_knowledge_version 的业务流程并返回该流程的结果。"""
+    """执行 create_knowledge_version 的业务流程并返回该流程的结果。
+
+Args:
+    source_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     runtime = get_knowledge_runtime()
     source = await runtime.source(source_id)
     if source is None or source.status in {"withdrawn", "deleted"}:
@@ -187,7 +262,17 @@ async def create_knowledge_version(
 
 @router.get("/{source_id}/versions", response_model=list[KnowledgeVersionResponse])
 async def list_knowledge_versions(source_id: str) -> list[KnowledgeVersionResponse]:
-    """执行 list_knowledge_versions 的业务流程并返回该流程的结果。"""
+    """执行 list_knowledge_versions 的业务流程并返回该流程的结果。
+
+Args:
+    source_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     runtime = get_knowledge_runtime()
     if await runtime.source(source_id) is None:
         raise HTTPException(status_code=404, detail="知识源不存在")
@@ -196,7 +281,17 @@ async def list_knowledge_versions(source_id: str) -> list[KnowledgeVersionRespon
 
 @router.post("/versions/{version_id}/publish", response_model=KnowledgeVersionResponse)
 async def publish_knowledge_version(version_id: str) -> KnowledgeVersionResponse:
-    """执行 publish_knowledge_version 的业务流程并返回该流程的结果。"""
+    """执行 publish_knowledge_version 的业务流程并返回该流程的结果。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     runtime = get_knowledge_runtime()
     version = await runtime.version(version_id)
     if version is None:
@@ -220,7 +315,17 @@ async def publish_knowledge_version(version_id: str) -> KnowledgeVersionResponse
 
 @router.post("/versions/{version_id}/withdraw", response_model=KnowledgeVersionResponse)
 async def withdraw_knowledge_version(version_id: str) -> KnowledgeVersionResponse:
-    """执行 withdraw_knowledge_version 的业务流程并返回该流程的结果。"""
+    """执行 withdraw_knowledge_version 的业务流程并返回该流程的结果。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     runtime = get_knowledge_runtime()
     version = await runtime.version(version_id)
     if version is None:
@@ -242,7 +347,19 @@ async def rebuild_knowledge_version(
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
     queue: Annotated[RedisRagTaskQueue, Depends(get_rag_task_queue)],
 ) -> dict[str, object]:
-    """为指定版本创建幂等重建任务；真正索引写入由 Worker 执行。"""
+    """为指定版本创建幂等重建任务；真正索引写入由 Worker 执行。
+
+Args:
+    version_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    queue: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     runtime = get_knowledge_runtime()
     version = await runtime.version(version_id)
     if version is None or version.status not in {"draft", "published"}:

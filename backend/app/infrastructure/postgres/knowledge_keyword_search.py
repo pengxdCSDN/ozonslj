@@ -15,14 +15,32 @@ class PostgresKnowledgeKeywordSearch(KeywordSearchPort):
     """只返回当前组织、已发布版本和已发布切片，避免草稿或撤回内容泄漏到 RAG。"""
 
     def __init__(self, pool: AsyncConnectionPool, organization_id: str) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    pool: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if not organization_id.strip():
             raise ValueError("organization_id 不能为空")
         self._pool = pool
         self._organization_id = organization_id
 
     async def search(self, query: str, *, limit: int) -> list[RetrievalHit]:
-        """执行 search 的业务流程并返回该流程的结果。"""
+        """执行 search 的业务流程并返回该流程的结果。
+
+Args:
+    query: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         if not query.strip() or limit < 1:
             return []
         bounded_limit = min(limit, 50)
@@ -61,7 +79,13 @@ class PostgresKnowledgeKeywordSearch(KeywordSearchPort):
 
 
 def _hit_from_row(row: dict[str, object]) -> RetrievalHit:
-    """执行内部步骤 _hit_from_row，供同一模块的公开流程复用。"""
+    """执行内部步骤 _hit_from_row，供同一模块的公开流程复用。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     source_type = cast(Literal["markdown", "postgres_schema", "pdf"], str(row["source_type"]))
     business_domain = cast(
         Literal[
@@ -94,5 +118,11 @@ def _hit_from_row(row: dict[str, object]) -> RetrievalHit:
 
 
 def _optional_int(value: object) -> int | None:
-    """执行内部步骤 _optional_int，供同一模块的公开流程复用。"""
+    """执行内部步骤 _optional_int，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return int(str(value)) if value is not None else None

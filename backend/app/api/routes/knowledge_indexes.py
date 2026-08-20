@@ -17,7 +17,13 @@ class ReconcilePayload(BaseModel):
 
 @router.post("/reconcile", response_model=dict[str, object])
 async def reconcile_knowledge_index(payload: ReconcilePayload) -> dict[str, object]:
-    """执行 reconcile_knowledge_index 的业务流程并返回该流程的结果。"""
+    """执行 reconcile_knowledge_index 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     plan = build_reconciliation_plan(
         set(payload.published_chunk_ids), set(payload.indexed_chunk_ids),
         metadata_ids=set(payload.metadata_chunk_ids),

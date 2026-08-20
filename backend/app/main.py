@@ -123,7 +123,14 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
     """记录方法、受控路径、状态和耗时，不记录查询参数、请求体、Cookie 或响应正文。"""
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        """执行 dispatch 的业务流程并返回该流程的结果。"""
+        """执行 dispatch 的业务流程并返回该流程的结果。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+    call_next: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         started = time.perf_counter()
         try:
             response = await call_next(request)
@@ -152,7 +159,13 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
 
 
 def _route_label(path: str) -> str:
-    """将动态路径归并为固定标签，防止标签基数和敏感信息进入指标。"""
+    """将动态路径归并为固定标签，防止标签基数和敏感信息进入指标。
+
+Args:
+    path: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     if path == "/metrics":
         return "/metrics"
     if path.startswith("/health/"):
@@ -164,7 +177,13 @@ def _route_label(path: str) -> str:
 
 @asynccontextmanager
 async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
-    """应用退出时释放已打开的 PostgreSQL 连接池。"""
+    """应用退出时释放已打开的 PostgreSQL 连接池。
+
+Args:
+    _: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     yield
     await close_knowledge_runtime()
     close_postgres_sessions()
@@ -176,7 +195,14 @@ def create_app(
     credential_protector: CredentialProtector | None = None,
     seller_account_verifier: SellerAccountVerifier | None = None,
 ) -> FastAPI:
-    """执行 create_app 的业务流程并返回该流程的结果。"""
+    """执行 create_app 的业务流程并返回该流程的结果。
+
+Args:
+    credential_protector: 参数语义、输入边界和安全约束。
+    seller_account_verifier: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     app = FastAPI(
         title="Ozon Seller Operations API",
         version="0.1.0",

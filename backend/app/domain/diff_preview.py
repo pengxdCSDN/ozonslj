@@ -27,7 +27,14 @@ class DiffPreviewGateway(Protocol):
     async def save_preview(
         self, *, workspace_id: str, previews: list[DiffPreview]
     ) -> list[DiffPreview]:
-        """执行 save_preview 的业务流程并返回该流程的结果。"""
+        """执行 save_preview 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    previews: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def build_diff_preview(
@@ -37,7 +44,24 @@ def build_diff_preview(
     max_age_seconds: int | None = None,
     now: datetime | None = None,
 ) -> list[DiffPreview]:
-    """执行 build_diff_preview 的业务流程并返回该流程的结果。"""
+    """执行 build_diff_preview 的业务流程并返回该流程的结果。
+
+Args:
+    old_values: 参数语义、输入边界和安全约束。
+    new_values: 参数语义、输入边界和安全约束。
+    source: 参数语义、输入边界和安全约束。
+    impact: 参数语义、输入边界和安全约束。
+    observed_at: 参数语义、输入边界和安全约束。
+    max_age_seconds: 参数语义、输入边界和安全约束。
+    now: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+    StalePreviewError: 业务约束或外部依赖失败时抛出。
+"""
     if not source.strip() or not impact.strip():
         raise ValueError("差异预览必须包含来源和影响说明")
     # 只要提供新鲜度元数据，就把它作为预览硬门槛，避免过期状态进入审核链路。

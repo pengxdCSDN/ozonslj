@@ -32,7 +32,13 @@ class ProfitModelPayload(BaseModel):
 
 @router.post("/calculate", response_model=list[ProfitScenario])
 async def calculate_profit(payload: ProfitModelPayload) -> list[ProfitScenario]:
-    """执行 calculate_profit 的业务流程并返回该流程的结果。"""
+    """执行 calculate_profit 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return list(calculate_profit_model(ProfitModelInput(**payload.model_dump())))
 
 
@@ -46,7 +52,20 @@ async def calculate_and_save_profit(
     gateway: Annotated[ProfitModelGateway, Depends(get_profit_model_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[ProfitScenario]:
-    """执行 calculate_and_save_profit 的业务流程并返回该流程的结果。"""
+    """执行 calculate_and_save_profit 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     assumptions = payload.model_dump()

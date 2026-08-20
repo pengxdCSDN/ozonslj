@@ -15,7 +15,17 @@ class DataSourcePayload(BaseModel):
 
 @router.post("/label", response_model=DataSourceLabel)
 async def label_source(payload: DataSourcePayload) -> DataSourceLabel:
-    """执行 label_source 的业务流程并返回该流程的结果。"""
+    """执行 label_source 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         return get_data_source_label(payload.source)
     except ValueError as error:

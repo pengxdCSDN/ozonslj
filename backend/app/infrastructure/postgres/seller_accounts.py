@@ -13,7 +13,13 @@ class PostgresSellerAccountGateway:
     """原子写入卖家账号、工作区和创建者成员关系。"""
 
     def __init__(self, pool: AsyncConnectionPool) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    pool: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._pool = pool
 
     async def create(
@@ -28,7 +34,24 @@ class PostgresSellerAccountGateway:
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> CreatedSellerAccount:
-        """执行 create 的业务流程并返回该流程的结果。"""
+        """执行 create 的业务流程并返回该流程的结果。
+
+Args:
+    seller_account_id: 参数语义、输入边界和安全约束。
+    workspace_id: 参数语义、输入边界和安全约束。
+    operator_id: 参数语义、输入边界和安全约束。
+    display_name: 参数语义、输入边界和安全约束。
+    workspace_name: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    encrypted_api_key: 参数语义、输入边界和安全约束。
+    credential_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    SellerAccountConflictError: 业务约束或外部依赖失败时抛出。
+"""
         try:
             async with self._pool.connection() as connection, connection.transaction():
                 await connection.execute(

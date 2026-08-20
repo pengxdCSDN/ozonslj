@@ -28,16 +28,31 @@ class PostgresStoreWorkspaceGateway:
         sessions: PostgresSessionFactory,
         tenant_context: TenantContext,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    tenant_context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._tenant_context = tenant_context
 
     async def list_workspaces(self) -> list[StoreWorkspace]:
-        """执行 list_workspaces 的业务流程并返回该流程的结果。"""
+        """执行 list_workspaces 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_workspaces)
 
     async def get_workspace(self, workspace_id: str) -> StoreWorkspace | None:
-        """执行 get_workspace 的业务流程并返回该流程的结果。"""
+        """执行 get_workspace 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._get_workspace, workspace_id)
 
     async def create_workspace(
@@ -48,7 +63,16 @@ class PostgresStoreWorkspaceGateway:
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> StoreWorkspace:
-        """执行 create_workspace 的业务流程并返回该流程的结果。"""
+        """执行 create_workspace 的业务流程并返回该流程的结果。
+
+Args:
+    display_name: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    encrypted_api_key: 参数语义、输入边界和安全约束。
+    credential_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._create_workspace,
             display_name.strip(),
@@ -65,7 +89,16 @@ class PostgresStoreWorkspaceGateway:
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> StoreWorkspace | None:
-        """执行 replace_credentials 的业务流程并返回该流程的结果。"""
+        """执行 replace_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    encrypted_api_key: 参数语义、输入边界和安全约束。
+    credential_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._replace_credentials,
             workspace_id,
@@ -75,7 +108,13 @@ class PostgresStoreWorkspaceGateway:
         )
 
     async def load_credentials(self, workspace_id: str) -> tuple[str, bytes, int] | None:
-        """执行 load_credentials 的业务流程并返回该流程的结果。"""
+        """执行 load_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._load_credentials, workspace_id)
 
     async def set_verification_status(
@@ -87,7 +126,17 @@ class PostgresStoreWorkspaceGateway:
         audit_result: Literal["success", "failed"],
         audit_detail: dict[str, str] | None = None,
     ) -> StoreWorkspace | None:
-        """执行 set_verification_status 的业务流程并返回该流程的结果。"""
+        """执行 set_verification_status 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+    verified_at: 参数语义、输入边界和安全约束。
+    audit_result: 参数语义、输入边界和安全约束。
+    audit_detail: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._set_verification_status,
             workspace_id,
@@ -98,7 +147,9 @@ class PostgresStoreWorkspaceGateway:
         )
 
     def _list_workspaces(self) -> list[StoreWorkspace]:
-        """执行内部步骤 _list_workspaces，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_workspaces，供同一模块的公开流程复用。
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._tenant_context) as connection:
             rows = connection.execute(
                 f"{_WORKSPACE_SELECT} ORDER BY w.created_at, w.id",
@@ -107,7 +158,13 @@ class PostgresStoreWorkspaceGateway:
         return [_workspace_from_row(row) for row in rows]
 
     def _get_workspace(self, workspace_id: str) -> StoreWorkspace | None:
-        """执行内部步骤 _get_workspace，供同一模块的公开流程复用。"""
+        """执行内部步骤 _get_workspace，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._tenant_context) as connection:
             row = connection.execute(
                 f"{_WORKSPACE_SELECT} AND w.id = %s",
@@ -122,7 +179,21 @@ class PostgresStoreWorkspaceGateway:
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> StoreWorkspace:
-        """执行内部步骤 _create_workspace，供同一模块的公开流程复用。"""
+        """执行内部步骤 _create_workspace，供同一模块的公开流程复用。
+
+Args:
+    display_name: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    encrypted_api_key: 参数语义、输入边界和安全约束。
+    credential_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+    ClientIdConflictError: 业务约束或外部依赖失败时抛出。
+"""
         seller_id = str(uuid4())
         workspace_id = str(uuid4())
         try:
@@ -181,7 +252,20 @@ class PostgresStoreWorkspaceGateway:
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> StoreWorkspace | None:
-        """执行内部步骤 _replace_credentials，供同一模块的公开流程复用。"""
+        """执行内部步骤 _replace_credentials，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    encrypted_api_key: 参数语义、输入边界和安全约束。
+    credential_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ClientIdConflictError: 业务约束或外部依赖失败时抛出。
+"""
         try:
             with self._sessions.transaction(self._tenant_context) as connection:
                 cursor = connection.execute(
@@ -225,7 +309,13 @@ class PostgresStoreWorkspaceGateway:
         return self._get_workspace(workspace_id)
 
     def _load_credentials(self, workspace_id: str) -> tuple[str, bytes, int] | None:
-        """执行内部步骤 _load_credentials，供同一模块的公开流程复用。"""
+        """执行内部步骤 _load_credentials，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._tenant_context) as connection:
             row = connection.execute(
                 """
@@ -255,7 +345,17 @@ class PostgresStoreWorkspaceGateway:
         audit_result: Literal["success", "failed"],
         audit_detail: dict[str, str] | None,
     ) -> StoreWorkspace | None:
-        """执行内部步骤 _set_verification_status，供同一模块的公开流程复用。"""
+        """执行内部步骤 _set_verification_status，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+    verified_at: 参数语义、输入边界和安全约束。
+    audit_result: 参数语义、输入边界和安全约束。
+    audit_detail: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._tenant_context) as connection:
             cursor = connection.execute(
                 """
@@ -305,7 +405,13 @@ WHERE w.organization_id = %s
 
 
 def _workspace_from_row(row: dict[str, Any]) -> StoreWorkspace:
-    """执行内部步骤 _workspace_from_row，供同一模块的公开流程复用。"""
+    """执行内部步骤 _workspace_from_row，供同一模块的公开流程复用。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return StoreWorkspace.model_validate(row)
 
 
@@ -319,7 +425,19 @@ def _insert_audit(
     result: Literal["success", "failed"],
     detail: dict[str, str] | None,
 ) -> None:
-    """写入脱敏审计；调用方必须与业务变更共享同一数据库事务。"""
+    """写入脱敏审计；调用方必须与业务变更共享同一数据库事务。
+
+Args:
+    connection: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+    workspace_id: 参数语义、输入边界和安全约束。
+    operation_type: 参数语义、输入边界和安全约束。
+    risk_level: 参数语义、输入边界和安全约束。
+    result: 参数语义、输入边界和安全约束。
+    detail: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     connection.execute(
         """
         INSERT INTO seller_operations (

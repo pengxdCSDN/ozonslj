@@ -9,13 +9,28 @@ class RedisLoginRateLimiter:
     """使用 Redis 短期计数限制登录猜测，键名不保存邮箱或客户端地址明文。"""
 
     def __init__(self, redis: Redis, *, max_attempts: int, window_seconds: int) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    redis: 参数语义、输入边界和安全约束。
+    max_attempts: 参数语义、输入边界和安全约束。
+    window_seconds: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._redis = redis
         self._max_attempts = max_attempts
         self._window_seconds = window_seconds
 
     async def retry_after(self, email: str, client_key: str) -> int | None:
-        """执行 retry_after 的业务流程并返回该流程的结果。"""
+        """执行 retry_after 的业务流程并返回该流程的结果。
+
+Args:
+    email: 参数语义、输入边界和安全约束。
+    client_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         key = self._key(email, client_key)
         attempts = await self._redis.get(key)
         if attempts is None or int(attempts) < self._max_attempts:
@@ -24,18 +39,39 @@ class RedisLoginRateLimiter:
         return max(int(ttl), 1)
 
     async def record_failure(self, email: str, client_key: str) -> None:
-        """执行 record_failure 的业务流程并返回该流程的结果。"""
+        """执行 record_failure 的业务流程并返回该流程的结果。
+
+Args:
+    email: 参数语义、输入边界和安全约束。
+    client_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         key = self._key(email, client_key)
         attempts = await self._redis.incr(key)
         if attempts == 1:
             await self._redis.expire(key, self._window_seconds)
 
     async def clear(self, email: str, client_key: str) -> None:
-        """执行 clear 的业务流程并返回该流程的结果。"""
+        """执行 clear 的业务流程并返回该流程的结果。
+
+Args:
+    email: 参数语义、输入边界和安全约束。
+    client_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await self._redis.delete(self._key(email, client_key))
 
     @staticmethod
     def _key(email: str, client_key: str) -> str:
-        """执行内部步骤 _key，供同一模块的公开流程复用。"""
+        """执行内部步骤 _key，供同一模块的公开流程复用。
+
+Args:
+    email: 参数语义、输入边界和安全约束。
+    client_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         identity = f"{email.strip().lower()}\0{client_key}".encode()
         return f"auth:login:{hashlib.sha256(identity).hexdigest()}"

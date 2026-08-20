@@ -19,16 +19,35 @@ class PostgresModelBudgetGateway:
     """按租户持久化用途级预算策略，并安全累计当前周期用量。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def upsert_policy(self, *, policy: ModelBudgetPolicy) -> None:
-        """执行 upsert_policy 的业务流程并返回该流程的结果。"""
+        """执行 upsert_policy 的业务流程并返回该流程的结果。
+
+Args:
+    policy: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await asyncio.to_thread(self._upsert_policy, policy)
 
     def _upsert_policy(self, policy: ModelBudgetPolicy) -> None:
-        """执行内部步骤 _upsert_policy，供同一模块的公开流程复用。"""
+        """执行内部步骤 _upsert_policy，供同一模块的公开流程复用。
+
+Args:
+    policy: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -50,11 +69,15 @@ class PostgresModelBudgetGateway:
             )
 
     async def list_policies(self) -> list[ModelBudgetPolicy]:
-        """执行 list_policies 的业务流程并返回该流程的结果。"""
+        """执行 list_policies 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_policies)
 
     def _list_policies(self) -> list[ModelBudgetPolicy]:
-        """执行内部步骤 _list_policies，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_policies，供同一模块的公开流程复用。
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """
@@ -71,11 +94,25 @@ class PostgresModelBudgetGateway:
     async def get_policy(
         self, *, provider_id: str, purpose: BudgetPurpose
     ) -> ModelBudgetPolicy | None:
-        """执行 get_policy 的业务流程并返回该流程的结果。"""
+        """执行 get_policy 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    purpose: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._get_policy, provider_id, purpose)
 
     def _get_policy(self, provider_id: str, purpose: BudgetPurpose) -> ModelBudgetPolicy | None:
-        """执行内部步骤 _get_policy，供同一模块的公开流程复用。"""
+        """执行内部步骤 _get_policy，供同一模块的公开流程复用。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    purpose: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """
@@ -91,7 +128,23 @@ class PostgresModelBudgetGateway:
     async def add_usage(self, *, provider_id: str, purpose: BudgetPurpose,
                         period_start: date, daily_tokens: int, monthly_tokens: int,
                         daily_requests: int, monthly_cost: float) -> None:
-        """执行 add_usage 的业务流程并返回该流程的结果。"""
+        """执行 add_usage 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    purpose: 参数语义、输入边界和安全约束。
+    period_start: 参数语义、输入边界和安全约束。
+    daily_tokens: 参数语义、输入边界和安全约束。
+    monthly_tokens: 参数语义、输入边界和安全约束。
+    daily_requests: 参数语义、输入边界和安全约束。
+    monthly_cost: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if min(daily_tokens, monthly_tokens, daily_requests) < 0 or monthly_cost < 0:
             raise ValueError("额度用量增量不能为负数")
         await asyncio.to_thread(
@@ -102,7 +155,19 @@ class PostgresModelBudgetGateway:
     def _add_usage(self, provider_id: str, purpose: BudgetPurpose, period_start: date,
                    daily_tokens: int, monthly_tokens: int, daily_requests: int,
                    monthly_cost: float) -> None:
-        """执行内部步骤 _add_usage，供同一模块的公开流程复用。"""
+        """执行内部步骤 _add_usage，供同一模块的公开流程复用。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    purpose: 参数语义、输入边界和安全约束。
+    period_start: 参数语义、输入边界和安全约束。
+    daily_tokens: 参数语义、输入边界和安全约束。
+    monthly_tokens: 参数语义、输入边界和安全约束。
+    daily_requests: 参数语义、输入边界和安全约束。
+    monthly_cost: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -126,12 +191,28 @@ class PostgresModelBudgetGateway:
 
     async def get_usage(self, *, provider_id: str, purpose: BudgetPurpose,
                         period_start: date) -> ModelBudgetUsage:
-        """执行 get_usage 的业务流程并返回该流程的结果。"""
+        """执行 get_usage 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    purpose: 参数语义、输入边界和安全约束。
+    period_start: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._get_usage, provider_id, purpose, period_start)
 
     def _get_usage(self, provider_id: str, purpose: BudgetPurpose,
                    period_start: date) -> ModelBudgetUsage:
-        """执行内部步骤 _get_usage，供同一模块的公开流程复用。"""
+        """执行内部步骤 _get_usage，供同一模块的公开流程复用。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    purpose: 参数语义、输入边界和安全约束。
+    period_start: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """
@@ -155,7 +236,13 @@ class PostgresModelBudgetGateway:
 
 
 def _policy_from_row(row: object) -> ModelBudgetPolicy:
-    """执行内部步骤 _policy_from_row，供同一模块的公开流程复用。"""
+    """执行内部步骤 _policy_from_row，供同一模块的公开流程复用。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     values = cast(dict[str, object], row)
     return ModelBudgetPolicy(
         provider_id=str(values["provider_id"]), purpose=cast(BudgetPurpose, str(values["purpose"])),

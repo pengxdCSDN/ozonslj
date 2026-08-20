@@ -17,7 +17,13 @@ class LangChainRunnable(Protocol):
     """定义项目对 LangChain 异步 Runnable 的最小依赖协议。"""
 
     async def ainvoke(self, input: dict[str, Any]) -> dict[str, Any]:
-        """接收图状态并返回可映射回领域状态的结果。"""
+        """接收图状态并返回可映射回领域状态的结果。
+
+Args:
+    input: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         ...
 
 
@@ -25,11 +31,23 @@ class LangChainGraphAdapter:
     """把 LangChain Runnable 适配为项目内部的图执行端口。"""
 
     def __init__(self, runnable: LangChainRunnable) -> None:
-        """保存第三方 Runnable；不在构造阶段加载模型或访问网络。"""
+        """保存第三方 Runnable；不在构造阶段加载模型或访问网络。
+
+Args:
+    runnable: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._runnable = runnable
 
     async def run(self, state: AgentState) -> AgentState:
-        """将领域 AgentState 转换为 Runnable 输入，并映射执行结果。"""
+        """将领域 AgentState 转换为 Runnable 输入，并映射执行结果。
+
+Args:
+    state: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         result = await self._runnable.ainvoke(
             {"messages": list(state.messages), "intent": state.intent, "question": state.question}
         )
@@ -50,13 +68,25 @@ class LangChainGraphAdapter:
 def build_langgraph_adapter(
     factory: Callable[[dict[str, Any]], LangChainRunnable],
 ) -> AgentGraphPort:
-    """以工厂形式接入 LangGraph，避免在领域代码中硬编码 StateGraph。"""
+    """以工厂形式接入 LangGraph，避免在领域代码中硬编码 StateGraph。
+
+Args:
+    factory: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     class FactoryAdapter:
         """延迟创建 Runnable 的领域图端口适配器。"""
 
         async def invoke(self, state: AgentState) -> AgentState:
-            """按当前意图创建 Runnable 并执行一次领域状态转换。"""
+            """按当前意图创建 Runnable 并执行一次领域状态转换。
+
+Args:
+    state: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
             return await LangChainGraphAdapter(factory({"intent": state.intent})).run(state)
 
     return FactoryAdapter()

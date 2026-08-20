@@ -20,10 +20,24 @@ class ListingLayerGateway(Protocol):
     async def save_layers(
         self, *, workspace_id: str, layers: list[LayeredKeyword]
     ) -> list[LayeredKeyword]:
-        """执行 save_layers 的业务流程并返回该流程的结果。"""
+        """执行 save_layers 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    layers: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_layers(self, *, workspace_id: str, limit: int = 50) -> list[LayeredKeyword]:
-        """执行 list_layers 的业务流程并返回该流程的结果。"""
+        """执行 list_layers 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def classify_listing_keywords(
@@ -33,7 +47,16 @@ def classify_listing_keywords(
     attribute_terms: set[str] | None = None,
     scene_terms: set[str] | None = None,
 ) -> list[LayeredKeyword]:
-    """按人工词表优先、词形特征其次分层；结果始终可人工复核。"""
+    """按人工词表优先、词形特征其次分层；结果始终可人工复核。
+
+Args:
+    keywords: 参数语义、输入边界和安全约束。
+    core_terms: 参数语义、输入边界和安全约束。
+    attribute_terms: 参数语义、输入边界和安全约束。
+    scene_terms: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     core_terms = {term.casefold() for term in (core_terms or set())}
     attribute_terms = {term.casefold() for term in (attribute_terms or set())}
     scene_terms = {term.casefold() for term in (scene_terms or set())}
@@ -60,7 +83,13 @@ def classify_listing_keywords(
 
 
 def _unique(values: list[str]) -> list[str]:
-    """执行内部步骤 _unique，供同一模块的公开流程复用。"""
+    """执行内部步骤 _unique，供同一模块的公开流程复用。
+
+Args:
+    values: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     seen: set[str] = set()
     result: list[str] = []
     for value in values:

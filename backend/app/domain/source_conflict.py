@@ -15,7 +15,14 @@ class SourceConflict:
 def find_source_conflicts(
     records: dict[str, dict[str, object]], *, fields: list[str]
 ) -> list[SourceConflict]:
-    """执行 find_source_conflicts 的业务流程并返回该流程的结果。"""
+    """执行 find_source_conflicts 的业务流程并返回该流程的结果。
+
+Args:
+    records: 参数语义、输入边界和安全约束。
+    fields: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     conflicts: list[SourceConflict] = []
     for field in fields:
         values = {source: data[field] for source, data in records.items() if field in data}

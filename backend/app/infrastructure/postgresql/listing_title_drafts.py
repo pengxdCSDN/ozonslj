@@ -12,20 +12,43 @@ class PostgresListingTitleDraftGateway:
     """保存可编辑标题草稿和关键词覆盖报告，不执行外部发布。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def save_draft(
         self, *, workspace_id: str, product_scope: str, draft: ListingTitleDraft
     ) -> ListingTitleDraft:
-        """执行 save_draft 的业务流程并返回该流程的结果。"""
+        """执行 save_draft 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    draft: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._save, workspace_id, product_scope, draft)
 
     def _save(
         self, workspace_id: str, product_scope: str, draft: ListingTitleDraft
     ) -> ListingTitleDraft:
-        """执行内部步骤 _save，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    draft: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -45,12 +68,26 @@ class PostgresListingTitleDraftGateway:
         return draft
 
     async def list_drafts(self, *, workspace_id: str, limit: int = 50) -> list[ListingTitleDraft]:
-        """执行 list_drafts 的业务流程并返回该流程的结果。"""
+        """执行 list_drafts 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list, workspace_id, limit)
 
     def _list(self, workspace_id: str, limit: int) -> list[ListingTitleDraft]:
         # 标题草稿历史只读当前组织和工作区，便于人工复核且不触发发布。
-        """执行内部步骤 _list，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """

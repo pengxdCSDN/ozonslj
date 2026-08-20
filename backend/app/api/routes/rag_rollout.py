@@ -20,7 +20,9 @@ class RolloutTransitionPayload(BaseModel):
 
 @router.get("/v1/capabilities/knowledge-rag")
 async def knowledge_rag_capabilities() -> dict[str, object]:
-    """执行 knowledge_rag_capabilities 的业务流程并返回该流程的结果。"""
+    """执行 knowledge_rag_capabilities 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
     return {
         "knowledge_management": True,
         "knowledge_query": True,
@@ -34,7 +36,17 @@ async def knowledge_rag_capabilities() -> dict[str, object]:
 
 @router.post("/v1/rag-rollout/transitions")
 async def transition_rag_rollout(payload: RolloutTransitionPayload) -> dict[str, object]:
-    """执行 transition_rag_rollout 的业务流程并返回该流程的结果。"""
+    """执行 transition_rag_rollout 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     global _flag
     if payload.mode == "internal" and not payload.reason.strip():
         raise HTTPException(status_code=400, detail="internal 模式必须提供切换理由")

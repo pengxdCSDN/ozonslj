@@ -15,7 +15,14 @@ class PostgresSellerOperationGateway:
     """读取 PostgreSQL 追加式审计中的固定脱敏字段。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
@@ -26,7 +33,15 @@ class PostgresSellerOperationGateway:
         cursor: str | None,
         limit: int,
     ) -> SellerOperationPage:
-        """执行 list_seller_operations 的业务流程并返回该流程的结果。"""
+        """执行 list_seller_operations 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._list_seller_operations,
             workspace_id,
@@ -41,7 +56,15 @@ class PostgresSellerOperationGateway:
         limit: int,
     ) -> SellerOperationPage:
         # detail、operator_id 和 user_id 不进入查询白名单，防止泄露凭据或内部身份。
-        """执行内部步骤 _list_seller_operations，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_seller_operations，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    offset: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             count_row = connection.execute(
                 """
@@ -74,7 +97,17 @@ class PostgresSellerOperationGateway:
 
 
 def _seller_operation_from_row(row: dict[str, Any]) -> SellerOperationSummary:
-    """将数据库约束后的审计行映射为固定白名单摘要。"""
+    """将数据库约束后的审计行映射为固定白名单摘要。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     occurred_at = row["occurred_at"]
     if not isinstance(occurred_at, datetime):
         raise ValueError("审计 occurred_at 不是有效时间")

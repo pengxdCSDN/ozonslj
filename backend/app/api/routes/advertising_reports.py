@@ -23,7 +23,17 @@ class AdvertisingReportPayload(BaseModel):
 
 @router.post("/sync-preview", response_model=list[AdvertisingReportRow])
 async def sync_report_preview(payload: AdvertisingReportPayload) -> list[AdvertisingReportRow]:
-    """执行 sync_report_preview 的业务流程并返回该流程的结果。"""
+    """执行 sync_report_preview 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         return [normalize_advertising_report(row) for row in payload.rows]
     except (TypeError, ValueError) as error:
@@ -43,7 +53,20 @@ async def sync_and_save_reports(
     gateway: Annotated[AdvertisingReportGateway, Depends(get_advertising_report_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[AdvertisingReportRow]:
-    """执行 sync_and_save_reports 的业务流程并返回该流程的结果。"""
+    """执行 sync_and_save_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -63,7 +86,20 @@ async def list_saved_reports(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 100,
 ) -> list[AdvertisingReportRow]:
-    """执行 list_saved_reports 的业务流程并返回该流程的结果。"""
+    """执行 list_saved_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_rows(workspace_id=workspace_id, limit=limit)

@@ -28,7 +28,19 @@ class QuarantinedPdf:
 
 
 def quarantined_pdf_path(upload_id: str, *, root: Path | None = None) -> Path:
-    """解析隔离文件路径；只接受 UUID，避免路径穿越。"""
+    """解析隔离文件路径；只接受 UUID，避免路径穿越。
+
+Args:
+    upload_id: 参数语义、输入边界和安全约束。
+    root: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    FileNotFoundError: 业务约束或外部依赖失败时抛出。
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
 
     try:
         safe_id = upload_id if upload_id else str(uuid4())
@@ -45,7 +57,14 @@ def quarantined_pdf_path(upload_id: str, *, root: Path | None = None) -> Path:
 
 
 def quarantine_pdf(content: bytes, *, root: Path | None = None) -> QuarantinedPdf:
-    """写入仅服务端可访问的隔离目录，不返回真实路径。"""
+    """写入仅服务端可访问的隔离目录，不返回真实路径。
+
+Args:
+    content: 参数语义、输入边界和安全约束。
+    root: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     configured_root = os.environ.get(
         "OZONSLJ_PDF_QUARANTINE_DIR", "/var/lib/ozonslj/pdf-quarantine"
@@ -71,7 +90,17 @@ def validate_pdf_upload(
     *, filename: str, declared_mime: str, content: bytes,
     max_bytes: int = 25 * 1024 * 1024, max_pages: int = 300,
 ) -> PdfSafetyResult:
-    """文件先隔离；未配置杀毒服务时不得显示为安全通过。"""
+    """文件先隔离；未配置杀毒服务时不得显示为安全通过。
+
+Args:
+    filename: 参数语义、输入边界和安全约束。
+    declared_mime: 参数语义、输入边界和安全约束。
+    content: 参数语义、输入边界和安全约束。
+    max_bytes: 参数语义、输入边界和安全约束。
+    max_pages: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     if len(content) > max_bytes:
         return _blocked(len(content), "文件超过 25 MiB 限制")
@@ -92,7 +121,14 @@ def validate_pdf_upload(
 
 
 def _blocked(byte_size: int, reason: str) -> PdfSafetyResult:
-    """执行内部步骤 _blocked，供同一模块的公开流程复用。"""
+    """执行内部步骤 _blocked，供同一模块的公开流程复用。
+
+Args:
+    byte_size: 参数语义、输入边界和安全约束。
+    reason: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return PdfSafetyResult(
         status="blocked", byte_size=byte_size, page_count=None, blocked_reason=reason,
         structural_safety_status="blocked", malware_scan_status="not_run",

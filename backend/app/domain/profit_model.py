@@ -39,11 +39,25 @@ class ProfitModelGateway(Protocol):
         assumptions: dict[str, object],
         scenarios: tuple[ProfitScenario, ProfitScenario],
     ) -> tuple[ProfitScenario, ProfitScenario]:
-        """执行 save_model 的业务流程并返回该流程的结果。"""
+        """执行 save_model 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    assumptions: 参数语义、输入边界和安全约束。
+    scenarios: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def calculate_profit_model(item: ProfitModelInput) -> tuple[ProfitScenario, ProfitScenario]:
-    """执行 calculate_profit_model 的业务流程并返回该流程的结果。"""
+    """执行 calculate_profit_model 的业务流程并返回该流程的结果。
+
+Args:
+    item: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     _validate_inputs(item)
     return (
         _scenario("FBO", item, item.fbo_logistics_minor),
@@ -52,7 +66,17 @@ def calculate_profit_model(item: ProfitModelInput) -> tuple[ProfitScenario, Prof
 
 
 def _validate_inputs(item: ProfitModelInput) -> None:
-    """执行内部步骤 _validate_inputs，供同一模块的公开流程复用。"""
+    """执行内部步骤 _validate_inputs，供同一模块的公开流程复用。
+
+Args:
+    item: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     values = (
         item.selling_price_minor,
         item.purchase_cost_minor,
@@ -70,7 +94,15 @@ def _validate_inputs(item: ProfitModelInput) -> None:
 
 
 def _scenario(kind: str, item: ProfitModelInput, logistics: int) -> ProfitScenario:
-    """执行内部步骤 _scenario，供同一模块的公开流程复用。"""
+    """执行内部步骤 _scenario，供同一模块的公开流程复用。
+
+Args:
+    kind: 参数语义、输入边界和安全约束。
+    item: 参数语义、输入边界和安全约束。
+    logistics: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     profit = _profit(item, logistics, item.ad_cost_minor, item.purchase_cost_minor)
     cost = (
         item.purchase_cost_minor
@@ -92,7 +124,16 @@ def _scenario(kind: str, item: ProfitModelInput, logistics: int) -> ProfitScenar
 
 
 def _profit(item: ProfitModelInput, logistics: float, ad_cost: float, purchase: float) -> int:
-    """执行内部步骤 _profit，供同一模块的公开流程复用。"""
+    """执行内部步骤 _profit，供同一模块的公开流程复用。
+
+Args:
+    item: 参数语义、输入边界和安全约束。
+    logistics: 参数语义、输入边界和安全约束。
+    ad_cost: 参数语义、输入边界和安全约束。
+    purchase: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return round(
         item.selling_price_minor
         - purchase

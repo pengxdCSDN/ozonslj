@@ -29,14 +29,26 @@ class SamplingBatchPayload(BaseModel):
 
 
 async def _stub_fetch_page(url: str) -> int:
-    """默认 Stub 只用于开发验证，真实 HTTP 适配器需单独实现并复核官方策略。"""
+    """默认 Stub 只用于开发验证，真实 HTTP 适配器需单独实现并复核官方策略。
+
+Args:
+    url: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     del url
     return 200
 
 
 @router.post("/preview", response_model=list[SamplingResult])
 async def sample_preview(payload: SamplingBatchPayload) -> list[SamplingResult]:
-    """执行 sample_preview 的业务流程并返回该流程的结果。"""
+    """执行 sample_preview 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     sampler = PublicSampler(
         _stub_fetch_page, global_limit=payload.global_limit, max_attempts=payload.max_attempts
     )
@@ -53,7 +65,20 @@ async def sample_preview_and_record(
     gateway: Annotated[QualityFindingGateway, Depends(get_quality_finding_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[SamplingResult]:
-    """执行受控采样预览并记录被阻止的请求，当前仍只使用 Stub。"""
+    """执行受控采样预览并记录被阻止的请求，当前仍只使用 Stub。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     results = await sample_preview(payload)

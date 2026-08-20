@@ -57,7 +57,13 @@ class PdfExtractResponse(BaseModel):
 
 @router.post("", response_model=PdfUploadResponse, status_code=202)
 async def upload_pdf(payload: PdfUploadPayload) -> PdfUploadResponse:
-    """执行 upload_pdf 的业务流程并返回该流程的结果。"""
+    """执行 upload_pdf 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     try:
         content = base64.b64decode(payload.content_base64, validate=True)
     except ValueError:
@@ -81,7 +87,13 @@ async def upload_pdf(payload: PdfUploadPayload) -> PdfUploadResponse:
 
 @router.post("/{upload_id}/extract-text", response_model=PdfExtractResponse)
 async def extract_pdf_text(upload_id: str) -> PdfExtractResponse:
-    """执行 extract_pdf_text 的业务流程并返回该流程的结果。"""
+    """执行 extract_pdf_text 的业务流程并返回该流程的结果。
+
+Args:
+    upload_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     try:
         path = quarantined_pdf_path(upload_id)
     except (ValueError, FileNotFoundError) as error:

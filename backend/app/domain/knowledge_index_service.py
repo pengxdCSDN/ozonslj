@@ -32,7 +32,15 @@ class KnowledgeIndexService:
         embedding: EmbeddingPort,
         vector_index: VectorIndexPort,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    chunk_gateway: 参数语义、输入边界和安全约束。
+    embedding: 参数语义、输入边界和安全约束。
+    vector_index: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._chunk_gateway = chunk_gateway
         self._embedding = embedding
         self._vector_index = vector_index
@@ -40,7 +48,18 @@ class KnowledgeIndexService:
     async def publish(
         self, *, organization_id: str, chunks: list[KnowledgeChunk]
     ) -> IndexingResult:
-        """执行 publish 的业务流程并返回该流程的结果。"""
+        """执行 publish 的业务流程并返回该流程的结果。
+
+Args:
+    organization_id: 参数语义、输入边界和安全约束。
+    chunks: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if not chunks:
             raise ValueError("禁止发布空切片集合")
         published = [
@@ -57,7 +76,14 @@ class KnowledgeIndexService:
     async def withdraw(
         self, *, organization_id: str, chunks: list[KnowledgeChunk]
     ) -> IndexingResult:
-        """执行 withdraw 的业务流程并返回该流程的结果。"""
+        """执行 withdraw 的业务流程并返回该流程的结果。
+
+Args:
+    organization_id: 参数语义、输入边界和安全约束。
+    chunks: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         chunk_ids = [chunk.chunk_id for chunk in chunks]
         if not chunk_ids:
             return IndexingResult("withdraw", 0, True)
@@ -70,6 +96,13 @@ class KnowledgeIndexService:
     async def delete(
         self, *, organization_id: str, chunks: list[KnowledgeChunk]
     ) -> IndexingResult:
-        """删除索引内容；治理表采用 withdrawn 状态保留审计事实。"""
+        """删除索引内容；治理表采用 withdrawn 状态保留审计事实。
+
+Args:
+    organization_id: 参数语义、输入边界和安全约束。
+    chunks: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
         return await self.withdraw(organization_id=organization_id, chunks=chunks)

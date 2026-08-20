@@ -20,7 +20,13 @@ class TenantContext:
     user_id: str
 
     def __post_init__(self) -> None:
-        """实现特殊方法 __post_init__，遵循该类型的 Python 运行时约定。"""
+        """实现特殊方法 __post_init__，遵循该类型的 Python 运行时约定。
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if not self.organization_id.strip():
             raise ValueError("organization_id 不能为空")
         if not self.user_id.strip():
@@ -38,7 +44,20 @@ class PostgresSessionFactory:
         max_size: int = 5,
         pool: ConnectionPool[Connection[dict[str, Any]]] | None = None,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    database_url: 参数语义、输入边界和安全约束。
+    min_size: 参数语义、输入边界和安全约束。
+    max_size: 参数语义、输入边界和安全约束。
+    pool: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if not database_url.strip():
             raise ValueError("database_url 不能为空")
         if min_size < 0 or max_size < 1 or min_size > max_size:
@@ -56,7 +75,9 @@ class PostgresSessionFactory:
         )
 
     def open(self) -> None:
-        """显式打开连接池并等待最小连接就绪，使启动失败可被部署平台观察。"""
+        """显式打开连接池并等待最小连接就绪，使启动失败可被部署平台观察。
+Returns:
+    返回调用完成后的领域结果。"""
         # API 与 Worker 都可能率先访问数据库；迁移运行器通过咨询锁串行化升级。
         # 升级失败时不开放连接池，避免新代码在旧 schema 上继续提供流量。
         if self._migrate_on_open:
@@ -64,11 +85,15 @@ class PostgresSessionFactory:
         self._pool.open(wait=True)
 
     def close(self) -> None:
-        """停止接收新借用并关闭池内连接。"""
+        """停止接收新借用并关闭池内连接。
+Returns:
+    返回调用完成后的领域结果。"""
         self._pool.close()
 
     def check(self) -> None:
-        """执行最小只读查询，验证连接池能够取得可用 PostgreSQL 连接。"""
+        """执行最小只读查询，验证连接池能够取得可用 PostgreSQL 连接。
+Returns:
+    返回调用完成后的领域结果。"""
         with self._pool.connection() as connection:
             connection.execute("SELECT 1").fetchone()
 
@@ -77,7 +102,13 @@ class PostgresSessionFactory:
         self,
         context: TenantContext,
     ) -> Iterator[Connection[dict[str, Any]]]:
-        """在同一事务内设置 RLS 上下文，并把连接交给参数化业务查询。"""
+        """在同一事务内设置 RLS 上下文，并把连接交给参数化业务查询。
+
+Args:
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._pool.connection() as connection, connection.transaction():
             # set_config(..., true) 与 SET LOCAL 等价，值只在当前事务有效；
             # 连接归还池前事务结束，避免租户上下文泄漏到下一位借用者。
@@ -93,6 +124,8 @@ class PostgresSessionFactory:
 
     @contextmanager
     def authentication_transaction(self) -> Iterator[Connection[dict[str, Any]]]:
-        """提供登录前受限事务；仅身份适配器可先查用户，再在事务内补齐 RLS 上下文。"""
+        """提供登录前受限事务；仅身份适配器可先查用户，再在事务内补齐 RLS 上下文。
+Returns:
+    返回调用完成后的领域结果。"""
         with self._pool.connection() as connection, connection.transaction():
             yield connection

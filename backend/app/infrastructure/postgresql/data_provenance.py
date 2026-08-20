@@ -12,16 +12,37 @@ class PostgresDataProvenanceGateway:
     """保存来源、观测时间和解释，保证分析结果可以回溯可信度边界。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def save(self, *, workspace_id: str, provenance: DataProvenance) -> DataProvenance:
-        """执行 save 的业务流程并返回该流程的结果。"""
+        """执行 save 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    provenance: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._save, workspace_id, provenance)
 
     def _save(self, workspace_id: str, provenance: DataProvenance) -> DataProvenance:
-        """执行内部步骤 _save，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    provenance: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -37,11 +58,25 @@ class PostgresDataProvenanceGateway:
         return provenance
 
     async def list_history(self, *, workspace_id: str, limit: int = 50) -> list[DataProvenance]:
-        """执行 list_history 的业务流程并返回该流程的结果。"""
+        """执行 list_history 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_history, workspace_id, limit)
 
     def _list_history(self, workspace_id: str, limit: int) -> list[DataProvenance]:
-        """执行内部步骤 _list_history，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_history，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """

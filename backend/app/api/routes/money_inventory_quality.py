@@ -21,7 +21,13 @@ class MoneyInventoryPayload(BaseModel):
 
 @router.post("/money-inventory-check", response_model=list[MoneyInventoryFinding])
 async def money_inventory_check(payload: MoneyInventoryPayload) -> list[MoneyInventoryFinding]:
-    """执行 money_inventory_check 的业务流程并返回该流程的结果。"""
+    """执行 money_inventory_check 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return check_money_inventory(payload.record, allowed_currencies=payload.allowed_currencies)
 
 
@@ -35,7 +41,20 @@ async def money_inventory_check_and_isolate(
     gateway: Annotated[QualityFindingGateway, Depends(get_quality_finding_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[MoneyInventoryFinding]:
-    """将币种、金额和库存异常写入质量隔离区，阻止其静默进入运营指标。"""
+    """将币种、金额和库存异常写入质量隔离区，阻止其静默进入运营指标。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     findings = await money_inventory_check(payload)

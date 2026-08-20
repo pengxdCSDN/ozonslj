@@ -21,12 +21,26 @@ class ExternalNotificationGateway(Protocol):
     async def save_config(
         self, *, workspace_id: str, config: ExternalNotificationConfig
     ) -> ExternalNotificationConfig:
-        """执行 save_config 的业务流程并返回该流程的结果。"""
+        """执行 save_config 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    config: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_configs(
         self, *, workspace_id: str, limit: int
     ) -> list[ExternalNotificationConfig]:
-        """执行 list_configs 的业务流程并返回该流程的结果。"""
+        """执行 list_configs 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 ALLOWED_CHANNELS = frozenset({"feishu", "dingtalk", "wechat_work", "email"})
@@ -37,7 +51,21 @@ def validate_notification_config(
     *, channel: str, enabled: bool, template: str,
     retry_limit: int, sensitive_data_allowed: bool,
 ) -> ExternalNotificationConfig:
-    """执行 validate_notification_config 的业务流程并返回该流程的结果。"""
+    """执行 validate_notification_config 的业务流程并返回该流程的结果。
+
+Args:
+    channel: 参数语义、输入边界和安全约束。
+    enabled: 参数语义、输入边界和安全约束。
+    template: 参数语义、输入边界和安全约束。
+    retry_limit: 参数语义、输入边界和安全约束。
+    sensitive_data_allowed: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     normalized = channel.strip().lower()
     normalized_template = template.strip()
     if normalized not in ALLOWED_CHANNELS or not template.strip():
@@ -57,7 +85,18 @@ def validate_notification_config(
 
 
 def render_notification_preview(template: str, values: dict[str, object]) -> str:
-    """仅渲染白名单字段，预览结果不触发任何外部发送。"""
+    """仅渲染白名单字段，预览结果不触发任何外部发送。
+
+Args:
+    template: 参数语义、输入边界和安全约束。
+    values: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     fields = re.findall(r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}", template)
     if not template.strip() or any(field not in ALLOWED_TEMPLATE_FIELDS for field in fields):
         raise ValueError("通知模板包含空内容或未允许字段")

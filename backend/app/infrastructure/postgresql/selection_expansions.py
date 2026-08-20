@@ -13,16 +13,37 @@ class PostgresExpandResultGateway:
     """保存关键词、属性、场景和变体扩展快照，供人工进入 Validate。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def save_expansion(self, *, workspace_id: str, result: ExpandResult) -> ExpandResult:
-        """执行 save_expansion 的业务流程并返回该流程的结果。"""
+        """执行 save_expansion 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    result: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._save, workspace_id, result)
 
     def _save(self, workspace_id: str, result: ExpandResult) -> ExpandResult:
-        """执行内部步骤 _save，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    result: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         payload = asdict(result)
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
@@ -46,11 +67,25 @@ class PostgresExpandResultGateway:
     async def list_expansions(
         self, *, workspace_id: str, limit: int
     ) -> list[ExpandResult]:
-        """执行 list_expansions 的业务流程并返回该流程的结果。"""
+        """执行 list_expansions 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_expansions, workspace_id, limit)
 
     def _list_expansions(self, workspace_id: str, limit: int) -> list[ExpandResult]:
-        """执行内部步骤 _list_expansions，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_expansions，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT seed_product, core_terms, attribute_terms, scene_terms,

@@ -26,7 +26,17 @@ class SyncProcessorPlan(BaseModel):
 
 @router.post("/plan", response_model=SyncProcessorPlan)
 async def build_plan(payload: SyncProcessorPlanPayload) -> SyncProcessorPlan:
-    """执行 build_plan 的业务流程并返回该流程的结果。"""
+    """执行 build_plan 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if payload.resource_type not in {"products", "stock", "orders", "postings"}:
         raise HTTPException(
             status_code=422,

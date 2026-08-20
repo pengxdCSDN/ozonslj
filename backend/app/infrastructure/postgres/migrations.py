@@ -28,7 +28,18 @@ def migrate_postgres(
     *,
     migrations_path: Path = _DEFAULT_MIGRATIONS_PATH,
 ) -> None:
-    """按版本执行 PostgreSQL 迁移，并拒绝校验和发生变化的历史迁移。"""
+    """按版本执行 PostgreSQL 迁移，并拒绝校验和发生变化的历史迁移。
+
+Args:
+    dsn: 参数语义、输入边界和安全约束。
+    migrations_path: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    PostgresMigrationError: 业务约束或外部依赖失败时抛出。
+"""
 
     migrations = _load_migrations(migrations_path)
     try:
@@ -80,7 +91,17 @@ def migrate_postgres(
 
 
 def _load_migrations(migrations_path: Path) -> tuple[_Migration, ...]:
-    """执行内部步骤 _load_migrations，供同一模块的公开流程复用。"""
+    """执行内部步骤 _load_migrations，供同一模块的公开流程复用。
+
+Args:
+    migrations_path: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    PostgresMigrationError: 业务约束或外部依赖失败时抛出。
+"""
     migrations: list[_Migration] = []
     for path in sorted(migrations_path.glob("[0-9][0-9][0-9][0-9]_*.sql")):
         version_text, _, name_with_suffix = path.name.partition("_")
@@ -102,7 +123,18 @@ def _verify_checksums(
     applied: dict[int, str],
     migrations: tuple[_Migration, ...],
 ) -> None:
-    """执行内部步骤 _verify_checksums，供同一模块的公开流程复用。"""
+    """执行内部步骤 _verify_checksums，供同一模块的公开流程复用。
+
+Args:
+    applied: 参数语义、输入边界和安全约束。
+    migrations: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    PostgresMigrationError: 业务约束或外部依赖失败时抛出。
+"""
     expected = {migration.version: migration.checksum for migration in migrations}
     unknown_versions = sorted(set(applied) - set(expected))
     if unknown_versions:

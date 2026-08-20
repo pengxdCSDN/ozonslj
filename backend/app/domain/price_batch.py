@@ -26,7 +26,19 @@ class PriceBatchValidation:
 def validate_price_batch(
     items: list[PriceChange], *, max_items: int = 20, max_change_percent: int = 10
 ) -> PriceBatchValidation:
-    """执行 validate_price_batch 的业务流程并返回该流程的结果。"""
+    """执行 validate_price_batch 的业务流程并返回该流程的结果。
+
+Args:
+    items: 参数语义、输入边界和安全约束。
+    max_items: 参数语义、输入边界和安全约束。
+    max_change_percent: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if isinstance(max_items, bool) or not isinstance(max_items, int) or max_items < 1:
         raise ValueError("批量上限必须为正数")
     if (

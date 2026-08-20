@@ -28,7 +28,13 @@ class SearchAttributesPayload(BaseModel):
 
 @router.post("/suggest", response_model=SearchAttributesReport)
 async def suggest_search_attributes(payload: SearchAttributesPayload) -> SearchAttributesReport:
-    """执行 suggest_search_attributes 的业务流程并返回该流程的结果。"""
+    """执行 suggest_search_attributes 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return build_search_attributes(payload.required, payload.current, payload.keyword_terms)
 
 
@@ -42,7 +48,20 @@ async def suggest_and_save_search_attributes(
     gateway: Annotated[SearchAttributesGateway, Depends(get_search_attributes_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> SearchAttributesReport:
-    """执行 suggest_and_save_search_attributes 的业务流程并返回该流程的结果。"""
+    """执行 suggest_and_save_search_attributes 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     report = build_search_attributes(payload.required, payload.current, payload.keyword_terms)
@@ -60,7 +79,20 @@ async def list_search_attributes_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[SearchAttributesReport]:
-    """返回属性建议历史，供运营复核覆盖率和缺失必填项。"""
+    """返回属性建议历史，供运营复核覆盖率和缺失必填项。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_reports(workspace_id=workspace_id, limit=limit)

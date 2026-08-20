@@ -22,12 +22,26 @@ class SummaryReportGateway(Protocol):
     async def save_report(
         self, *, workspace_id: str, report: SummaryReport
     ) -> SummaryReport:
-        """执行 save_report 的业务流程并返回该流程的结果。"""
+        """执行 save_report 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    report: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
     ) -> list[SummaryReport]:
-        """执行 list_reports 的业务流程并返回该流程的结果。"""
+        """执行 list_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def build_summary_report(
@@ -35,7 +49,22 @@ def build_summary_report(
     stockout_risk_count: int, advertising_anomaly_count: int,
     opportunity_count: int,
 ) -> SummaryReport:
-    """执行 build_summary_report 的业务流程并返回该流程的结果。"""
+    """执行 build_summary_report 的业务流程并返回该流程的结果。
+
+Args:
+    report_type: 参数语义、输入边界和安全约束。
+    period: 参数语义、输入边界和安全约束。
+    sales_change_percent: 参数语义、输入边界和安全约束。
+    stockout_risk_count: 参数语义、输入边界和安全约束。
+    advertising_anomaly_count: 参数语义、输入边界和安全约束。
+    opportunity_count: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     normalized = report_type.strip().lower()
     if normalized not in {"daily", "weekly", "monthly"} or not period.strip():
         raise ValueError("报告类型必须是 daily、weekly 或 monthly，且周期不能为空")

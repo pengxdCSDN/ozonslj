@@ -17,7 +17,13 @@ class SampleScope:
 
 
 def summarize_sample_scope(records: Sequence[dict[str, object]]) -> SampleScope:
-    """生成必须随公开样本结论展示的范围和不确定性摘要。"""
+    """生成必须随公开样本结论展示的范围和不确定性摘要。
+
+Args:
+    records: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     times = [value for record in records if isinstance(value := record.get("sampled_at"), datetime)]
     missing: set[str] = set()
     tracked_fields = ("title", "price_minor", "rating", "review_count", "image_url")

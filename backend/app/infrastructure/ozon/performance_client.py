@@ -24,18 +24,37 @@ class PerformanceTokenError(RuntimeError):
     def __init__(
         self, message: str, *, code: str = "performance_token_request_failed"
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    message: 参数语义、输入边界和安全约束。
+    code: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         super().__init__(message)
         self.code = code
 
 
 def _content_type(response: httpx.Response) -> str:
-    """只返回响应头中的媒体类型，避免把上游响应正文带入错误信息。"""
+    """只返回响应头中的媒体类型，避免把上游响应正文带入错误信息。
+
+Args:
+    response: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return response.headers.get("content-type", "").split(";", 1)[0].strip() or "未返回"
 
 
 def _token_http_error(response: httpx.Response) -> PerformanceTokenError:
-    """将 OAuth 上游状态转换为可操作且不泄露正文的错误。"""
+    """将 OAuth 上游状态转换为可操作且不泄露正文的错误。
+
+Args:
+    response: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     status = response.status_code
     if status == 401:
         return PerformanceTokenError(
@@ -68,7 +87,21 @@ async def request_performance_token(
     *, client_id: str, client_secret: str, timeout_seconds: float = 20.0,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> tuple[str, datetime]:
-    """使用 Ozon Performance 服务账号获取短期访问令牌。"""
+    """使用 Ozon Performance 服务账号获取短期访问令牌。
+
+Args:
+    client_id: 参数语义、输入边界和安全约束。
+    client_secret: 参数语义、输入边界和安全约束。
+    timeout_seconds: 参数语义、输入边界和安全约束。
+    transport: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    _token_http_error: 业务约束或外部依赖失败时抛出。
+    PerformanceTokenError: 业务约束或外部依赖失败时抛出。
+"""
     token_url = PERFORMANCE_TOKEN_URL
     payload = {
         "client_id": client_id,
@@ -144,7 +177,14 @@ class PerformanceApiError(RuntimeError):
     """Performance API 只读请求失败；异常信息不得包含令牌或密钥。"""
 
     def __init__(self, message: str, *, code: str = "performance_api_failed") -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    message: 参数语义、输入边界和安全约束。
+    code: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         super().__init__(message)
         self.code = code
 
@@ -153,7 +193,19 @@ async def fetch_performance_campaigns(
     *, access_token: str, timeout_seconds: float = 20.0,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> dict[str, Any]:
-    """读取广告活动列表，不执行任何写操作。"""
+    """读取广告活动列表，不执行任何写操作。
+
+Args:
+    access_token: 参数语义、输入边界和安全约束。
+    timeout_seconds: 参数语义、输入边界和安全约束。
+    transport: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    PerformanceApiError: 业务约束或外部依赖失败时抛出。
+"""
     try:
         async with httpx.AsyncClient(timeout=timeout_seconds, transport=transport) as client:
             response = await client.get(

@@ -103,7 +103,17 @@ class Migration:
 
 
 def build_migration_plan(applied: dict[int, str]) -> tuple[Migration, ...]:
-    """根据空库或已核验旧基线生成不可覆盖历史的迁移计划。"""
+    """根据空库或已核验旧基线生成不可覆盖历史的迁移计划。
+
+Args:
+    applied: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    PostgresMigrationError: 业务约束或外部依赖失败时抛出。
+"""
     authoritative = _load_authoritative_migrations()
     base_sql = _BASE_SCHEMA_PATH.read_text(encoding="utf-8")
     if not applied:
@@ -129,7 +139,17 @@ def build_migration_plan(applied: dict[int, str]) -> tuple[Migration, ...]:
 
 
 def migrate_postgres(dsn: str) -> None:
-    """在单个事务与咨询锁内执行迁移；任一步失败都会完整回滚。"""
+    """在单个事务与咨询锁内执行迁移；任一步失败都会完整回滚。
+
+Args:
+    dsn: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    PostgresMigrationError: 业务约束或外部依赖失败时抛出。
+"""
     try:
         with psycopg.connect(dsn) as connection, connection.cursor() as cursor:
             cursor.execute("SELECT pg_advisory_xact_lock(hashtext('ozonslj_schema_migrations'))")
@@ -168,7 +188,13 @@ def migrate_postgres(dsn: str) -> None:
 
 
 def _load_authoritative_migrations() -> tuple[Migration, ...]:
-    """执行内部步骤 _load_authoritative_migrations，供同一模块的公开流程复用。"""
+    """执行内部步骤 _load_authoritative_migrations，供同一模块的公开流程复用。
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    PostgresMigrationError: 业务约束或外部依赖失败时抛出。
+"""
     migrations: list[Migration] = []
     for path in sorted(_MIGRATIONS_PATH.glob("[0-9][0-9][0-9][0-9]_*.sql")):
         version_text, _, name_with_suffix = path.name.partition("_")
@@ -194,7 +220,16 @@ def _migration(
     *,
     source_version: int | None = None,
 ) -> Migration:
-    """执行内部步骤 _migration，供同一模块的公开流程复用。"""
+    """执行内部步骤 _migration，供同一模块的公开流程复用。
+
+Args:
+    version: 参数语义、输入边界和安全约束。
+    name: 参数语义、输入边界和安全约束。
+    sql: 参数语义、输入边界和安全约束。
+    source_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return Migration(
         version=version,
         name=name,
@@ -207,7 +242,13 @@ def _migration(
 def _build_legacy_migration_plan(
     authoritative: tuple[Migration, ...],
 ) -> tuple[Migration, ...]:
-    """生成旧云端基线的稳定版本映射，后续启动可继续追加新迁移。"""
+    """生成旧云端基线的稳定版本映射，后续启动可继续追加新迁移。
+
+Args:
+    authoritative: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     modern_v2 = authoritative[0]
     later = tuple(
         _migration(
@@ -228,14 +269,27 @@ def _build_legacy_migration_plan(
 
 
 def _without_transaction_control(sql: str) -> str:
-    """让迁移运行器独占事务边界，保证任一迁移失败时整批回滚。"""
+    """让迁移运行器独占事务边界，保证任一迁移失败时整批回滚。
+
+Args:
+    sql: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return _TRANSACTION_CONTROL_RE.sub("", sql)
 
 
 def _archive_superseded_table(
     cursor: psycopg.Cursor[tuple[object, ...]], source_version: int | None
 ) -> None:
-    """正式同名表创建前归档缺少 organization_id 的试验版结构。"""
+    """正式同名表创建前归档缺少 organization_id 的试验版结构。
+
+Args:
+    cursor: 参数语义、输入边界和安全约束。
+    source_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     table_name = _SUPERSEDED_TABLES_BY_SOURCE_VERSION.get(source_version or -1)
     if table_name is None:
         return

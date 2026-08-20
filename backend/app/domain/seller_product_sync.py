@@ -29,7 +29,18 @@ class SellerProductSyncPreview:
 def map_seller_product_response(
     payload: dict[str, object], *, cursor: str | None = None
 ) -> SellerProductSyncPreview:
-    """执行 map_seller_product_response 的业务流程并返回该流程的结果。"""
+    """执行 map_seller_product_response 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     raw_items = payload.get("items", [])
     if not isinstance(raw_items, list):
         raise ValueError("Seller 商品响应 items 必须是数组")
@@ -64,7 +75,18 @@ def map_seller_product_response(
 
 
 def _text(raw: dict[str, object], name: str) -> str:
-    """执行内部步骤 _text，供同一模块的公开流程复用。"""
+    """执行内部步骤 _text，供同一模块的公开流程复用。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+    name: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     value = raw.get(name)
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"Seller 商品字段 {name} 无效")
@@ -72,7 +94,18 @@ def _text(raw: dict[str, object], name: str) -> str:
 
 
 def _nonnegative_int(raw: dict[str, object], name: str) -> int:
-    """执行内部步骤 _nonnegative_int，供同一模块的公开流程复用。"""
+    """执行内部步骤 _nonnegative_int，供同一模块的公开流程复用。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+    name: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     value = raw.get(name)
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise ValueError(f"Seller 商品字段 {name} 必须是非负整数")
@@ -80,7 +113,17 @@ def _nonnegative_int(raw: dict[str, object], name: str) -> int:
 
 
 def _currency(raw: dict[str, object]) -> str:
-    """执行内部步骤 _currency，供同一模块的公开流程复用。"""
+    """执行内部步骤 _currency，供同一模块的公开流程复用。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     value = raw.get("currency")
     if not isinstance(value, str) or len(value.strip()) != 3 or not value.strip().isalpha():
         raise ValueError("Seller 商品币种必须是三位字母代码")

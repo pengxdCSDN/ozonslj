@@ -29,7 +29,13 @@ class SmartSearchPayload(BaseModel):
 
 @router.post("/check", response_model=SmartSearchReport)
 async def smart_search_check(payload: SmartSearchPayload) -> SmartSearchReport:
-    """执行 smart_search_check 的业务流程并返回该流程的结果。"""
+    """执行 smart_search_check 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return check_smart_search(
         payload.text,
         required_terms=payload.required_terms,
@@ -45,7 +51,20 @@ async def check_and_save_smart_search(
     gateway: Annotated[SmartSearchGateway, Depends(get_smart_search_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> SmartSearchReport:
-    """执行 check_and_save_smart_search 的业务流程并返回该流程的结果。"""
+    """执行 check_and_save_smart_search 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     report = await smart_search_check(payload)
@@ -62,7 +81,20 @@ async def list_smart_search_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[SmartSearchReport]:
-    """返回 Smart Search 检查历史，供人工复核建议且保留原文。"""
+    """返回 Smart Search 检查历史，供人工复核建议且保留原文。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_reports(workspace_id=workspace_id, limit=limit)

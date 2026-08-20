@@ -48,7 +48,14 @@ class KnowledgeSegmentAnswer:
 class RerankerPort(Protocol):
     """说明 RerankerPort 的职责、状态边界和对外协作关系。"""
     async def rerank(self, query: str, hits: list[RetrievalHit]) -> list[RetrievalHit]:
-        """执行 rerank 的业务流程并返回该流程的结果。"""
+        """执行 rerank 的业务流程并返回该流程的结果。
+
+Args:
+    query: 参数语义、输入边界和安全约束。
+    hits: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class AnswerGeneratorPort(Protocol):
@@ -56,7 +63,14 @@ class AnswerGeneratorPort(Protocol):
     async def generate(
         self, question: str, evidence: tuple[KnowledgeCitation, ...]
     ) -> str | None:
-        """执行 generate 的业务流程并返回该流程的结果。"""
+        """执行 generate 的业务流程并返回该流程的结果。
+
+Args:
+    question: 参数语义、输入边界和安全约束。
+    evidence: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class KnowledgeQueryEngine:
@@ -75,7 +89,17 @@ class KnowledgeQueryEngine:
         reranker: RerankerPort | None = None,
         answer_generator: AnswerGeneratorPort | None = None,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    embedding: 参数语义、输入边界和安全约束。
+    keyword_index: 参数语义、输入边界和安全约束。
+    vector_index: 参数语义、输入边界和安全约束。
+    reranker: 参数语义、输入边界和安全约束。
+    answer_generator: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._embedding = embedding
         self._keyword_index = keyword_index
         self._vector_index = vector_index
@@ -83,7 +107,14 @@ class KnowledgeQueryEngine:
         self._answer_generator = answer_generator
 
     async def answer(self, question: str, *, limit: int = 5) -> tuple[KnowledgeSegmentAnswer, ...]:
-        """执行 answer 的业务流程并返回该流程的结果。"""
+        """执行 answer 的业务流程并返回该流程的结果。
+
+Args:
+    question: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         results: list[KnowledgeSegmentAnswer] = []
         for segment in classify_intents(question):
             rewritten = rewrite_query(segment)
@@ -135,7 +166,15 @@ def _to_answer(
     rewritten: RewriteResult,
     decision: EvidenceDecision,
 ) -> KnowledgeSegmentAnswer:
-    """执行内部步骤 _to_answer，供同一模块的公开流程复用。"""
+    """执行内部步骤 _to_answer，供同一模块的公开流程复用。
+
+Args:
+    segment: 参数语义、输入边界和安全约束。
+    rewritten: 参数语义、输入边界和安全约束。
+    decision: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     citations = tuple(_citation(hit) for hit in decision.supported_hits)
     if decision.status == "answered" and citations:
         answer = citations[0].excerpt
@@ -159,7 +198,13 @@ def _to_answer(
 
 
 def _citation(hit: RetrievalHit) -> KnowledgeCitation:
-    """执行内部步骤 _citation，供同一模块的公开流程复用。"""
+    """执行内部步骤 _citation，供同一模块的公开流程复用。
+
+Args:
+    hit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return KnowledgeCitation(
         chunk_id=hit.chunk.chunk_id,
         source_locator=hit.chunk.metadata.source_locator,

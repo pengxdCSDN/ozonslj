@@ -26,7 +26,9 @@ router = APIRouter(prefix="/v1/rag-evaluation", tags=["rag-evaluation"])
 
 
 def _fixed_cases() -> list[EvaluationCase]:
-    """构造稳定的固定语料；网关负责幂等写入当前组织。"""
+    """构造稳定的固定语料；网关负责幂等写入当前组织。
+Returns:
+    返回调用完成后的领域结果。"""
     return [EvaluationCase(
         case_id=item.case_id, question=item.question, expected_status=item.expected_status,
         expected_sources=item.expected_chunk_ids, safety_tags=item.safety_tags,
@@ -112,7 +114,13 @@ class EvaluationRunResponse(BaseModel):
 
 
 def _run_response(run: EvaluationRun) -> EvaluationRunResponse:
-    """执行内部步骤 _run_response，供同一模块的公开流程复用。"""
+    """执行内部步骤 _run_response，供同一模块的公开流程复用。
+
+Args:
+    run: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return EvaluationRunResponse(
         run_id=run.run_id, suite=run.suite, status=run.status, gate_status=run.gate_status,
         target_count=run.target_count, executed_count=run.executed_count,
@@ -122,7 +130,13 @@ def _run_response(run: EvaluationRun) -> EvaluationRunResponse:
 
 
 def _response(case: EvaluationCase) -> EvaluationCaseResponse:
-    """执行内部步骤 _response，供同一模块的公开流程复用。"""
+    """执行内部步骤 _response，供同一模块的公开流程复用。
+
+Args:
+    case: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return EvaluationCaseResponse(
         case_id=case.case_id, question=case.question, expected_status=case.expected_status,
         expected_sources=list(case.expected_sources), safety_tags=list(case.safety_tags),
@@ -135,7 +149,14 @@ async def generate_evaluation_cases(
     payload: CaseGenerationPayload,
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> list[EvaluationCaseResponse]:
-    """执行 generate_evaluation_cases 的业务流程并返回该流程的结果。"""
+    """执行 generate_evaluation_cases 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     generated: list[EvaluationCaseResponse] = []
     for topic in payload.topics:
         case = EvaluationCase(
@@ -153,7 +174,16 @@ async def list_evaluation_cases(
     page_size: int = Query(default=20, ge=1, le=100),
     q: str = Query(default="", max_length=100),
 ) -> EvaluationCasesPageResponse:
-    """执行 list_evaluation_cases 的业务流程并返回该流程的结果。"""
+    """执行 list_evaluation_cases 的业务流程并返回该流程的结果。
+
+Args:
+    gateway: 参数语义、输入边界和安全约束。
+    page: 参数语义、输入边界和安全约束。
+    page_size: 参数语义、输入边界和安全约束。
+    q: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     await gateway.seed_fixed_cases(_fixed_cases())
     current_fixed_ids = {case.case_id for case in _fixed_cases()}
     # v2 固定语料替换 v1 后，历史案例仍需保留在 PostgreSQL 以便审计，
@@ -189,7 +219,14 @@ async def confirm_evaluation_cases_batch(
     payload: BatchConfirmPayload,
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> BatchConfirmResponse:
-    """批量确认固定语料；未知或已拒绝案例不会被伪报为已确认。"""
+    """批量确认固定语料；未知或已拒绝案例不会被伪报为已确认。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     confirmed = await gateway.confirm_cases(payload.case_ids, reviewer=payload.reviewer)
     return BatchConfirmResponse(
         confirmed_count=len(confirmed), confirmed_case_ids=[case.case_id for case in confirmed]
@@ -202,7 +239,19 @@ async def confirm_evaluation_case(
     payload: ConfirmPayload,
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> EvaluationCaseResponse:
-    """执行 confirm_evaluation_case 的业务流程并返回该流程的结果。"""
+    """执行 confirm_evaluation_case 的业务流程并返回该流程的结果。
+
+Args:
+    case_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     case = await gateway.confirm_case(case_id, reviewer=payload.reviewer)
     if case is None:
         raise HTTPException(status_code=404, detail="评测案例不存在")
@@ -214,7 +263,14 @@ async def start_evaluation(
     payload: EvaluationRunPayload,
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> dict[str, object]:
-    """执行 start_evaluation 的业务流程并返回该流程的结果。"""
+    """执行 start_evaluation 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     await gateway.seed_fixed_cases(_fixed_cases())
     limit = suite_case_limit(payload.suite)
     target_ids = fixed_suite_case_ids(payload.suite)
@@ -255,7 +311,13 @@ async def start_evaluation(
 async def calculate_evaluation_metrics(
     observations: list[MetricObservationPayload],
 ) -> dict[str, object]:
-    """执行 calculate_evaluation_metrics 的业务流程并返回该流程的结果。"""
+    """执行 calculate_evaluation_metrics 的业务流程并返回该流程的结果。
+
+Args:
+    observations: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     metrics = calculate_metrics([
         EvaluationObservation(
             expected_chunk_ids=frozenset(item.expected_chunk_ids),
@@ -292,7 +354,14 @@ async def list_evaluation_runs(
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
     limit: int = Query(default=20, ge=1, le=100),
 ) -> list[EvaluationRunResponse]:
-    """结果页读取当前组织的运行历史；不返回案例正文或模型原始响应。"""
+    """结果页读取当前组织的运行历史；不返回案例正文或模型原始响应。
+
+Args:
+    gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return [_run_response(run) for run in await gateway.list_runs(limit)]
 
 
@@ -301,7 +370,18 @@ async def get_evaluation_run(
     run_id: str,
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> EvaluationRunResponse:
-    """执行 get_evaluation_run 的业务流程并返回该流程的结果。"""
+    """执行 get_evaluation_run 的业务流程并返回该流程的结果。
+
+Args:
+    run_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     run = await gateway.get_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="评测运行不存在或不可见")
@@ -314,7 +394,19 @@ async def save_evaluation_run_metrics(
     observations: list[MetricObservationPayload],
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> EvaluationRunResponse:
-    """由评测 Worker 回写聚合指标；只接受已通过启动门禁的运行。"""
+    """由评测 Worker 回写聚合指标；只接受已通过启动门禁的运行。
+
+Args:
+    run_id: 参数语义、输入边界和安全约束。
+    observations: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if not observations:
         raise HTTPException(status_code=422, detail="评测结果不能为空")
     calculated = await calculate_evaluation_metrics(observations)

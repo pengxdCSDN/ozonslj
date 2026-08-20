@@ -72,7 +72,13 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def require_postgresql_and_cloud_runtime_dependencies(self) -> "Settings":
-        """所有环境必须配置 PostgreSQL；生产环境还必须配置 Redis。"""
+        """所有环境必须配置 PostgreSQL；生产环境还必须配置 Redis。
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         missing: list[str] = []
         if self.service_role != "scheduler":
             for env_name, key_name, file_name in (
@@ -123,5 +129,7 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """执行 get_settings 的业务流程并返回该流程的结果。"""
+    """执行 get_settings 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
     return Settings()

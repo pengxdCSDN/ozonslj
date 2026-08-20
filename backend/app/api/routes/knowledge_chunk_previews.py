@@ -61,7 +61,13 @@ class ChunkPreviewResponse(BaseModel):
 
 @router.post("", response_model=ChunkPreviewResponse)
 async def preview_knowledge_chunks(payload: ChunkPreviewPayload) -> ChunkPreviewResponse:
-    """执行 preview_knowledge_chunks 的业务流程并返回该流程的结果。"""
+    """执行 preview_knowledge_chunks 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     metadata = ChunkMetadata(
         document_id="preview-document", document_version_id="preview-version",
         business_domain=cast(Literal[

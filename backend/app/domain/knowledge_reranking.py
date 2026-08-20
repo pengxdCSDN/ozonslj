@@ -18,7 +18,14 @@ class RerankPolicy:
 def rerank_hits(
     hits: list[RetrievalHit], *, policy: RerankPolicy | None = None
 ) -> list[RetrievalHit]:
-    """按 RRF 分数、来源权威等级和发布状态精排，过滤草稿与撤回证据。"""
+    """按 RRF 分数、来源权威等级和发布状态精排，过滤草稿与撤回证据。
+
+Args:
+    hits: 参数语义、输入边界和安全约束。
+    policy: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     active_policy = policy or RerankPolicy()
     ranked: list[RetrievalHit] = []
@@ -35,7 +42,15 @@ def rerank_hits(
 def bounded_hop_queries(
     initial_query: str, evidence: list[RetrievalHit], *, max_hops: int = 2
 ) -> tuple[str, ...]:
-    """只从证据标题路径生成有限补充查询，禁止模型自由扩展导致查询爆炸。"""
+    """只从证据标题路径生成有限补充查询，禁止模型自由扩展导致查询爆炸。
+
+Args:
+    initial_query: 参数语义、输入边界和安全约束。
+    evidence: 参数语义、输入边界和安全约束。
+    max_hops: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     if max_hops <= 0:
         return ()

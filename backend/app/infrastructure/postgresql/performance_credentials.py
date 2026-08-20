@@ -19,7 +19,15 @@ class PostgresPerformanceCredentialGateway:
         self, sessions: PostgresSessionFactory, context: TenantContext,
         protector: CredentialProtector,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+    protector: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
         self._protector = protector
@@ -28,7 +36,17 @@ class PostgresPerformanceCredentialGateway:
         self, *, workspace_id: str, access_token: str, refresh_token: str | None,
         expires_at: str, client_id_present: bool,
     ) -> PerformanceCredentialStatus:
-        """执行 save_tokens 的业务流程并返回该流程的结果。"""
+        """执行 save_tokens 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    access_token: 参数语义、输入边界和安全约束。
+    refresh_token: 参数语义、输入边界和安全约束。
+    expires_at: 参数语义、输入边界和安全约束。
+    client_id_present: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._save_tokens, workspace_id, access_token, refresh_token, expires_at,
             client_id_present,
@@ -37,7 +55,15 @@ class PostgresPerformanceCredentialGateway:
     async def save_client_credentials(
         self, *, workspace_id: str, client_id: str, client_secret: str,
     ) -> PerformanceCredentialStatus:
-        """执行 save_client_credentials 的业务流程并返回该流程的结果。"""
+        """执行 save_client_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    client_secret: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._save_client_credentials, workspace_id, client_id, client_secret,
         )
@@ -45,7 +71,20 @@ class PostgresPerformanceCredentialGateway:
     def _save_client_credentials(
         self, workspace_id: str, client_id: str, client_secret: str,
     ) -> PerformanceCredentialStatus:
-        """执行内部步骤 _save_client_credentials，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save_client_credentials，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    client_secret: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         if not client_id.strip() or not client_secret.strip():
             raise ValueError("Performance Client ID 和 Client Secret 不能为空")
         with self._sessions.transaction(self._context) as connection:
@@ -76,7 +115,21 @@ class PostgresPerformanceCredentialGateway:
         self, workspace_id: str, access_token: str, refresh_token: str | None,
         expires_at: str, client_id_present: bool,
     ) -> PerformanceCredentialStatus:
-        """执行内部步骤 _save_tokens，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save_tokens，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    access_token: 参数语义、输入边界和安全约束。
+    refresh_token: 参数语义、输入边界和安全约束。
+    expires_at: 参数语义、输入边界和安全约束。
+    client_id_present: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         inspect_performance_credentials(
             client_id="configured" if client_id_present else None,
             client_secret="stored",
@@ -107,19 +160,43 @@ class PostgresPerformanceCredentialGateway:
         return saved_status
 
     async def get_status(self, *, workspace_id: str) -> PerformanceCredentialStatus | None:
-        """执行 get_status 的业务流程并返回该流程的结果。"""
+        """执行 get_status 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._get_status, workspace_id)
 
     async def get_client_credentials(self, *, workspace_id: str) -> tuple[str, str] | None:
-        """执行 get_client_credentials 的业务流程并返回该流程的结果。"""
+        """执行 get_client_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._get_client_credentials, workspace_id)
 
     async def get_access_token(self, *, workspace_id: str) -> tuple[str, str] | None:
-        """执行 get_access_token 的业务流程并返回该流程的结果。"""
+        """执行 get_access_token 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._get_access_token, workspace_id)
 
     def _get_client_credentials(self, workspace_id: str) -> tuple[str, str] | None:
-        """执行内部步骤 _get_client_credentials，供同一模块的公开流程复用。"""
+        """执行内部步骤 _get_client_credentials，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """
@@ -141,7 +218,13 @@ class PostgresPerformanceCredentialGateway:
         )
 
     def _get_access_token(self, workspace_id: str) -> tuple[str, str] | None:
-        """读取解密后的令牌和过期时间，仅供后端外部 API 适配器使用。"""
+        """读取解密后的令牌和过期时间，仅供后端外部 API 适配器使用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """
@@ -161,7 +244,13 @@ class PostgresPerformanceCredentialGateway:
         )
 
     def _get_status(self, workspace_id: str) -> PerformanceCredentialStatus | None:
-        """执行内部步骤 _get_status，供同一模块的公开流程复用。"""
+        """执行内部步骤 _get_status，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """

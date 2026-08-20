@@ -12,7 +12,14 @@ class PostgresPostingGateway:
     """读取 PostgreSQL 中按内部组织和工作区隔离的履约摘要。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
@@ -23,7 +30,15 @@ class PostgresPostingGateway:
         cursor: str | None,
         limit: int,
     ) -> PostingPage:
-        """执行 list_postings 的业务流程并返回该流程的结果。"""
+        """执行 list_postings 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._list_postings,
             workspace_id,
@@ -33,7 +48,15 @@ class PostgresPostingGateway:
 
     def _list_postings(self, workspace_id: str, offset: int, limit: int) -> PostingPage:
         # tracking_number 和商品明细不属于列表摘要，SQL 不选择这些字段。
-        """执行内部步骤 _list_postings，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_postings，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    offset: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             count_row = connection.execute(
                 """
@@ -76,7 +99,13 @@ class PostgresPostingGateway:
 
 
 def _posting_from_row(row: dict[str, Any]) -> PostingSummary:
-    """将数据库聚合结果映射为不含追踪号和商品详情的履约摘要。"""
+    """将数据库聚合结果映射为不含追踪号和商品详情的履约摘要。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return PostingSummary(
         posting_id=str(row["id"]),
         customer_order_id=(
@@ -93,7 +122,17 @@ def _posting_from_row(row: dict[str, Any]) -> PostingSummary:
 
 
 def _optional_date(value: object) -> date | None:
-    """执行内部步骤 _optional_date，供同一模块的公开流程复用。"""
+    """执行内部步骤 _optional_date，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if value is None:
         return None
     if not isinstance(value, date):
@@ -102,7 +141,17 @@ def _optional_date(value: object) -> date | None:
 
 
 def _required_datetime(value: object) -> datetime:
-    """执行内部步骤 _required_datetime，供同一模块的公开流程复用。"""
+    """执行内部步骤 _required_datetime，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if not isinstance(value, datetime):
         raise ValueError("履约单 synced_at 不是有效时间")
     return value

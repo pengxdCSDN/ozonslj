@@ -28,12 +28,26 @@ class PublicSnapshotGateway(Protocol):
     async def save_snapshot(
         self, *, workspace_id: str, snapshot: PublicSnapshot
     ) -> PublicSnapshot:
-        """执行 save_snapshot 的业务流程并返回该流程的结果。"""
+        """执行 save_snapshot 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    snapshot: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_snapshots(
         self, *, workspace_id: str, limit: int = 50
     ) -> list[PublicSnapshot]:
-        """执行 list_snapshots 的业务流程并返回该流程的结果。"""
+        """执行 list_snapshots 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class PublicSnapshotError(ValueError):
@@ -41,7 +55,18 @@ class PublicSnapshotError(ValueError):
 
 
 def normalize_public_snapshot(raw: dict[str, object], *, sampled_at: datetime) -> PublicSnapshot:
-    """只保留公开字段，并把金额、评分和评价数转换为可审计类型。"""
+    """只保留公开字段，并把金额、评分和评价数转换为可审计类型。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+    sampled_at: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    PublicSnapshotError: 业务约束或外部依赖失败时抛出。
+"""
     url = _optional_text(raw.get("url"))
     parsed = urlparse(url or "")
     if parsed.scheme != "https" or not parsed.hostname:
@@ -77,7 +102,18 @@ def normalize_public_snapshot(raw: dict[str, object], *, sampled_at: datetime) -
 
 
 def _integer(value: object, field: str) -> int | None:
-    """执行内部步骤 _integer，供同一模块的公开流程复用。"""
+    """执行内部步骤 _integer，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+    field: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    PublicSnapshotError: 业务约束或外部依赖失败时抛出。
+"""
     if value is None or value == "":
         return None
     if not isinstance(value, (int, str)):
@@ -92,7 +128,18 @@ def _integer(value: object, field: str) -> int | None:
 
 
 def _decimal(value: object, field: str) -> Decimal | None:
-    """执行内部步骤 _decimal，供同一模块的公开流程复用。"""
+    """执行内部步骤 _decimal，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+    field: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    PublicSnapshotError: 业务约束或外部依赖失败时抛出。
+"""
     if value is None or value == "":
         return None
     try:
@@ -102,5 +149,11 @@ def _decimal(value: object, field: str) -> Decimal | None:
 
 
 def _optional_text(value: object) -> str | None:
-    """执行内部步骤 _optional_text，供同一模块的公开流程复用。"""
+    """执行内部步骤 _optional_text，供同一模块的公开流程复用。
+
+Args:
+    value: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return str(value).strip() or None if value is not None else None

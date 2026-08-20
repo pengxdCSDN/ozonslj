@@ -16,7 +16,17 @@ class PasswordHasher:
     _p = 1
 
     def hash(self, password: str) -> str:
-        """校验密码长度并生成带随机盐的 scrypt 编码结果。"""
+        """校验密码长度并生成带随机盐的 scrypt 编码结果。
+
+Args:
+    password: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if len(password) < 12:
             raise ValueError("密码至少需要 12 个字符")
         salt = secrets.token_bytes(16)
@@ -30,7 +40,14 @@ class PasswordHasher:
         return f"scrypt${self._n}${self._r}${self._p}${salt.hex()}${digest.hex()}"
 
     def verify(self, password: str, encoded: str) -> bool:
-        """验证密码与编码哈希；格式错误或算法不匹配时返回 False。"""
+        """验证密码与编码哈希；格式错误或算法不匹配时返回 False。
+
+Args:
+    password: 参数语义、输入边界和安全约束。
+    encoded: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         try:
             algorithm, n, r, p, salt, expected = encoded.split("$", 5)
             if algorithm != "scrypt":
@@ -57,7 +74,15 @@ class IdentityService:
         password_hasher: PasswordHasher | None = None,
         session_ttl: timedelta = timedelta(hours=12),
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    gateway: 参数语义、输入边界和安全约束。
+    password_hasher: 参数语义、输入边界和安全约束。
+    session_ttl: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._gateway = gateway
         self._password_hasher = password_hasher or PasswordHasher()
         self._session_ttl = session_ttl
@@ -68,7 +93,15 @@ class IdentityService:
         password: str,
         organization_id: str,
     ) -> LoginResult | None:
-        """校验登录身份并创建只保存哈希的短期会话。"""
+        """校验登录身份并创建只保存哈希的短期会话。
+
+Args:
+    email: 参数语义、输入边界和安全约束。
+    password: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         identity = await self._gateway.find_login_identity(
             email.strip().lower(),
             organization_id,
@@ -89,17 +122,35 @@ class IdentityService:
         return LoginResult(token=token, expires_at=expires_at, user=user)
 
     async def authenticate(self, token: str) -> AuthenticatedUser | None:
-        """通过会话令牌哈希查找当前认证用户。"""
+        """通过会话令牌哈希查找当前认证用户。
+
+Args:
+    token: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         if not token:
             return None
         return await self._gateway.find_user_by_session_hash(self._token_hash(token))
 
     async def logout(self, token: str) -> None:
-        """撤销会话令牌；空令牌视为无需处理。"""
+        """撤销会话令牌；空令牌视为无需处理。
+
+Args:
+    token: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         if token:
             await self._gateway.revoke_session(self._token_hash(token))
 
     @staticmethod
     def _token_hash(token: str) -> str:
-        """执行内部步骤 _token_hash，供同一模块的公开流程复用。"""
+        """执行内部步骤 _token_hash，供同一模块的公开流程复用。
+
+Args:
+    token: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return hashlib.sha256(token.encode()).hexdigest()

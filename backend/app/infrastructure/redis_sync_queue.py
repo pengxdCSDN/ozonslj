@@ -16,14 +16,29 @@ class RedisSyncJobQueue:
         dedupe_seconds: int = 60,
         maxlen: int = 10_000,
     ) -> None:
-        """配置 Redis Stream、重复投递抑制窗口和 Stream 长度上限。"""
+        """配置 Redis Stream、重复投递抑制窗口和 Stream 长度上限。
+
+Args:
+    redis: 参数语义、输入边界和安全约束。
+    stream_name: 参数语义、输入边界和安全约束。
+    dedupe_seconds: 参数语义、输入边界和安全约束。
+    maxlen: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._redis = redis
         self._stream_name = stream_name
         self._dedupe_seconds = dedupe_seconds
         self._maxlen = maxlen
 
     async def enqueue_once(self, job: SyncJob) -> bool:
-        """以任务 ID 做短期幂等投递；成功返回 True，重复投递返回 False。"""
+        """以任务 ID 做短期幂等投递；成功返回 True，重复投递返回 False。
+
+Args:
+    job: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         marker = f"sync:dispatch:{job.id}"
         acquired = await self._redis.set(marker, "1", ex=self._dedupe_seconds, nx=True)
         if not acquired:

@@ -70,7 +70,15 @@ class BudgetResponse(BaseModel):
 def _response(
     provider_id: str, policy: ModelBudgetPolicy, usage: ModelBudgetUsage
 ) -> BudgetResponse:
-    """执行内部步骤 _response，供同一模块的公开流程复用。"""
+    """执行内部步骤 _response，供同一模块的公开流程复用。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    policy: 参数语义、输入边界和安全约束。
+    usage: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     decision = decide_budget(policy, usage)
     # 四项预算必须全部回传；用户需要知道到底是 Token、请求次数还是费用触发阻断。
     metric_values = [
@@ -116,7 +124,9 @@ def _response(
 
 
 def _period_start() -> date:
-    """按自然月读取用量；daily 字段由结算端在日切换时归零。"""
+    """按自然月读取用量；daily 字段由结算端在日切换时归零。
+Returns:
+    返回调用完成后的领域结果。"""
     today = date.today()
     return today.replace(day=1)
 
@@ -129,7 +139,16 @@ async def upsert_model_budget(
     gateway: Annotated[PostgresModelBudgetGateway, Depends(get_model_budget_gateway)],
 ) -> BudgetResponse:
     # 币种是接口层的显式契约字段，领域策略当前固定按 RMB 核算，不把它重复写入策略对象。
-    """执行 upsert_model_budget 的业务流程并返回该流程的结果。"""
+    """执行 upsert_model_budget 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    _account_manager: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     policy = ModelBudgetPolicy(
         provider_id=provider_id,
         **payload.model_dump(exclude={"budget_currency"}),
@@ -147,7 +166,14 @@ async def list_model_budgets(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresModelBudgetGateway, Depends(get_model_budget_gateway)],
 ) -> list[BudgetResponse]:
-    """执行 list_model_budgets 的业务流程并返回该流程的结果。"""
+    """执行 list_model_budgets 的业务流程并返回该流程的结果。
+
+Args:
+    _account_manager: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     policies = await gateway.list_policies()
     return [
         _response(
@@ -169,7 +195,20 @@ async def get_model_budget(
     gateway: Annotated[PostgresModelBudgetGateway, Depends(get_model_budget_gateway)],
     purpose: BudgetPurpose = "answer_generation",
 ) -> BudgetResponse:
-    """执行 get_model_budget 的业务流程并返回该流程的结果。"""
+    """执行 get_model_budget 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    _account_manager: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    purpose: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     policy = await gateway.get_policy(provider_id=provider_id, purpose=purpose)
     if policy is None:
         raise HTTPException(status_code=404, detail="供应商额度策略不存在")
@@ -187,7 +226,20 @@ async def evaluate_model_budget(
     gateway: Annotated[PostgresModelBudgetGateway, Depends(get_model_budget_gateway)],
     purpose: BudgetPurpose = "answer_generation",
 ) -> BudgetResponse:
-    """执行 evaluate_model_budget 的业务流程并返回该流程的结果。"""
+    """执行 evaluate_model_budget 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    purpose: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     policy = await gateway.get_policy(provider_id=provider_id, purpose=purpose)
     if policy is None:
         raise HTTPException(status_code=404, detail="供应商额度策略不存在")

@@ -19,7 +19,14 @@ class RetryableSyncError(RuntimeError):
     """上游限流或临时不可用错误，可按 Retry-After 重试。"""
 
     def __init__(self, message: str = "上游暂时不可用", retry_after_seconds: float = 0.0) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    message: 参数语义、输入边界和安全约束。
+    retry_after_seconds: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         super().__init__(message)
         self.retry_after_seconds = max(retry_after_seconds, 0.0)
 
@@ -29,21 +36,43 @@ class SyncPageFetcher(Protocol):
     async def fetch_page(
         self, *, workspace_id: str, resource_type: str, cursor: str | None
     ) -> SyncPage:
-        """执行 fetch_page 的业务流程并返回该流程的结果。"""
+        """执行 fetch_page 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    resource_type: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class SyncPageSink(Protocol):
     """将已成功读取的页面映射并保存为 PostgreSQL 事实。"""
 
     async def save_page(self, *, job: SyncJob, page: SyncPage) -> None:
-        """执行 save_page 的业务流程并返回该流程的结果。"""
+        """执行 save_page 的业务流程并返回该流程的结果。
+
+Args:
+    job: 参数语义、输入边界和安全约束。
+    page: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class SyncWatermarkStore(Protocol):
     """仅在完整同步成功后保存长期水位，避免失败任务推进水位。"""
 
     async def advance(self, *, job: SyncJob, cursor: str | None) -> None:
-        """执行 advance 的业务流程并返回该流程的结果。"""
+        """执行 advance 的业务流程并返回该流程的结果。
+
+Args:
+    job: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class PaginatedSyncHandler:
@@ -59,7 +88,22 @@ class PaginatedSyncHandler:
         max_retries: int = 3,
         retry_base_seconds: float = 0.0,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    fetcher: 参数语义、输入边界和安全约束。
+    sink: 参数语义、输入边界和安全约束。
+    watermark_store: 参数语义、输入边界和安全约束。
+    max_pages: 参数语义、输入边界和安全约束。
+    max_retries: 参数语义、输入边界和安全约束。
+    retry_base_seconds: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         if max_pages < 1 or max_pages > 1000:
             raise ValueError("max_pages 必须在 1 到 1000 之间")
         if max_retries < 0 or max_retries > 10:
@@ -72,7 +116,17 @@ class PaginatedSyncHandler:
         self._retry_base_seconds = max(retry_base_seconds, 0.0)
 
     async def run(self, job: SyncJob) -> SyncResult:
-        """执行 run 的业务流程并返回该流程的结果。"""
+        """执行 run 的业务流程并返回该流程的结果。
+
+Args:
+    job: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         cursor: str | None = None
         seen_cursors: set[str | None] = set()
         processed = 0
@@ -93,7 +147,19 @@ class PaginatedSyncHandler:
         raise RuntimeError("同步超过最大分页数，已停止同步")
 
     async def _fetch_page_with_retry(self, job: SyncJob, cursor: str | None) -> SyncPage:
-        """执行内部步骤 _fetch_page_with_retry，供同一模块的公开流程复用。"""
+        """执行内部步骤 _fetch_page_with_retry，供同一模块的公开流程复用。
+
+Args:
+    job: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    AssertionError: 业务约束或外部依赖失败时抛出。
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         for attempt in range(self._max_retries + 1):
             try:
                 return await self._fetcher.fetch_page(

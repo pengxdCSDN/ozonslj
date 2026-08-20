@@ -42,4 +42,12 @@ class PostingGateway(Protocol):
         cursor: str | None,
         limit: int,
     ) -> PostingPage:
-        """执行 list_postings 的业务流程并返回该流程的结果。"""
+        """执行 list_postings 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""

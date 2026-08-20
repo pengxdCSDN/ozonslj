@@ -25,7 +25,13 @@ class ProvenancePayload(BaseModel):
 
 @router.post("/classify", response_model=DataProvenance)
 async def classify(payload: ProvenancePayload) -> DataProvenance:
-    """执行 classify 的业务流程并返回该流程的结果。"""
+    """执行 classify 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return classify_source(**payload.model_dump())
 
 
@@ -36,7 +42,20 @@ async def classify_and_save(
     gateway: Annotated[DataProvenanceGateway, Depends(get_data_provenance_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> DataProvenance:
-    """保存来源标签，供后续分析回溯数据口径和观测时间。"""
+    """保存来源标签，供后续分析回溯数据口径和观测时间。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -56,7 +75,20 @@ async def list_provenance_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[DataProvenance]:
-    """执行 list_provenance_history 的业务流程并返回该流程的结果。"""
+    """执行 list_provenance_history 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_history(workspace_id=workspace_id, limit=limit)

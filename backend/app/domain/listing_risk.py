@@ -29,12 +29,27 @@ class ListingRiskGateway(Protocol):
     async def save_report(
         self, *, workspace_id: str, product_scope: str, report: ListingRiskReport
     ) -> ListingRiskReport:
-        """执行 save_report 的业务流程并返回该流程的结果。"""
+        """执行 save_report 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    report: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int = 50
     ) -> list[ListingRiskReport]:
-        """执行 list_reports 的业务流程并返回该流程的结果。"""
+        """执行 list_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def detect_listing_risks(
@@ -43,7 +58,15 @@ def detect_listing_risks(
     authorized_brands: set[str] | None = None,
     verified_certifications: set[str] | None = None,
 ) -> ListingRiskReport:
-    """执行 detect_listing_risks 的业务流程并返回该流程的结果。"""
+    """执行 detect_listing_risks 的业务流程并返回该流程的结果。
+
+Args:
+    text: 参数语义、输入边界和安全约束。
+    authorized_brands: 参数语义、输入边界和安全约束。
+    verified_certifications: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     authorized_brands = {value.casefold() for value in (authorized_brands or set())}
     verified_certifications = {value.casefold() for value in (verified_certifications or set())}
     findings: list[ListingRiskFinding] = []
@@ -83,7 +106,18 @@ def _find_phrase(
     findings: list[ListingRiskFinding], text: str, phrases: tuple[str, ...],
     risk_type: RiskType, message: str, suggestion: str,
 ) -> None:
-    """执行内部步骤 _find_phrase，供同一模块的公开流程复用。"""
+    """执行内部步骤 _find_phrase，供同一模块的公开流程复用。
+
+Args:
+    findings: 参数语义、输入边界和安全约束。
+    text: 参数语义、输入边界和安全约束。
+    phrases: 参数语义、输入边界和安全约束。
+    risk_type: 参数语义、输入边界和安全约束。
+    message: 参数语义、输入边界和安全约束。
+    suggestion: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     folded = text.casefold()
     for phrase in phrases:
         if phrase.casefold() in folded:
@@ -97,5 +131,11 @@ def _find_phrase(
 
 
 def _tokens(text: str) -> list[str]:
-    """执行内部步骤 _tokens，供同一模块的公开流程复用。"""
+    """执行内部步骤 _tokens，供同一模块的公开流程复用。
+
+Args:
+    text: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return [token.strip(".,;:!?()[]") for token in text.split() if token.strip()]

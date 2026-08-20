@@ -31,7 +31,9 @@ _VARIANTS = ("规则是什么", "如何验证", "失败后怎么办", "限制如
 
 
 def fixed_evaluation_corpus() -> tuple[FixedEvaluationCase, ...]:
-    """生成固定 400 例 v2：前 160 例为校准集，后 240 例为冻结验收集。"""
+    """生成固定 400 例 v2：前 160 例为校准集，后 240 例为冻结验收集。
+Returns:
+    返回调用完成后的领域结果。"""
 
     cases: list[FixedEvaluationCase] = []
     for index in range(400):
@@ -80,7 +82,17 @@ def fixed_evaluation_corpus() -> tuple[FixedEvaluationCase, ...]:
 
 
 def fixed_suite_case_ids(suite: str) -> tuple[str, ...]:
-    """返回不可由客户端改写的固定 30/120/240 例清单。"""
+    """返回不可由客户端改写的固定 30/120/240 例清单。
+
+Args:
+    suite: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
 
     cases = [case for case in fixed_evaluation_corpus() if case.split == "frozen"]
     limits = {"quick": 30, "standard": 120, "full": 240}
@@ -100,7 +112,12 @@ def fixed_evaluation_chunks(*, suite: str | None = None) -> tuple[KnowledgeChunk
     ``suite`` 用于评测索引的懒加载：quick、standard、full 分别只发布对应的
     30、120、240 个冻结案例证据。校准集仍然完整保留在固定语料定义中，但不为
     正式质量门禁提前调用 Embedding；传入 ``None`` 时返回完整语料，供离线校验使用。
-    """
+
+Args:
+    suite: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     cases = fixed_evaluation_corpus()
     if suite is not None:
         suite_ids = set(fixed_suite_case_ids(suite))

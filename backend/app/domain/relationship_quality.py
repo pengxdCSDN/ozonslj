@@ -17,7 +17,17 @@ def check_relationship_and_time(
     rows: list[dict[str, object]], *, parent_ids: set[str], id_field: str = "id",
     parent_field: str = "parent_id", time_field: str = "observed_at"
 ) -> list[RelationshipFinding]:
-    """执行 check_relationship_and_time 的业务流程并返回该流程的结果。"""
+    """执行 check_relationship_and_time 的业务流程并返回该流程的结果。
+
+Args:
+    rows: 参数语义、输入边界和安全约束。
+    parent_ids: 参数语义、输入边界和安全约束。
+    id_field: 参数语义、输入边界和安全约束。
+    parent_field: 参数语义、输入边界和安全约束。
+    time_field: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     findings: list[RelationshipFinding] = []
     seen: set[str] = set()
     previous: datetime | None = None

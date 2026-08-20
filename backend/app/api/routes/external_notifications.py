@@ -37,7 +37,17 @@ class NotificationPreviewPayload(BaseModel):
 
 @router.post("/preview", response_model=str)
 async def preview_notification(payload: NotificationPreviewPayload) -> str:
-    """执行 preview_notification 的业务流程并返回该流程的结果。"""
+    """执行 preview_notification 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         return render_notification_preview(payload.template, payload.values)
     except ValueError as error:
@@ -49,7 +59,17 @@ async def preview_notification(payload: NotificationPreviewPayload) -> str:
 
 @router.post("/validate", response_model=ExternalNotificationConfig)
 async def validate(payload: ExternalNotificationPayload) -> ExternalNotificationConfig:
-    """执行 validate 的业务流程并返回该流程的结果。"""
+    """执行 validate 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         return validate_notification_config(**payload.model_dump())
     except ValueError as error:
@@ -69,7 +89,20 @@ async def validate_and_save(
     gateway: Annotated[ExternalNotificationGateway, Depends(get_external_notification_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> ExternalNotificationConfig:
-    """执行 validate_and_save 的业务流程并返回该流程的结果。"""
+    """执行 validate_and_save 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     config = await validate(payload)
@@ -86,7 +119,20 @@ async def list_notification_configs(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[ExternalNotificationConfig]:
-    """执行 list_notification_configs 的业务流程并返回该流程的结果。"""
+    """执行 list_notification_configs 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

@@ -33,18 +33,42 @@ class CostSensitivityGateway(Protocol):
         assumptions: dict[str, object],
         scenarios: tuple[CostSensitivityScenario, ...],
     ) -> tuple[CostSensitivityScenario, ...]:
-        """执行 save_analysis 的业务流程并返回该流程的结果。"""
+        """执行 save_analysis 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    assumptions: 参数语义、输入边界和安全约束。
+    scenarios: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def analyze_cost_sensitivity(item: CostSensitivityInput) -> tuple[CostSensitivityScenario, ...]:
-    """执行 analyze_cost_sensitivity 的业务流程并返回该流程的结果。"""
+    """执行 analyze_cost_sensitivity 的业务流程并返回该流程的结果。
+
+Args:
+    item: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     _validate(item)
     scenarios = (("成本下降", -20), ("基准", 0), ("成本上升", 20))
     return tuple(_scenario(item, label, change) for label, change in scenarios)
 
 
 def _validate(item: CostSensitivityInput) -> None:
-    """执行内部步骤 _validate，供同一模块的公开流程复用。"""
+    """执行内部步骤 _validate，供同一模块的公开流程复用。
+
+Args:
+    item: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if item.selling_price_minor <= 0:
         raise ValueError("敏感性分析售价必须大于零")
     if any(
@@ -61,7 +85,15 @@ def _validate(item: CostSensitivityInput) -> None:
 
 
 def _scenario(item: CostSensitivityInput, label: str, change: int) -> CostSensitivityScenario:
-    """执行内部步骤 _scenario，供同一模块的公开流程复用。"""
+    """执行内部步骤 _scenario，供同一模块的公开流程复用。
+
+Args:
+    item: 参数语义、输入边界和安全约束。
+    label: 参数语义、输入边界和安全约束。
+    change: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     factor = 1 + change / 100
     cost = (
         item.purchase_cost_minor * factor

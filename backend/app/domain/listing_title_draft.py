@@ -21,12 +21,27 @@ class ListingTitleDraftGateway(Protocol):
     async def save_draft(
         self, *, workspace_id: str, product_scope: str, draft: ListingTitleDraft
     ) -> ListingTitleDraft:
-        """执行 save_draft 的业务流程并返回该流程的结果。"""
+        """执行 save_draft 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    draft: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_drafts(
         self, *, workspace_id: str, limit: int = 50
     ) -> list[ListingTitleDraft]:
-        """执行 list_drafts 的业务流程并返回该流程的结果。"""
+        """执行 list_drafts 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def generate_russian_title(
@@ -37,7 +52,21 @@ def generate_russian_title(
     scene_terms: list[str],
     max_characters: int = 120,
 ) -> ListingTitleDraft:
-    """执行 generate_russian_title 的业务流程并返回该流程的结果。"""
+    """执行 generate_russian_title 的业务流程并返回该流程的结果。
+
+Args:
+    category: 参数语义、输入边界和安全约束。
+    core_terms: 参数语义、输入边界和安全约束。
+    attribute_terms: 参数语义、输入边界和安全约束。
+    scene_terms: 参数语义、输入边界和安全约束。
+    max_characters: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if max_characters < 1:
         raise ValueError("标题最大长度必须为正数")
     terms = _unique(core_terms + attribute_terms + scene_terms)
@@ -56,7 +85,13 @@ def generate_russian_title(
 
 
 def _unique(values: list[str]) -> list[str]:
-    """执行内部步骤 _unique，供同一模块的公开流程复用。"""
+    """执行内部步骤 _unique，供同一模块的公开流程复用。
+
+Args:
+    values: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     result: list[str] = []
     seen: set[str] = set()
     for value in values:

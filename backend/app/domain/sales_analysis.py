@@ -24,12 +24,26 @@ class SalesAnalysisGateway(Protocol):
     async def save_report(
         self, *, workspace_id: str, report: SalesAnalysis
     ) -> SalesAnalysis:
-        """执行 save_report 的业务流程并返回该流程的结果。"""
+        """执行 save_report 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    report: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
     ) -> list[SalesAnalysis]:
-        """执行 list_reports 的业务流程并返回该流程的结果。"""
+        """执行 list_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def analyze_sales(
@@ -37,7 +51,22 @@ def analyze_sales(
     current_orders: int, previous_orders: int,
     current_window: str, previous_window: str,
 ) -> SalesAnalysis:
-    """执行 analyze_sales 的业务流程并返回该流程的结果。"""
+    """执行 analyze_sales 的业务流程并返回该流程的结果。
+
+Args:
+    current_sales_minor: 参数语义、输入边界和安全约束。
+    previous_sales_minor: 参数语义、输入边界和安全约束。
+    current_orders: 参数语义、输入边界和安全约束。
+    previous_orders: 参数语义、输入边界和安全约束。
+    current_window: 参数语义、输入边界和安全约束。
+    previous_window: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     values = (current_sales_minor, previous_sales_minor, current_orders, previous_orders)
     if (
         any(isinstance(value, bool) or not isinstance(value, int) for value in values)
@@ -66,5 +95,12 @@ def analyze_sales(
 
 
 def _change(current: int, previous: int) -> float | None:
-    """执行内部步骤 _change，供同一模块的公开流程复用。"""
+    """执行内部步骤 _change，供同一模块的公开流程复用。
+
+Args:
+    current: 参数语义、输入边界和安全约束。
+    previous: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return (current - previous) / previous * 100 if previous else None

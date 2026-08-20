@@ -50,7 +50,17 @@ class SavePerformanceClientCredentialsPayload(BaseModel):
 
 @router.post("/inspect", response_model=PerformanceToken)
 async def inspect_performance_token(payload: PerformanceTokenPayload) -> PerformanceToken:
-    """执行 inspect_performance_token 的业务流程并返回该流程的结果。"""
+    """执行 inspect_performance_token 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         return build_performance_token(
             payload.access_token, payload.expires_at, payload.refresh_token
@@ -72,7 +82,20 @@ async def save_performance_credentials(
     gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> PerformanceCredentialStatus:
-    """执行 save_performance_credentials 的业务流程并返回该流程的结果。"""
+    """执行 save_performance_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -103,7 +126,19 @@ async def get_performance_credentials_status(
     gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> PerformanceCredentialStatus:
-    """执行 get_performance_credentials_status 的业务流程并返回该流程的结果。"""
+    """执行 get_performance_credentials_status 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     status_result = await gateway.get_status(workspace_id=workspace_id)
@@ -122,7 +157,20 @@ async def save_performance_client_credentials(
     gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> PerformanceCredentialStatus:
-    """执行 save_performance_client_credentials 的业务流程并返回该流程的结果。"""
+    """执行 save_performance_client_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -147,7 +195,19 @@ async def refresh_performance_token(
     gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> PerformanceCredentialStatus:
-    """执行 refresh_performance_token 的业务流程并返回该流程的结果。"""
+    """执行 refresh_performance_token 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     credentials = await gateway.get_client_credentials(workspace_id=workspace_id)
@@ -176,7 +236,18 @@ async def refresh_performance_token(
 async def _ensure_performance_access_token(
     workspace_id: str, gateway: PerformanceCredentialGateway,
 ) -> str:
-    """在真实只读调用前复用有效令牌，临近过期时自动换取新令牌。"""
+    """在真实只读调用前复用有效令牌，临近过期时自动换取新令牌。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     current = await gateway.get_access_token(workspace_id=workspace_id)
     if current is not None:
         token, stored_expires_at = current
@@ -212,7 +283,19 @@ async def list_performance_campaigns(
     gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> dict[str, object]:
-    """自动刷新令牌后读取 Performance 广告活动；该接口只读。"""
+    """自动刷新令牌后读取 Performance 广告活动；该接口只读。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     token = await _ensure_performance_access_token(workspace_id, gateway)

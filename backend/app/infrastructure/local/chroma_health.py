@@ -31,13 +31,23 @@ class ChromaHealthProbe:
         timeout_seconds: float = 2.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    base_url: 参数语义、输入边界和安全约束。
+    timeout_seconds: 参数语义、输入边界和安全约束。
+    transport: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._base_url = base_url.rstrip("/") if base_url else None
         self._timeout_seconds = timeout_seconds
         self._transport = transport
 
     async def check(self) -> ChromaHealthStatus:
-        """执行 check 的业务流程并返回该流程的结果。"""
+        """执行 check 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         if not self._base_url:
             return ChromaHealthStatus("not_configured", None, "CHROMA_URL 未配置")
         started = monotonic()

@@ -22,12 +22,26 @@ class AdvertisingAnalysisGateway(Protocol):
     async def save_report(
         self, *, workspace_id: str, report: AdvertisingAnalysis
     ) -> AdvertisingAnalysis:
-        """执行 save_report 的业务流程并返回该流程的结果。"""
+        """执行 save_report 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    report: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
     ) -> list[AdvertisingAnalysis]:
-        """执行 list_reports 的业务流程并返回该流程的结果。"""
+        """执行 list_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def analyze_advertising(
@@ -35,7 +49,22 @@ def analyze_advertising(
     keyword_count: int, unconverted_keyword_count: int,
     acos_alert_percent: float,
 ) -> AdvertisingAnalysis:
-    """执行 analyze_advertising 的业务流程并返回该流程的结果。"""
+    """执行 analyze_advertising 的业务流程并返回该流程的结果。
+
+Args:
+    spend_minor: 参数语义、输入边界和安全约束。
+    ad_sales_minor: 参数语义、输入边界和安全约束。
+    total_sales_minor: 参数语义、输入边界和安全约束。
+    keyword_count: 参数语义、输入边界和安全约束。
+    unconverted_keyword_count: 参数语义、输入边界和安全约束。
+    acos_alert_percent: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     values = (
         spend_minor, ad_sales_minor, total_sales_minor,
         keyword_count, unconverted_keyword_count,

@@ -24,7 +24,18 @@ class SyncWorker:
         lease_seconds: int = 30,
         retry_delay_seconds: int = 60,
     ) -> None:
-        """注入任务网关、消息消费者和按资源类型索引的同步处理器。"""
+        """注入任务网关、消息消费者和按资源类型索引的同步处理器。
+
+Args:
+    jobs: 参数语义、输入边界和安全约束。
+    consumer: 参数语义、输入边界和安全约束。
+    handlers: 参数语义、输入边界和安全约束。
+    worker_id: 参数语义、输入边界和安全约束。
+    lease_seconds: 参数语义、输入边界和安全约束。
+    retry_delay_seconds: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._jobs = jobs
         self._consumer = consumer
         self._handlers = handlers
@@ -33,7 +44,13 @@ class SyncWorker:
         self._retry_delay_seconds = retry_delay_seconds
 
     async def process_one(self, *, block_ms: int = 1_000) -> bool:
-        """消费并处理一条消息，完成租约、心跳、成功/失败落库和确认。"""
+        """消费并处理一条消息，完成租约、心跳、成功/失败落库和确认。
+
+Args:
+    block_ms: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         message = await self._consumer.read_one(block_ms=block_ms)
         if message is None:
             return False
@@ -85,7 +102,13 @@ class SyncWorker:
                 await heartbeat
 
     async def _heartbeat(self, job_id: str) -> None:
-        """按租约周期续租；任务失去租约后停止续租。"""
+        """按租约周期续租；任务失去租约后停止续租。
+
+Args:
+    job_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         interval = max(self._lease_seconds // 3, 1)
         while True:
             await asyncio.sleep(interval)

@@ -122,7 +122,9 @@ _answers: set[str] = set()
 
 
 async def _demo_engine() -> KnowledgeQueryEngine:
-    """提供无外部凭据的演示索引；生产环境由 Chroma/PostgreSQL 适配器替换。"""
+    """提供无外部凭据的演示索引；生产环境由 Chroma/PostgreSQL 适配器替换。
+Returns:
+    返回调用完成后的领域结果。"""
 
     embedding = DeterministicEmbedding()
     vector = InMemoryVectorIndex(dimension=embedding.dimension)
@@ -156,7 +158,13 @@ async def _demo_engine() -> KnowledgeQueryEngine:
 async def build_knowledge_query_plan(
     payload: KnowledgeQuestionPayload,
 ) -> KnowledgeQuestionResponse:
-    """生成受控意图/重写计划；未接入索引前不会伪造回答或引用。"""
+    """生成受控意图/重写计划；未接入索引前不会伪造回答或引用。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     segments = classify_intents(payload.question)
     plans = [
@@ -181,7 +189,13 @@ async def build_knowledge_query_plan(
 
 @router.post("/query", response_model=KnowledgeAnswerResponse)
 async def answer_knowledge_question(payload: KnowledgeQuestionPayload) -> KnowledgeAnswerResponse:
-    """执行可审计的混合检索；无证据时返回不知道，不调用生成模型兜底编造。"""
+    """执行可审计的混合检索；无证据时返回不知道，不调用生成模型兜底编造。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     runtime = get_knowledge_runtime()
     # 本地测试保留演示知识，生产环境绝不使用演示内容作为回答兜底。
@@ -238,7 +252,17 @@ async def answer_knowledge_question(payload: KnowledgeQuestionPayload) -> Knowle
 async def translate_knowledge_text(
     payload: KnowledgeTranslationPayload,
 ) -> KnowledgeTranslationResponse:
-    """调用 translation 用途绑定；生产环境失败时拒绝伪造译文。"""
+    """调用 translation 用途绑定；生产环境失败时拒绝伪造译文。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if any(not text.strip() for text in payload.texts):
         raise HTTPException(status_code=422, detail="翻译输入不能包含空文本")
     runtime = get_knowledge_runtime()
@@ -251,7 +275,17 @@ async def translate_knowledge_text(
 
 @router.get("/{answer_id}/trace", response_model=KnowledgeTraceResponse)
 async def get_knowledge_answer_trace(answer_id: str) -> KnowledgeTraceResponse:
-    """执行 get_knowledge_answer_trace 的业务流程并返回该流程的结果。"""
+    """执行 get_knowledge_answer_trace 的业务流程并返回该流程的结果。
+
+Args:
+    answer_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     for trace in _traces.values():
         if trace.answer_id == answer_id:
             return trace
@@ -260,7 +294,9 @@ async def get_knowledge_answer_trace(answer_id: str) -> KnowledgeTraceResponse:
 
 @router.get("/history", response_model=list[KnowledgeTraceResponse])
 async def list_knowledge_answer_history() -> list[KnowledgeTraceResponse]:
-    """执行 list_knowledge_answer_history 的业务流程并返回该流程的结果。"""
+    """执行 list_knowledge_answer_history 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
     return list(_traces.values())
 
 
@@ -268,7 +304,18 @@ async def list_knowledge_answer_history() -> list[KnowledgeTraceResponse]:
 async def create_knowledge_feedback(
     answer_id: str, payload: KnowledgeFeedbackPayload
 ) -> KnowledgeFeedbackResponse:
-    """执行 create_knowledge_feedback 的业务流程并返回该流程的结果。"""
+    """执行 create_knowledge_feedback 的业务流程并返回该流程的结果。
+
+Args:
+    answer_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if answer_id not in _answers:
         raise HTTPException(status_code=404, detail="回答不存在或已过期")
     feedback = KnowledgeFeedbackResponse(
@@ -281,5 +328,7 @@ async def create_knowledge_feedback(
 
 @router.get("/feedback", response_model=list[KnowledgeFeedbackResponse])
 async def list_knowledge_feedback() -> list[KnowledgeFeedbackResponse]:
-    """执行 list_knowledge_feedback 的业务流程并返回该流程的结果。"""
+    """执行 list_knowledge_feedback 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
     return list(_feedback.values())

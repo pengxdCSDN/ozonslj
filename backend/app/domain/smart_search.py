@@ -31,12 +31,28 @@ class SmartSearchGateway(Protocol):
         self, *, workspace_id: str, product_scope: str, source_text: str,
         report: SmartSearchReport
     ) -> SmartSearchReport:
-        """执行 save_report 的业务流程并返回该流程的结果。"""
+        """执行 save_report 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    source_text: 参数语义、输入边界和安全约束。
+    report: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int = 50
     ) -> list[SmartSearchReport]:
-        """执行 list_reports 的业务流程并返回该流程的结果。"""
+        """执行 list_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def check_smart_search(
@@ -46,7 +62,16 @@ def check_smart_search(
     category: str,
     category_terms: list[str] | None = None,
 ) -> SmartSearchReport:
-    """执行 check_smart_search 的业务流程并返回该流程的结果。"""
+    """执行 check_smart_search 的业务流程并返回该流程的结果。
+
+Args:
+    text: 参数语义、输入边界和安全约束。
+    required_terms: 参数语义、输入边界和安全约束。
+    category: 参数语义、输入边界和安全约束。
+    category_terms: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     if not text.strip():
         return SmartSearchReport(
             (
@@ -98,7 +123,13 @@ def check_smart_search(
 
 
 def _unique(values: list[str]) -> list[str]:
-    """执行内部步骤 _unique，供同一模块的公开流程复用。"""
+    """执行内部步骤 _unique，供同一模块的公开流程复用。
+
+Args:
+    values: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     result: list[str] = []
     seen: set[str] = set()
     for value in values:

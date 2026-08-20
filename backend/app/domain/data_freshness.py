@@ -27,12 +27,26 @@ class DataFreshnessGateway(Protocol):
     async def save_decision(
         self, *, workspace_id: str, decision: DataFreshnessDecision
     ) -> DataFreshnessDecision:
-        """执行 save_decision 的业务流程并返回该流程的结果。"""
+        """执行 save_decision 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    decision: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_decisions(
         self, *, workspace_id: str, limit: int = 50
     ) -> list[DataFreshnessDecision]:
-        """执行 list_decisions 的业务流程并返回该流程的结果。"""
+        """执行 list_decisions 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def check_data_freshness(
@@ -44,7 +58,25 @@ def check_data_freshness(
     record_count: int | None = None,
     error_summary: str | None = None,
 ) -> DataFreshnessDecision:
-    """执行 check_data_freshness 的业务流程并返回该流程的结果。"""
+    """执行 check_data_freshness 的业务流程并返回该流程的结果。
+
+Args:
+    data_domain: 参数语义、输入边界和安全约束。
+    observed_at: 参数语义、输入边界和安全约束。
+    max_age_seconds: 参数语义、输入边界和安全约束。
+    now: 参数语义、输入边界和安全约束。
+    last_success_at: 参数语义、输入边界和安全约束。
+    window: 参数语义、输入边界和安全约束。
+    latency_seconds: 参数语义、输入边界和安全约束。
+    record_count: 参数语义、输入边界和安全约束。
+    error_summary: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if (
         not data_domain.strip()
         or isinstance(max_age_seconds, bool)

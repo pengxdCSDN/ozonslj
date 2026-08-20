@@ -17,7 +17,15 @@ class ProductOfferGateway(Protocol):
         cursor: str | None,
         limit: int,
     ) -> ProductOfferPage:
-        """执行 list_product_offers 的业务流程并返回该流程的结果。"""
+        """执行 list_product_offers 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 STUB_PRODUCT_OFFERS: Sequence[ProductOffer] = (
@@ -59,7 +67,19 @@ class StubOzonGateway:
         cursor: str | None,
         limit: int,
     ) -> ProductOfferPage:
-        """执行 list_product_offers 的业务流程并返回该流程的结果。"""
+        """执行 list_product_offers 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    WorkspaceNotFoundError: 业务约束或外部依赖失败时抛出。
+"""
         if workspace_id != "local":
             raise WorkspaceNotFoundError(workspace_id)
         start = int(cursor) if cursor else 0

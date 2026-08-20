@@ -25,7 +25,13 @@ class SellerPageReader(Protocol):
     """定义 Seller 分页读取适配器必须提供的接口。"""
 
     async def read_page(self, *, cursor: str | None) -> SyncPage:
-        """读取指定游标的单页数据。"""
+        """读取指定游标的单页数据。
+
+Args:
+    cursor: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         ...
 
 
@@ -33,7 +39,13 @@ class SyncPageSink(Protocol):
     """定义成功读取的 Seller 页面事实落库接口。"""
 
     async def save_page(self, *, items: list[dict[str, object]]) -> None:
-        """保存当前页事实；调用方随后才推进同步游标。"""
+        """保存当前页事实；调用方随后才推进同步游标。
+
+Args:
+    items: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         ...
 
 
@@ -45,7 +57,22 @@ async def process_seller_pages(
     max_pages: int = 100,
     max_retries: int = 3,
 ) -> SyncProcessResult:
-    """处理 Seller 分页读取；每页成功保存后才推进游标，失败不会推进长期水位。"""
+    """处理 Seller 分页读取；每页成功保存后才推进游标，失败不会推进长期水位。
+
+Args:
+    reader: 参数语义、输入边界和安全约束。
+    sink: 参数语义、输入边界和安全约束。
+    initial_cursor: 参数语义、输入边界和安全约束。
+    max_pages: 参数语义、输入边界和安全约束。
+    max_retries: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
     if (
         isinstance(max_pages, bool) or not isinstance(max_pages, int)
         or isinstance(max_retries, bool) or not isinstance(max_retries, int)

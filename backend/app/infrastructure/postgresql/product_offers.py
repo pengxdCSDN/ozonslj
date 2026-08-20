@@ -21,7 +21,14 @@ class PostgresProductOfferGateway:
         sessions: PostgresSessionFactory,
         tenant_context: TenantContext,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    tenant_context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._tenant_context = tenant_context
 
@@ -32,7 +39,15 @@ class PostgresProductOfferGateway:
         cursor: str | None,
         limit: int,
     ) -> ProductOfferPage:
-        """执行 list_product_offers 的业务流程并返回该流程的结果。"""
+        """执行 list_product_offers 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    cursor: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._list_product_offers,
             workspace_id,
@@ -46,7 +61,15 @@ class PostgresProductOfferGateway:
         offset: int,
         limit: int,
     ) -> ProductOfferPage:
-        """执行内部步骤 _list_product_offers，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_product_offers，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    offset: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._tenant_context) as connection:
             count_row = connection.execute(
                 """
@@ -85,7 +108,13 @@ class PostgresProductOfferGateway:
 
 
 def _product_offer_from_row(row: dict[str, Any]) -> ProductOffer:
-    """把最小货币单位整数转换为 API 使用的精确 Decimal。"""
+    """把最小货币单位整数转换为 API 使用的精确 Decimal。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return ProductOffer(
         offer_id=str(row["offer_id"]),
         ozon_product_id=(

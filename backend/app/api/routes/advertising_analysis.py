@@ -31,7 +31,17 @@ class AdvertisingAnalysisPayload(BaseModel):
 
 @router.post("/analyze", response_model=AdvertisingAnalysis)
 async def analyze(payload: AdvertisingAnalysisPayload) -> AdvertisingAnalysis:
-    """执行 analyze 的业务流程并返回该流程的结果。"""
+    """执行 analyze 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         return analyze_advertising(**payload.model_dump())
     except ValueError as error:
@@ -51,7 +61,20 @@ async def analyze_and_save(
     gateway: Annotated[AdvertisingAnalysisGateway, Depends(get_advertising_analysis_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> AdvertisingAnalysis:
-    """执行 analyze_and_save 的业务流程并返回该流程的结果。"""
+    """执行 analyze_and_save 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     report = await analyze(payload)
@@ -65,7 +88,20 @@ async def list_analysis_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[AdvertisingAnalysis]:
-    """执行 list_analysis_history 的业务流程并返回该流程的结果。"""
+    """执行 list_analysis_history 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

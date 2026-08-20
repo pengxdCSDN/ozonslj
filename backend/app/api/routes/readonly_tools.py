@@ -24,7 +24,13 @@ class ReadonlyToolPayload(BaseModel):
 
 @router.post("/authorize", response_model=ReadonlyToolDecision)
 async def authorize_tool(payload: ReadonlyToolPayload) -> ReadonlyToolDecision:
-    """执行 authorize_tool 的业务流程并返回该流程的结果。"""
+    """执行 authorize_tool 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return authorize_readonly_tool(payload.tool, payload.parameters)
 
 
@@ -38,7 +44,20 @@ async def authorize_and_save_tool(
     gateway: Annotated[ReadonlyToolGateway, Depends(get_readonly_tool_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> ReadonlyToolDecision:
-    """执行 authorize_and_save_tool 的业务流程并返回该流程的结果。"""
+    """执行 authorize_and_save_tool 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     decision = await authorize_tool(payload)
@@ -55,7 +74,20 @@ async def list_tool_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[ReadonlyToolDecision]:
-    """执行 list_tool_history 的业务流程并返回该流程的结果。"""
+    """执行 list_tool_history 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 200:

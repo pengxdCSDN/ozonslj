@@ -26,7 +26,13 @@ class CampaignSyncPayload(BaseModel):
 
 @router.post("/sync-preview", response_model=list[AdvertisingCampaign])
 async def sync_campaign_preview(payload: CampaignSyncPayload) -> list[AdvertisingCampaign]:
-    """执行 sync_campaign_preview 的业务流程并返回该流程的结果。"""
+    """执行 sync_campaign_preview 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return [map_performance_campaign(item) for item in payload.campaigns]
 
 
@@ -40,7 +46,20 @@ async def sync_and_save_campaigns(
     gateway: Annotated[AdvertisingCampaignGateway, Depends(get_advertising_campaign_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[AdvertisingCampaign]:
-    """执行 sync_and_save_campaigns 的业务流程并返回该流程的结果。"""
+    """执行 sync_and_save_campaigns 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     campaigns = [map_performance_campaign(item) for item in payload.campaigns]
@@ -54,7 +73,20 @@ async def list_saved_campaigns(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 100,
 ) -> list[AdvertisingCampaign]:
-    """执行 list_saved_campaigns 的业务流程并返回该流程的结果。"""
+    """执行 list_saved_campaigns 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_campaigns(workspace_id=workspace_id, limit=limit)

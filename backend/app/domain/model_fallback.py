@@ -31,7 +31,13 @@ class RolloutFlag:
 class ModelClient(Protocol):
     """说明 ModelClient 的职责、状态边界和对外协作关系。"""
     async def invoke(self, prompt: str) -> str:
-        """执行 invoke 的业务流程并返回该流程的结果。"""
+        """执行 invoke 的业务流程并返回该流程的结果。
+
+Args:
+    prompt: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class ProviderFallbackRouter:
@@ -40,12 +46,29 @@ class ProviderFallbackRouter:
     def __init__(
         self, clients: dict[str, ModelClient], candidates: tuple[ProviderCandidate, ...]
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    clients: 参数语义、输入边界和安全约束。
+    candidates: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._clients = clients
         self._candidates = candidates
 
     async def invoke(self, prompt: str) -> tuple[str, ProviderCandidate]:
-        """执行 invoke 的业务流程并返回该流程的结果。"""
+        """执行 invoke 的业务流程并返回该流程的结果。
+
+Args:
+    prompt: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         errors: list[str] = []
         for candidate in sorted(self._candidates, key=lambda item: item.priority):
             if candidate.status != "available" or candidate.provider not in self._clients:
@@ -66,13 +89,31 @@ class BudgetAwareProviderRouter(ProviderFallbackRouter):
         candidates: tuple[ProviderCandidate, ...],
         budgets: dict[str, tuple[ModelBudgetPolicy, ModelBudgetUsage]],
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    clients: 参数语义、输入边界和安全约束。
+    candidates: 参数语义、输入边界和安全约束。
+    budgets: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         super().__init__(clients, candidates)
         self._budget_candidates = candidates
         self._budgets = budgets
 
     async def invoke(self, prompt: str) -> tuple[str, ProviderCandidate]:
-        """执行 invoke 的业务流程并返回该流程的结果。"""
+        """执行 invoke 的业务流程并返回该流程的结果。
+
+Args:
+    prompt: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         eligible = tuple(
             candidate
             for candidate in self._budget_candidates
@@ -87,7 +128,14 @@ def _budget_allows(
     candidate: ProviderCandidate,
     budgets: dict[str, tuple[ModelBudgetPolicy, ModelBudgetUsage]],
 ) -> bool:
-    """执行内部步骤 _budget_allows，供同一模块的公开流程复用。"""
+    """执行内部步骤 _budget_allows，供同一模块的公开流程复用。
+
+Args:
+    candidate: 参数语义、输入边界和安全约束。
+    budgets: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     configured = budgets.get(candidate.provider)
     if configured is None:
         return True
@@ -96,7 +144,15 @@ def _budget_allows(
 
 
 def rollout_allows_execution(flag: RolloutFlag, *, is_admin: bool, now_iso: str) -> bool:
-    """统一判断试运行模式；pilot 到期或 disabled 不执行。"""
+    """统一判断试运行模式；pilot 到期或 disabled 不执行。
+
+Args:
+    flag: 参数语义、输入边界和安全约束。
+    is_admin: 参数语义、输入边界和安全约束。
+    now_iso: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     if flag.mode == "disabled":
         return False

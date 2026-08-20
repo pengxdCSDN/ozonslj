@@ -30,16 +30,40 @@ class AdvertisingCampaignGateway(Protocol):
     async def save_campaigns(
         self, *, workspace_id: str, campaigns: list[AdvertisingCampaign]
     ) -> list[AdvertisingCampaign]:
-        """执行 save_campaigns 的业务流程并返回该流程的结果。"""
+        """执行 save_campaigns 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    campaigns: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_campaigns(
         self, *, workspace_id: str, limit: int
     ) -> list[AdvertisingCampaign]:
-        """执行 list_campaigns 的业务流程并返回该流程的结果。"""
+        """执行 list_campaigns 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def map_performance_campaign(raw: dict[str, object]) -> AdvertisingCampaign:
-    """把 Performance API 模型映射为内部只读模型，未知活动状态不静默转换。"""
+    """把 Performance API 模型映射为内部只读模型，未知活动状态不静默转换。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     status = str(raw.get("status", "paused"))
     if status not in {"active", "paused", "archived"}:
         status = "paused"
@@ -66,7 +90,13 @@ def map_performance_campaign(raw: dict[str, object]) -> AdvertisingCampaign:
 
 
 def _dedupe_keywords(items: list[AdvertisingKeyword]) -> list[AdvertisingKeyword]:
-    """执行内部步骤 _dedupe_keywords，供同一模块的公开流程复用。"""
+    """执行内部步骤 _dedupe_keywords，供同一模块的公开流程复用。
+
+Args:
+    items: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     seen: set[tuple[str, bool]] = set()
     result: list[AdvertisingKeyword] = []
     for item in items:

@@ -21,24 +21,59 @@ class ModelAdapterGateway(Protocol):
     async def save_config(
         self, *, workspace_id: str, config: ModelAdapterConfig
     ) -> ModelAdapterConfig:
-        """执行 save_config 的业务流程并返回该流程的结果。"""
+        """执行 save_config 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    config: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_configs(
         self, *, workspace_id: str, limit: int
     ) -> list[ModelAdapterConfig]:
-        """执行 list_configs 的业务流程并返回该流程的结果。"""
+        """执行 list_configs 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def get_active_config(
         self, *, workspace_id: str
     ) -> ModelAdapterConfig | None:
-        """执行 get_active_config 的业务流程并返回该流程的结果。"""
+        """执行 get_active_config 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def inspect_model_adapter(
     *, adapter: str, provider: str, model: str, base_url: str | None,
     enabled: bool, credential_configured: bool,
 ) -> ModelAdapterConfig:
-    """只检查厂商无关的适配器配置，不接触访问令牌，也不发起模型请求。"""
+    """只检查厂商无关的适配器配置，不接触访问令牌，也不发起模型请求。
+
+Args:
+    adapter: 参数语义、输入边界和安全约束。
+    provider: 参数语义、输入边界和安全约束。
+    model: 参数语义、输入边界和安全约束。
+    base_url: 参数语义、输入边界和安全约束。
+    enabled: 参数语义、输入边界和安全约束。
+    credential_configured: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     normalized_adapter = adapter.strip().lower()
     if not normalized_adapter or not provider.strip() or not model.strip():
         raise ValueError("模型适配器、厂商和模型名称不能为空")

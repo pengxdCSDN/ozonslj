@@ -16,16 +16,35 @@ class PostgresRagModelProviderGateway:
     """按组织隔离供应商配置，并维护用途级主备绑定。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def create_provider(self, **kwargs: object) -> None:
-        """执行 create_provider 的业务流程并返回该流程的结果。"""
+        """执行 create_provider 的业务流程并返回该流程的结果。
+
+Args:
+    **kwargs: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await asyncio.to_thread(self._create_provider, kwargs)
 
     def _create_provider(self, values: dict[str, object]) -> None:
-        """执行内部步骤 _create_provider，供同一模块的公开流程复用。"""
+        """执行内部步骤 _create_provider，供同一模块的公开流程复用。
+
+Args:
+    values: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -43,11 +62,15 @@ class PostgresRagModelProviderGateway:
             )
 
     async def list_provider_metadata(self) -> list[dict[str, object]]:
-        """执行 list_provider_metadata 的业务流程并返回该流程的结果。"""
+        """执行 list_provider_metadata 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_provider_metadata)
 
     def _list_provider_metadata(self) -> list[dict[str, object]]:
-        """执行内部步骤 _list_provider_metadata，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_provider_metadata，供同一模块的公开流程复用。
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """
@@ -62,11 +85,27 @@ class PostgresRagModelProviderGateway:
         return [dict(row) for row in rows]
 
     async def update_provider(self, **kwargs: object) -> None:
-        """执行 update_provider 的业务流程并返回该流程的结果。"""
+        """执行 update_provider 的业务流程并返回该流程的结果。
+
+Args:
+    **kwargs: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await asyncio.to_thread(self._update_provider, kwargs)
 
     def _update_provider(self, values: dict[str, object]) -> None:
-        """执行内部步骤 _update_provider，供同一模块的公开流程复用。"""
+        """执行内部步骤 _update_provider，供同一模块的公开流程复用。
+
+Args:
+    values: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         with self._sessions.transaction(self._context) as connection:
             current = connection.execute(
                 """
@@ -109,11 +148,23 @@ class PostgresRagModelProviderGateway:
             )
 
     async def disable_provider(self, provider_id: str) -> None:
-        """执行 disable_provider 的业务流程并返回该流程的结果。"""
+        """执行 disable_provider 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await asyncio.to_thread(self._disable_provider, provider_id)
 
     def _disable_provider(self, provider_id: str) -> None:
-        """执行内部步骤 _disable_provider，供同一模块的公开流程复用。"""
+        """执行内部步骤 _disable_provider，供同一模块的公开流程复用。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -124,11 +175,27 @@ class PostgresRagModelProviderGateway:
             )
 
     async def delete_provider(self, provider_id: str) -> bool:
-        """执行 delete_provider 的业务流程并返回该流程的结果。"""
+        """执行 delete_provider 的业务流程并返回该流程的结果。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._delete_provider, provider_id)
 
     def _delete_provider(self, provider_id: str) -> bool:
-        """删除未被用途绑定的配置；绑定中的配置必须先停用或解绑，避免运行时悬挂引用。"""
+        """删除未被用途绑定的配置；绑定中的配置必须先停用或解绑，避免运行时悬挂引用。
+
+Args:
+    provider_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         with self._sessions.transaction(self._context) as connection:
             bound = connection.execute(
                 """
@@ -155,7 +222,19 @@ class PostgresRagModelProviderGateway:
     async def bind_purpose(
         self, *, purpose: str, primary_provider_id: str, fallback_provider_ids: Sequence[str]
     ) -> None:
-        """执行 bind_purpose 的业务流程并返回该流程的结果。"""
+        """执行 bind_purpose 的业务流程并返回该流程的结果。
+
+Args:
+    purpose: 参数语义、输入边界和安全约束。
+    primary_provider_id: 参数语义、输入边界和安全约束。
+    fallback_provider_ids: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         provider_ids = [primary_provider_id, *fallback_provider_ids]
         if len(provider_ids) != len(set(provider_ids)):
             raise ValueError("provider_duplicate")
@@ -166,7 +245,19 @@ class PostgresRagModelProviderGateway:
         )
 
     def _bind_purpose(self, purpose: str, primary: str, fallbacks: list[str]) -> None:
-        """执行内部步骤 _bind_purpose，供同一模块的公开流程复用。"""
+        """执行内部步骤 _bind_purpose，供同一模块的公开流程复用。
+
+Args:
+    purpose: 参数语义、输入边界和安全约束。
+    primary: 参数语义、输入边界和安全约束。
+    fallbacks: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
         with self._sessions.transaction(self._context) as connection:
             provider_ids = [primary, *fallbacks]
             required_kind = {"embedding": "embedding", "rerank": "rerank"}.get(purpose, "text")
@@ -199,11 +290,15 @@ class PostgresRagModelProviderGateway:
             )
 
     async def list_bindings(self) -> list[dict[str, object]]:
-        """执行 list_bindings 的业务流程并返回该流程的结果。"""
+        """执行 list_bindings 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_bindings)
 
     def _list_bindings(self) -> list[dict[str, object]]:
-        """执行内部步骤 _list_bindings，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_bindings，供同一模块的公开流程复用。
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """

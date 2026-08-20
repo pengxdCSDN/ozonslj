@@ -21,7 +21,13 @@ class SourceConflictPayload(BaseModel):
 
 @router.post("/source-conflicts", response_model=list[SourceConflict])
 async def source_conflicts(payload: SourceConflictPayload) -> list[SourceConflict]:
-    """执行 source_conflicts 的业务流程并返回该流程的结果。"""
+    """执行 source_conflicts 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return find_source_conflicts(**payload.model_dump())
 
 
@@ -35,7 +41,20 @@ async def source_conflicts_and_isolate(
     gateway: Annotated[QualityFindingGateway, Depends(get_quality_finding_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[SourceConflict]:
-    """保存跨来源冲突到质量隔离区，官方事实不会被估算或导入值覆盖。"""
+    """保存跨来源冲突到质量隔离区，官方事实不会被估算或导入值覆盖。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     conflicts = await source_conflicts(payload)

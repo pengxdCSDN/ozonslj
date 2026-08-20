@@ -33,7 +33,17 @@ logger = logging.getLogger(__name__)
 
 
 def _require_runtime_urls(settings: Settings) -> tuple[str, str]:
-    """同步进程同时依赖 PostgreSQL 和 Redis，缺失时必须启动失败。"""
+    """同步进程同时依赖 PostgreSQL 和 Redis，缺失时必须启动失败。
+
+Args:
+    settings: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
     if settings.database_url is None:
         raise RuntimeError("DATABASE_URL 未配置")
     if settings.redis_url is None:
@@ -42,12 +52,28 @@ def _require_runtime_urls(settings: Settings) -> tuple[str, str]:
 
 
 def _service_context(settings: Settings) -> TenantContext:
-    """后台进程只使用部署绑定的固定数据边界，不接受客户端传入组织标识。"""
+    """后台进程只使用部署绑定的固定数据边界，不接受客户端传入组织标识。
+
+Args:
+    settings: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return TenantContext(settings.default_organization_id, "sync-service")
 
 
 def _build_handlers(settings: Settings) -> dict[SyncResourceType, SyncHandler]:
-    """Stub 环境提供确定性处理器；live 模式不得用空处理器伪装真实同步成功。"""
+    """Stub 环境提供确定性处理器；live 模式不得用空处理器伪装真实同步成功。
+
+Args:
+    settings: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
     if settings.ozon_mode != "stub":
         raise RuntimeError("live 模式的 Ozon 同步处理器尚未配置，拒绝启动 Worker")
     handler = StubSyncHandler()
@@ -60,9 +86,22 @@ def _build_handlers(settings: Settings) -> dict[SyncResourceType, SyncHandler]:
 
 
 def _install_shutdown_handlers(stop: asyncio.Event) -> None:
-    """把容器 SIGTERM 和终端中断转换为协作式停止信号。"""
+    """把容器 SIGTERM 和终端中断转换为协作式停止信号。
+
+Args:
+    stop: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     def request_stop(_signum: int, _frame: object) -> None:
-        """执行 request_stop 的业务流程并返回该流程的结果。"""
+        """执行 request_stop 的业务流程并返回该流程的结果。
+
+Args:
+    _signum: 参数语义、输入边界和安全约束。
+    _frame: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         stop.set()
 
     for signum in (signal.SIGINT, signal.SIGTERM):
@@ -70,7 +109,13 @@ def _install_shutdown_handlers(stop: asyncio.Event) -> None:
 
 
 async def run_scheduler(settings: Settings) -> None:
-    """组装并运行单组织运营部署的同步调度进程。"""
+    """组装并运行单组织运营部署的同步调度进程。
+
+Args:
+    settings: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     database_url, redis_url = _require_runtime_urls(settings)
     sessions = PostgresSessionFactory(database_url, max_size=2)
     redis = Redis.from_url(redis_url, decode_responses=True)
@@ -86,7 +131,9 @@ async def run_scheduler(settings: Settings) -> None:
         evaluation_queue = RedisRagEvaluationTaskQueue(redis)
 
         async def dispatch_once() -> int:
-            """执行 dispatch_once 的业务流程并返回该流程的结果。"""
+            """执行 dispatch_once 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
             count = await dispatcher.dispatch_due_jobs(limit=settings.sync_dispatch_batch_size)
             METRICS.set_gauge("ozonslj_scheduler_dispatched_jobs", count)
             METRICS.inc("ozonslj_scheduler_cycles_total")
@@ -128,7 +175,13 @@ async def run_scheduler(settings: Settings) -> None:
 
 
 async def run_worker(settings: Settings) -> None:
-    """组装并运行单并发同步 Worker，最终状态始终先落 PostgreSQL。"""
+    """组装并运行单并发同步 Worker，最终状态始终先落 PostgreSQL。
+
+Args:
+    settings: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     database_url, redis_url = _require_runtime_urls(settings)
     handlers = _build_handlers(settings)
     sessions = PostgresSessionFactory(database_url, max_size=2)
@@ -150,7 +203,9 @@ async def run_worker(settings: Settings) -> None:
         )
 
         async def process_one() -> bool:
-            """执行 process_one 的业务流程并返回该流程的结果。"""
+            """执行 process_one 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
             processed = await worker.process_one(block_ms=settings.sync_worker_block_ms)
             METRICS.inc(
                 "ozonslj_worker_processed_jobs_total",
@@ -167,7 +222,9 @@ async def run_worker(settings: Settings) -> None:
         )
 
         async def process_rag_one() -> bool:
-            """执行 process_rag_one 的业务流程并返回该流程的结果。"""
+            """执行 process_rag_one 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
             processed = await rag_worker.process_one(block_ms=settings.sync_worker_block_ms)
             METRICS.inc(
                 "ozonslj_worker_processed_jobs_total",
@@ -188,7 +245,9 @@ async def run_worker(settings: Settings) -> None:
         )
 
         async def process_evaluation_one() -> bool:
-            """执行 process_evaluation_one 的业务流程并返回该流程的结果。"""
+            """执行 process_evaluation_one 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
             processed = await evaluation_worker.process_one(
                 block_ms=settings.sync_worker_block_ms
             )
@@ -210,12 +269,16 @@ async def run_worker(settings: Settings) -> None:
 
 
 def scheduler_main() -> None:
-    """执行 scheduler_main 的业务流程并返回该流程的结果。"""
+    """执行 scheduler_main 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
     logging.basicConfig(level=get_settings().log_level)
     asyncio.run(run_scheduler(get_settings()))
 
 
 def worker_main() -> None:
-    """执行 worker_main 的业务流程并返回该流程的结果。"""
+    """执行 worker_main 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
     logging.basicConfig(level=get_settings().log_level)
     asyncio.run(run_worker(get_settings()))

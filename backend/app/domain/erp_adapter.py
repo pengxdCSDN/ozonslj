@@ -25,11 +25,27 @@ class ErpAdapter(Protocol):
     """未来 ERP 实现必须通过此端口，不允许领域层依赖具体厂商 SDK。"""
 
     async def list_supply_records(self, *, workspace_id: str) -> list[ErpSupplyRecord]:
-        """执行 list_supply_records 的业务流程并返回该流程的结果。"""
+        """执行 list_supply_records 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def normalize_erp_supply_record(raw: dict[str, object]) -> ErpSupplyRecord:
-    """执行 normalize_erp_supply_record 的业务流程并返回该流程的结果。"""
+    """执行 normalize_erp_supply_record 的业务流程并返回该流程的结果。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     external_id = _text(raw, "external_id")
     offer_id = _text(raw, "offer_id")
     record_type = _text(raw, "record_type")
@@ -69,7 +85,17 @@ def normalize_erp_supply_record(raw: dict[str, object]) -> ErpSupplyRecord:
 
 
 def parse_erp_csv(content: str) -> list[ErpSupplyRecord]:
-    """解析运营导入的 ERP 补充事实；不把导入值冒充 Seller 官方事实。"""
+    """解析运营导入的 ERP 补充事实；不把导入值冒充 Seller 官方事实。
+
+Args:
+    content: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if not content.strip():
         raise ValueError("ERP 导入文件不能为空")
     records: list[ErpSupplyRecord] = []
@@ -96,7 +122,18 @@ def parse_erp_csv(content: str) -> list[ErpSupplyRecord]:
 
 
 def _text(raw: dict[str, object], field: str) -> str:
-    """执行内部步骤 _text，供同一模块的公开流程复用。"""
+    """执行内部步骤 _text，供同一模块的公开流程复用。
+
+Args:
+    raw: 参数语义、输入边界和安全约束。
+    field: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     value = raw.get(field)
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"ERP 字段 {field} 不能为空")

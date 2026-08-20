@@ -25,16 +25,31 @@ class CreatedSellerAccount:
 class SellerCredentialVerifier(Protocol):
     """说明 SellerCredentialVerifier 的职责、状态边界和对外协作关系。"""
     async def verify(self, *, client_id: str, api_key: str) -> None:
-        """执行 verify 的业务流程并返回该流程的结果。"""
+        """执行 verify 的业务流程并返回该流程的结果。
+
+Args:
+    client_id: 参数语义、输入边界和安全约束。
+    api_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class CredentialProtector(Protocol):
     """定义凭据保护器的密钥版本查询和加密接口。"""
 
     @property
-    def key_version(self) -> int: """返回当前凭据保护密钥的版本。"""
+    def key_version(self) -> int: """返回当前凭据保护密钥的版本。
+Returns:
+    返回调用完成后的领域结果。"""
 
-    def encrypt(self, api_key: str) -> bytes: """加密 Api-Key，返回不可直接使用的密文。"""
+    def encrypt(self, api_key: str) -> bytes: """加密 Api-Key，返回不可直接使用的密文。
+
+Args:
+    api_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class SellerAccountGateway(Protocol):
@@ -51,4 +66,17 @@ class SellerAccountGateway(Protocol):
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> CreatedSellerAccount:
-        """执行 create 的业务流程并返回该流程的结果。"""
+        """执行 create 的业务流程并返回该流程的结果。
+
+Args:
+    seller_account_id: 参数语义、输入边界和安全约束。
+    workspace_id: 参数语义、输入边界和安全约束。
+    operator_id: 参数语义、输入边界和安全约束。
+    display_name: 参数语义、输入边界和安全约束。
+    workspace_name: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    encrypted_api_key: 参数语义、输入边界和安全约束。
+    credential_version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""

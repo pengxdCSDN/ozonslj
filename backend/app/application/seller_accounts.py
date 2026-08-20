@@ -19,7 +19,15 @@ class SellerAccountService:
         verifier: SellerCredentialVerifier,
         protector: CredentialProtector,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    gateway: 参数语义、输入边界和安全约束。
+    verifier: 参数语义、输入边界和安全约束。
+    protector: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._gateway = gateway
         self._verifier = verifier
         self._protector = protector
@@ -33,7 +41,17 @@ class SellerAccountService:
         client_id: str,
         api_key: str,
     ) -> CreatedSellerAccount:
-        """执行 create 的业务流程并返回该流程的结果。"""
+        """执行 create 的业务流程并返回该流程的结果。
+
+Args:
+    operator_id: 参数语义、输入边界和安全约束。
+    display_name: 参数语义、输入边界和安全约束。
+    workspace_name: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    api_key: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         normalized_client_id = client_id.strip()
         normalized_api_key = api_key.strip()
         await self._verifier.verify(client_id=normalized_client_id, api_key=normalized_api_key)

@@ -23,12 +23,26 @@ class ListingKeywordGateway(Protocol):
     async def save_keyword(
         self, *, workspace_id: str, keyword: ListingKeyword
     ) -> ListingKeyword:
-        """执行 save_keyword 的业务流程并返回该流程的结果。"""
+        """执行 save_keyword 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    keyword: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_keywords(
         self, *, workspace_id: str, limit: int = 50
     ) -> list[ListingKeyword]:
-        """执行 list_keywords 的业务流程并返回该流程的结果。"""
+        """执行 list_keywords 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class ListingKeywordError(ValueError):
@@ -36,7 +50,17 @@ class ListingKeywordError(ValueError):
 
 
 def normalize_listing_keyword(item: ListingKeyword) -> ListingKeyword:
-    """执行 normalize_listing_keyword 的业务流程并返回该流程的结果。"""
+    """执行 normalize_listing_keyword 的业务流程并返回该流程的结果。
+
+Args:
+    item: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ListingKeywordError: 业务约束或外部依赖失败时抛出。
+"""
     keyword = " ".join(item.keyword.split()).strip()
     if not keyword:
         raise ListingKeywordError("关键词不能为空")

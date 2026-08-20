@@ -19,7 +19,14 @@ class ClaimSupport:
 def validate_claims(
     claims: list[tuple[str, str, tuple[str, ...]]], hits: list[RetrievalHit]
 ) -> tuple[ClaimSupport, ...]:
-    """引用 ID 必须来自当前已发布证据；否则声明标记 unsupported。"""
+    """引用 ID 必须来自当前已发布证据；否则声明标记 unsupported。
+
+Args:
+    claims: 参数语义、输入边界和安全约束。
+    hits: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     available = {hit.chunk.chunk_id for hit in hits if hit.chunk.metadata.status == "published"}
     result: list[ClaimSupport] = []

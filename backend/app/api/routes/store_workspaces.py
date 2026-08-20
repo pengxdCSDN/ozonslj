@@ -36,7 +36,13 @@ router = APIRouter(prefix="/v1/store-workspaces", tags=["store-workspaces"])
 async def list_store_workspaces(
     gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[StoreWorkspace]:
-    """执行 list_store_workspaces 的业务流程并返回该流程的结果。"""
+    """执行 list_store_workspaces 的业务流程并返回该流程的结果。
+
+Args:
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return await gateway.list_workspaces()
 
 
@@ -51,7 +57,20 @@ async def create_store_workspace(
     protector: Annotated[CredentialProtector, Depends(get_credential_protector)],
     _account_manager: Annotated[AuthenticatedUser, Depends(require_account_manager)],
 ) -> StoreWorkspace:
-    """执行 create_store_workspace 的业务流程并返回该流程的结果。"""
+    """执行 create_store_workspace 的业务流程并返回该流程的结果。
+
+Args:
+    request: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    protector: 参数语义、输入边界和安全约束。
+    _account_manager: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     encrypted_api_key = protector.protect(request.api_key.get_secret_value())
     try:
         return await gateway.create_workspace(
@@ -75,7 +94,22 @@ async def replace_store_credentials(
     protector: Annotated[CredentialProtector, Depends(get_credential_protector)],
     _account_manager: Annotated[AuthenticatedUser, Depends(require_account_manager)],
 ) -> StoreWorkspace:
-    """执行 replace_store_credentials 的业务流程并返回该流程的结果。"""
+    """执行 replace_store_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    request: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    protector: 参数语义、输入边界和安全约束。
+    _account_manager: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    _workspace_not_found: 业务约束或外部依赖失败时抛出。
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     encrypted_api_key = protector.protect(request.api_key.get_secret_value())
     try:
         workspace = await gateway.replace_credentials(
@@ -102,7 +136,22 @@ async def verify_store_workspace(
     verifier: Annotated[SellerAccountVerifier, Depends(get_seller_account_verifier)],
     _account_manager: Annotated[AuthenticatedUser, Depends(require_account_manager)],
 ) -> StoreWorkspace:
-    """执行 verify_store_workspace 的业务流程并返回该流程的结果。"""
+    """执行 verify_store_workspace 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    protector: 参数语义、输入边界和安全约束。
+    verifier: 参数语义、输入边界和安全约束。
+    _account_manager: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    _workspace_not_found: 业务约束或外部依赖失败时抛出。
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     workspace = await gateway.get_workspace(workspace_id)
     stored_credentials = await gateway.load_credentials(workspace_id)
     if workspace is None or stored_credentials is None:
@@ -191,7 +240,22 @@ async def _mark_invalid_and_raise(
     status_code: int,
     cause: Exception,
 ) -> StoreWorkspace:
-    """执行内部步骤 _mark_invalid_and_raise，供同一模块的公开流程复用。"""
+    """执行内部步骤 _mark_invalid_and_raise，供同一模块的公开流程复用。
+
+Args:
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_id: 参数语义、输入边界和安全约束。
+    error_type: 参数语义、输入边界和安全约束。
+    message: 参数语义、输入边界和安全约束。
+    status_code: 参数语义、输入边界和安全约束。
+    cause: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     await gateway.set_verification_status(
         workspace_id=workspace_id,
         status="invalid",
@@ -211,7 +275,15 @@ async def _audit_retryable_failure(
     error_type: str,
 ) -> None:
     # 暂时性失败不应让已验证工作区失效，pending 也保持可重试。
-    """执行内部步骤 _audit_retryable_failure，供同一模块的公开流程复用。"""
+    """执行内部步骤 _audit_retryable_failure，供同一模块的公开流程复用。
+
+Args:
+    gateway: 参数语义、输入边界和安全约束。
+    workspace: 参数语义、输入边界和安全约束。
+    error_type: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     await gateway.set_verification_status(
         workspace_id=workspace.id,
         status=workspace.status,
@@ -222,7 +294,9 @@ async def _audit_retryable_failure(
 
 
 def _workspace_not_found() -> HTTPException:
-    """执行内部步骤 _workspace_not_found，供同一模块的公开流程复用。"""
+    """执行内部步骤 _workspace_not_found，供同一模块的公开流程复用。
+Returns:
+    返回调用完成后的领域结果。"""
     return HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail={"code": "workspace_not_found", "message": "工作区不存在"},

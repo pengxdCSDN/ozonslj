@@ -64,23 +64,57 @@ class KnowledgeGovernanceGateway(Protocol):
     """知识治理用例依赖的持久化端口。"""
 
     async def create_source(self, source: KnowledgeSource) -> KnowledgeSource:
-        """执行 create_source 的业务流程并返回该流程的结果。"""
+        """执行 create_source 的业务流程并返回该流程的结果。
+
+Args:
+    source: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def create_version(self, version: KnowledgeVersion) -> KnowledgeVersion:
-        """执行 create_version 的业务流程并返回该流程的结果。"""
+        """执行 create_version 的业务流程并返回该流程的结果。
+
+Args:
+    version: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def create_job(self, job: IngestionJob) -> IngestionJob:
-        """执行 create_job 的业务流程并返回该流程的结果。"""
+        """执行 create_job 的业务流程并返回该流程的结果。
+
+Args:
+    job: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def set_version_status(
         self, *, organization_id: str, version_id: str, status: KnowledgeVersionStatus
     ) -> KnowledgeVersion:
-        """执行 set_version_status 的业务流程并返回该流程的结果。"""
+        """执行 set_version_status 的业务流程并返回该流程的结果。
+
+Args:
+    organization_id: 参数语义、输入边界和安全约束。
+    version_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def set_source_status(
         self, *, organization_id: str, source_id: str, status: KnowledgeSourceStatus
     ) -> KnowledgeSource:
-        """执行 set_source_status 的业务流程并返回该流程的结果。"""
+        """执行 set_source_status 的业务流程并返回该流程的结果。
+
+Args:
+    organization_id: 参数语义、输入边界和安全约束。
+    source_id: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 class KnowledgeChunkGateway(Protocol):
@@ -89,9 +123,24 @@ class KnowledgeChunkGateway(Protocol):
     async def upsert_chunks(
         self, *, organization_id: str, chunks: list[KnowledgeChunk]
     ) -> None:
-        """执行 upsert_chunks 的业务流程并返回该流程的结果。"""
+        """执行 upsert_chunks 的业务流程并返回该流程的结果。
+
+Args:
+    organization_id: 参数语义、输入边界和安全约束。
+    chunks: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def set_chunk_status(
         self, *, organization_id: str, chunk_ids: list[str], status: str
     ) -> None:
-        """执行 set_chunk_status 的业务流程并返回该流程的结果。"""
+        """执行 set_chunk_status 的业务流程并返回该流程的结果。
+
+Args:
+    organization_id: 参数语义、输入边界和安全约束。
+    chunk_ids: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""

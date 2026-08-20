@@ -26,16 +26,40 @@ class SelectionDecisionBookGateway(Protocol):
     async def save_book(
         self, *, workspace_id: str, book: SelectionDecisionBook
     ) -> SelectionDecisionBook:
-        """执行 save_book 的业务流程并返回该流程的结果。"""
+        """执行 save_book 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    book: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_books(
         self, *, workspace_id: str, limit: int
     ) -> list[SelectionDecisionBook]:
-        """执行 list_books 的业务流程并返回该流程的结果。"""
+        """执行 list_books 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def validate_decision_book(book: SelectionDecisionBook) -> None:
-    """执行 validate_decision_book 的业务流程并返回该流程的结果。"""
+    """执行 validate_decision_book 的业务流程并返回该流程的结果。
+
+Args:
+    book: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     required_text = (
         book.opportunity_summary, book.customer_scene, book.market_sample,
         book.profit_calculation, book.price_range, book.stock_recommendation,
@@ -48,6 +72,16 @@ def validate_decision_book(book: SelectionDecisionBook) -> None:
 
 
 def validate_confirmation_status(status: str) -> None:
-    """执行 validate_confirmation_status 的业务流程并返回该流程的结果。"""
+    """执行 validate_confirmation_status 的业务流程并返回该流程的结果。
+
+Args:
+    status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if status not in {"confirmed", "rejected"}:
         raise ValueError("人工确认状态必须是 confirmed 或 rejected")

@@ -23,19 +23,47 @@ class InventoryAnalysisGateway(Protocol):
     async def save_report(
         self, *, workspace_id: str, report: InventoryAnalysis
     ) -> InventoryAnalysis:
-        """执行 save_report 的业务流程并返回该流程的结果。"""
+        """执行 save_report 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    report: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
     ) -> list[InventoryAnalysis]:
-        """执行 list_reports 的业务流程并返回该流程的结果。"""
+        """执行 list_reports 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def analyze_inventory(
     *, available_units: int, inbound_units: int, average_daily_sales: float,
     safety_days: int, overstock_days: int,
 ) -> InventoryAnalysis:
-    """执行 analyze_inventory 的业务流程并返回该流程的结果。"""
+    """执行 analyze_inventory 的业务流程并返回该流程的结果。
+
+Args:
+    available_units: 参数语义、输入边界和安全约束。
+    inbound_units: 参数语义、输入边界和安全约束。
+    average_daily_sales: 参数语义、输入边界和安全约束。
+    safety_days: 参数语义、输入边界和安全约束。
+    overstock_days: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     integer_values = (available_units, inbound_units, safety_days, overstock_days)
     if (
         any(isinstance(value, bool) or not isinstance(value, int) for value in integer_values)

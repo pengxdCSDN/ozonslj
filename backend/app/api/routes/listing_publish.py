@@ -28,7 +28,13 @@ class PublishPayload(BaseModel):
 
 @router.post("/execute", response_model=PublishCommand)
 async def publish_listing(payload: PublishPayload) -> PublishCommand:
-    """执行 publish_listing 的业务流程并返回该流程的结果。"""
+    """执行 publish_listing 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return execute_controlled_publish(**payload.model_dump())
 
 
@@ -39,7 +45,20 @@ async def execute_workspace_listing_publish(
     gateway: Annotated[ListingPublishGateway, Depends(get_listing_publish_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> PublishCommand:
-    """执行 execute_workspace_listing_publish 的业务流程并返回该流程的结果。"""
+    """执行 execute_workspace_listing_publish 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     command = await publish_listing(payload)
@@ -55,7 +74,20 @@ async def list_workspace_listing_publishes(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[PublishCommand]:
-    """执行 list_workspace_listing_publishes 的业务流程并返回该流程的结果。"""
+    """执行 list_workspace_listing_publishes 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

@@ -21,7 +21,19 @@ class IsolationResult:
 def isolate_invalid_records(
     records: list[dict[str, object]], invalid_rows: set[int], *, reason: str
 ) -> IsolationResult:
-    """执行 isolate_invalid_records 的业务流程并返回该流程的结果。"""
+    """执行 isolate_invalid_records 的业务流程并返回该流程的结果。
+
+Args:
+    records: 参数语义、输入边界和安全约束。
+    invalid_rows: 参数语义、输入边界和安全约束。
+    reason: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if not reason.strip():
         raise ValueError("隔离原因不能为空")
     accepted = [

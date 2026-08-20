@@ -20,7 +20,20 @@ def create_audit_event(
     detail: dict[str, object],
     occurred_at: datetime | None = None,
 ) -> AuditEvent:
-    """执行 create_audit_event 的业务流程并返回该流程的结果。"""
+    """执行 create_audit_event 的业务流程并返回该流程的结果。
+
+Args:
+    event_type: 参数语义、输入边界和安全约束。
+    subject_id: 参数语义、输入边界和安全约束。
+    detail: 参数语义、输入边界和安全约束。
+    occurred_at: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if not event_type.strip() or not subject_id.strip():
         raise ValueError("审计事件必须包含事件类型和对象标识")
     return AuditEvent(event_type, subject_id, detail, occurred_at or datetime.now(UTC))

@@ -16,16 +16,35 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
     """在组织 RLS 事务内保存案例、人工确认人和评测运行门禁。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def seed_fixed_cases(self, cases: Sequence[EvaluationCase]) -> None:
-        """执行 seed_fixed_cases 的业务流程并返回该流程的结果。"""
+        """执行 seed_fixed_cases 的业务流程并返回该流程的结果。
+
+Args:
+    cases: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         await asyncio.to_thread(self._seed_fixed_cases, cases)
 
     def _seed_fixed_cases(self, cases: Sequence[EvaluationCase]) -> None:
-        """执行内部步骤 _seed_fixed_cases，供同一模块的公开流程复用。"""
+        """执行内部步骤 _seed_fixed_cases，供同一模块的公开流程复用。
+
+Args:
+    cases: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         if not cases:
             return
         with self._sessions.transaction(self._context) as connection:
@@ -43,11 +62,27 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
                 )
 
     async def create_case(self, case: EvaluationCase) -> EvaluationCase:
-        """执行 create_case 的业务流程并返回该流程的结果。"""
+        """执行 create_case 的业务流程并返回该流程的结果。
+
+Args:
+    case: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._create_case, case)
 
     def _create_case(self, case: EvaluationCase) -> EvaluationCase:
-        """执行内部步骤 _create_case，供同一模块的公开流程复用。"""
+        """执行内部步骤 _create_case，供同一模块的公开流程复用。
+
+Args:
+    case: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """INSERT INTO rag_evaluation_cases
@@ -63,11 +98,15 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         return _case(row)
 
     async def list_cases(self) -> list[EvaluationCase]:
-        """执行 list_cases 的业务流程并返回该流程的结果。"""
+        """执行 list_cases 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_cases)
 
     def _list_cases(self) -> list[EvaluationCase]:
-        """执行内部步骤 _list_cases，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_cases，供同一模块的公开流程复用。
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT id, question, expected_status, expected_sources, safety_tags, status
@@ -78,11 +117,25 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         return [_case(row) for row in rows]
 
     async def confirm_case(self, case_id: str, reviewer: str) -> EvaluationCase | None:
-        """执行 confirm_case 的业务流程并返回该流程的结果。"""
+        """执行 confirm_case 的业务流程并返回该流程的结果。
+
+Args:
+    case_id: 参数语义、输入边界和安全约束。
+    reviewer: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._confirm_case, case_id, reviewer)
 
     def _confirm_case(self, case_id: str, reviewer: str) -> EvaluationCase | None:
-        """执行内部步骤 _confirm_case，供同一模块的公开流程复用。"""
+        """执行内部步骤 _confirm_case，供同一模块的公开流程复用。
+
+Args:
+    case_id: 参数语义、输入边界和安全约束。
+    reviewer: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """UPDATE rag_evaluation_cases
@@ -95,11 +148,25 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         return _case(row) if row is not None else None
 
     async def confirm_cases(self, case_ids: Sequence[str], reviewer: str) -> list[EvaluationCase]:
-        """执行 confirm_cases 的业务流程并返回该流程的结果。"""
+        """执行 confirm_cases 的业务流程并返回该流程的结果。
+
+Args:
+    case_ids: 参数语义、输入边界和安全约束。
+    reviewer: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._confirm_cases, list(dict.fromkeys(case_ids)), reviewer)
 
     def _confirm_cases(self, case_ids: list[str], reviewer: str) -> list[EvaluationCase]:
-        """执行内部步骤 _confirm_cases，供同一模块的公开流程复用。"""
+        """执行内部步骤 _confirm_cases，供同一模块的公开流程复用。
+
+Args:
+    case_ids: 参数语义、输入边界和安全约束。
+    reviewer: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         if not case_ids:
             return []
         with self._sessions.transaction(self._context) as connection:
@@ -114,11 +181,25 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         return [_case(row) for row in rows]
 
     async def create_run(self, suite: str, gate_status: str) -> str:
-        """执行 create_run 的业务流程并返回该流程的结果。"""
+        """执行 create_run 的业务流程并返回该流程的结果。
+
+Args:
+    suite: 参数语义、输入边界和安全约束。
+    gate_status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._create_run, suite, gate_status)
 
     def _create_run(self, suite: str, gate_status: str) -> str:
-        """执行内部步骤 _create_run，供同一模块的公开流程复用。"""
+        """执行内部步骤 _create_run，供同一模块的公开流程复用。
+
+Args:
+    suite: 参数语义、输入边界和安全约束。
+    gate_status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         run_id = f"rag-eval-{uuid4()}"
         with self._sessions.transaction(self._context) as connection:
             # 先拿事务级 advisory lock，再查询活动批次。这样两个并发点击即使来自
@@ -145,11 +226,23 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         return run_id
 
     async def find_active_run(self, suite: str) -> EvaluationRun | None:
-        """执行 find_active_run 的业务流程并返回该流程的结果。"""
+        """执行 find_active_run 的业务流程并返回该流程的结果。
+
+Args:
+    suite: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._find_active_run, suite)
 
     def _find_active_run(self, suite: str) -> EvaluationRun | None:
-        """执行内部步骤 _find_active_run，供同一模块的公开流程复用。"""
+        """执行内部步骤 _find_active_run，供同一模块的公开流程复用。
+
+Args:
+    suite: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """SELECT id, suite, status, gate_status, executed_count, passed_count,
@@ -163,11 +256,23 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         return _run(row) if row is not None else None
 
     async def dispatchable_run_ids(self, limit: int) -> list[str]:
-        """执行 dispatchable_run_ids 的业务流程并返回该流程的结果。"""
+        """执行 dispatchable_run_ids 的业务流程并返回该流程的结果。
+
+Args:
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._dispatchable_run_ids, min(max(limit, 1), 100))
 
     def _dispatchable_run_ids(self, limit: int) -> list[str]:
-        """执行内部步骤 _dispatchable_run_ids，供同一模块的公开流程复用。"""
+        """执行内部步骤 _dispatchable_run_ids，供同一模块的公开流程复用。
+
+Args:
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             # 过期租约先回到 queued，保证 Worker/API 重启后任务可以自动恢复。
             connection.execute(
@@ -200,11 +305,27 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
     async def claim_run(
         self, run_id: str, worker_id: str, lease_seconds: int
     ) -> EvaluationRun | None:
-        """执行 claim_run 的业务流程并返回该流程的结果。"""
+        """执行 claim_run 的业务流程并返回该流程的结果。
+
+Args:
+    run_id: 参数语义、输入边界和安全约束。
+    worker_id: 参数语义、输入边界和安全约束。
+    lease_seconds: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._claim_run, run_id, worker_id, lease_seconds)
 
     def _claim_run(self, run_id: str, worker_id: str, lease_seconds: int) -> EvaluationRun | None:
-        """执行内部步骤 _claim_run，供同一模块的公开流程复用。"""
+        """执行内部步骤 _claim_run，供同一模块的公开流程复用。
+
+Args:
+    run_id: 参数语义、输入边界和安全约束。
+    worker_id: 参数语义、输入边界和安全约束。
+    lease_seconds: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """UPDATE rag_evaluation_runs
@@ -225,11 +346,27 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         return _run(row) if row is not None else None
 
     async def heartbeat_run(self, run_id: str, worker_id: str, lease_seconds: int) -> bool:
-        """执行 heartbeat_run 的业务流程并返回该流程的结果。"""
+        """执行 heartbeat_run 的业务流程并返回该流程的结果。
+
+Args:
+    run_id: 参数语义、输入边界和安全约束。
+    worker_id: 参数语义、输入边界和安全约束。
+    lease_seconds: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._heartbeat_run, run_id, worker_id, lease_seconds)
 
     def _heartbeat_run(self, run_id: str, worker_id: str, lease_seconds: int) -> bool:
-        """执行内部步骤 _heartbeat_run，供同一模块的公开流程复用。"""
+        """执行内部步骤 _heartbeat_run，供同一模块的公开流程复用。
+
+Args:
+    run_id: 参数语义、输入边界和安全约束。
+    worker_id: 参数语义、输入边界和安全约束。
+    lease_seconds: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """UPDATE rag_evaluation_runs
@@ -245,11 +382,23 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         return row is not None
 
     async def list_runs(self, limit: int = 20) -> list[EvaluationRun]:
-        """执行 list_runs 的业务流程并返回该流程的结果。"""
+        """执行 list_runs 的业务流程并返回该流程的结果。
+
+Args:
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_runs, min(max(limit, 1), 100))
 
     def _list_runs(self, limit: int) -> list[EvaluationRun]:
-        """执行内部步骤 _list_runs，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_runs，供同一模块的公开流程复用。
+
+Args:
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT id, suite, status, gate_status, executed_count, passed_count,
@@ -261,11 +410,23 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         return [_run(row) for row in rows]
 
     async def get_run(self, run_id: str) -> EvaluationRun | None:
-        """执行 get_run 的业务流程并返回该流程的结果。"""
+        """执行 get_run 的业务流程并返回该流程的结果。
+
+Args:
+    run_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._get_run, run_id)
 
     def _get_run(self, run_id: str) -> EvaluationRun | None:
-        """执行内部步骤 _get_run，供同一模块的公开流程复用。"""
+        """执行内部步骤 _get_run，供同一模块的公开流程复用。
+
+Args:
+    run_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """SELECT id, suite, status, gate_status, executed_count, passed_count,
@@ -281,7 +442,20 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         passed_count: int, failed_count: int, error_count: int, worker_id: str | None = None,
         error_code: str | None = None,
     ) -> EvaluationRun | None:
-        """执行 save_run_metrics 的业务流程并返回该流程的结果。"""
+        """执行 save_run_metrics 的业务流程并返回该流程的结果。
+
+Args:
+    run_id: 参数语义、输入边界和安全约束。
+    metrics: 参数语义、输入边界和安全约束。
+    executed_count: 参数语义、输入边界和安全约束。
+    passed_count: 参数语义、输入边界和安全约束。
+    failed_count: 参数语义、输入边界和安全约束。
+    error_count: 参数语义、输入边界和安全约束。
+    worker_id: 参数语义、输入边界和安全约束。
+    error_code: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(
             self._save_run_metrics, run_id, metrics, executed_count,
             passed_count, failed_count, error_count, worker_id, error_code,
@@ -292,7 +466,20 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
         passed_count: int, failed_count: int, error_count: int, worker_id: str | None,
         error_code: str | None,
     ) -> EvaluationRun | None:
-        """执行内部步骤 _save_run_metrics，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save_run_metrics，供同一模块的公开流程复用。
+
+Args:
+    run_id: 参数语义、输入边界和安全约束。
+    metrics: 参数语义、输入边界和安全约束。
+    executed_count: 参数语义、输入边界和安全约束。
+    passed_count: 参数语义、输入边界和安全约束。
+    failed_count: 参数语义、输入边界和安全约束。
+    error_count: 参数语义、输入边界和安全约束。
+    worker_id: 参数语义、输入边界和安全约束。
+    error_code: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         import json
         status = "succeeded" if metrics.get("gate_status") == "passed" else "failed"
         with self._sessions.transaction(self._context) as connection:
@@ -318,7 +505,13 @@ class PostgresRagEvaluationGateway(RagEvaluationGateway):
 
 
 def _case(row: dict[str, Any]) -> EvaluationCase:
-    """将数据库数组字段还原为不可变领域值，避免 API 层携带驱动对象。"""
+    """将数据库数组字段还原为不可变领域值，避免 API 层携带驱动对象。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return EvaluationCase(
         case_id=row["id"], question=row["question"], expected_status=row["expected_status"],
         expected_sources=tuple(row["expected_sources"] or []),
@@ -327,7 +520,13 @@ def _case(row: dict[str, Any]) -> EvaluationCase:
 
 
 def _run(row: dict[str, Any]) -> EvaluationRun:
-    """将 JSONB 聚合结果转换为前端可安全展示的脱敏摘要。"""
+    """将 JSONB 聚合结果转换为前端可安全展示的脱敏摘要。
+
+Args:
+    row: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return EvaluationRun(
         run_id=row["id"], suite=row["suite"], status=row["status"],
         gate_status=row["gate_status"],

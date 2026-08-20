@@ -13,16 +13,37 @@ class PostgresPublicSnapshotGateway:
     """保存已规范化公开样本，不保存原始 HTML。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def save_snapshot(self, *, workspace_id: str, snapshot: PublicSnapshot) -> PublicSnapshot:
-        """执行 save_snapshot 的业务流程并返回该流程的结果。"""
+        """执行 save_snapshot 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    snapshot: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._save_snapshot, workspace_id, snapshot)
 
     def _save_snapshot(self, workspace_id: str, snapshot: PublicSnapshot) -> PublicSnapshot:
-        """执行内部步骤 _save_snapshot，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save_snapshot，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    snapshot: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -42,12 +63,26 @@ class PostgresPublicSnapshotGateway:
         return snapshot
 
     async def list_snapshots(self, *, workspace_id: str, limit: int = 50) -> list[PublicSnapshot]:
-        """执行 list_snapshots 的业务流程并返回该流程的结果。"""
+        """执行 list_snapshots 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_snapshots, workspace_id, limit)
 
     def _list_snapshots(self, workspace_id: str, limit: int) -> list[PublicSnapshot]:
         # 只读取规范化公开字段，不读取或保存原始 HTML。
-        """执行内部步骤 _list_snapshots，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_snapshots，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """

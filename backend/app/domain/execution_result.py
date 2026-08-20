@@ -22,7 +22,13 @@ class BatchExecutionResult:
 
 
 def summarize_execution(items: list[ItemExecutionResult]) -> BatchExecutionResult:
-    """执行 summarize_execution 的业务流程并返回该流程的结果。"""
+    """执行 summarize_execution 的业务流程并返回该流程的结果。
+
+Args:
+    items: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     succeeded = sum(item.success for item in items)
     failed = len(items) - succeeded
     status = "success" if failed == 0 and items else "partial_failure" if succeeded else "failure"

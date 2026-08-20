@@ -18,7 +18,18 @@ def provision_organization_owner(
     display_name: str,
     password_hash: str,
 ) -> str:
-    """使用专用高权限连接原子创建或更新组织所有者，并撤销其旧会话。"""
+    """使用专用高权限连接原子创建或更新组织所有者，并撤销其旧会话。
+
+Args:
+    connection: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    organization_name: 参数语义、输入边界和安全约束。
+    email: 参数语义、输入边界和安全约束。
+    display_name: 参数语义、输入边界和安全约束。
+    password_hash: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     _require_bootstrap_role(connection)
     normalized_email = email.strip().lower()
     with connection.transaction():
@@ -71,7 +82,17 @@ def provision_organization_owner(
 
 
 def _require_bootstrap_role(connection: Connection[tuple[object, ...]]) -> None:
-    """执行内部步骤 _require_bootstrap_role，供同一模块的公开流程复用。"""
+    """执行内部步骤 _require_bootstrap_role，供同一模块的公开流程复用。
+
+Args:
+    connection: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    BootstrapRoleRequiredError: 业务约束或外部依赖失败时抛出。
+"""
     row = connection.execute(
         """
         SELECT rolsuper, rolbypassrls

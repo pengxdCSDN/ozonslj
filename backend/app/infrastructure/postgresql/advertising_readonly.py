@@ -11,20 +11,41 @@ class PostgresAdvertisingBoundaryGateway:
     """记录广告动作边界判定，确保被阻断的写动作也可审计。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    sessions: 参数语义、输入边界和安全约束。
+    context: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._sessions = sessions
         self._context = context
 
     async def save_check(
         self, *, workspace_id: str, decision: AdvertisingReadOnlyDecision
     ) -> AdvertisingReadOnlyDecision:
-        """执行 save_check 的业务流程并返回该流程的结果。"""
+        """执行 save_check 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    decision: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._save, workspace_id, decision)
 
     def _save(
         self, workspace_id: str, decision: AdvertisingReadOnlyDecision
     ) -> AdvertisingReadOnlyDecision:
-        """执行内部步骤 _save，供同一模块的公开流程复用。"""
+        """执行内部步骤 _save，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    decision: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -42,11 +63,25 @@ class PostgresAdvertisingBoundaryGateway:
     async def list_checks(
         self, *, workspace_id: str, limit: int
     ) -> list[AdvertisingReadOnlyDecision]:
-        """执行 list_checks 的业务流程并返回该流程的结果。"""
+        """执行 list_checks 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         return await asyncio.to_thread(self._list_checks, workspace_id, limit)
 
     def _list_checks(self, workspace_id: str, limit: int) -> list[AdvertisingReadOnlyDecision]:
-        """执行内部步骤 _list_checks，供同一模块的公开流程复用。"""
+        """执行内部步骤 _list_checks，供同一模块的公开流程复用。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT action, allowed, reason, audit_required

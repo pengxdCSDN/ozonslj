@@ -7,12 +7,25 @@ class SyncJobDispatcher:
     """把 PostgreSQL 到期任务投递到可重建队列。"""
 
     def __init__(self, jobs: SyncJobGateway, queue: SyncJobQueue) -> None:
-        """注入任务事实网关和去重队列，保持调度器不依赖具体基础设施。"""
+        """注入任务事实网关和去重队列，保持调度器不依赖具体基础设施。
+
+Args:
+    jobs: 参数语义、输入边界和安全约束。
+    queue: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._jobs = jobs
         self._queue = queue
 
     async def dispatch_due_jobs(self, *, limit: int = 100) -> int:
-        """返回本轮新增投递数；短期重复任务由队列适配器抑制。"""
+        """返回本轮新增投递数；短期重复任务由队列适配器抑制。
+
+Args:
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         jobs = await self._jobs.list_dispatchable_sync_jobs(limit=limit)
         dispatched = 0
         for job in jobs:

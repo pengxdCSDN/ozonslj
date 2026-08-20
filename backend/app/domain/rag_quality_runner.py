@@ -65,7 +65,21 @@ async def run_fixed_quality_suite(
     cases: tuple[FixedEvaluationCase, ...] | None = None,
     batch_size: int = 10,
 ) -> QualityRunReport:
-    """执行 quick/standard/full 固定集，不随机抽样、不并发轰击模型供应商。"""
+    """执行 quick/standard/full 固定集，不随机抽样、不并发轰击模型供应商。
+
+Args:
+    engine: 参数语义、输入边界和安全约束。
+    suite: 参数语义、输入边界和安全约束。
+    cases: 参数语义、输入边界和安全约束。
+    batch_size: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+    RuntimeError: 业务约束或外部依赖失败时抛出。
+"""
 
     if batch_size < 1 or batch_size > 10:
         raise ValueError("评测批次必须在 1 到 10 之间")
@@ -116,7 +130,13 @@ async def run_fixed_quality_suite(
 
 
 def classify_evaluation_error(error: BaseException) -> str:
-    """将供应商/基础设施异常归一为可展示的脱敏错误码。"""
+    """将供应商/基础设施异常归一为可展示的脱敏错误码。
+
+Args:
+    error: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     chain: list[BaseException] = []
     current: BaseException | None = error
@@ -155,7 +175,15 @@ def _observation(
     answers: tuple[KnowledgeSegmentAnswer, ...],
     latency_ms: int,
 ) -> EvaluationObservation:
-    """执行内部步骤 _observation，供同一模块的公开流程复用。"""
+    """执行内部步骤 _observation，供同一模块的公开流程复用。
+
+Args:
+    case: 参数语义、输入边界和安全约束。
+    answers: 参数语义、输入边界和安全约束。
+    latency_ms: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     statuses = {answer.status for answer in answers}
     actual_status = (
         "partially_answered" if len(statuses) > 1 else next(iter(statuses), "unsupported")

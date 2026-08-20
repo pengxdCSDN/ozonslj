@@ -37,12 +37,26 @@ class ExploreOpportunityGateway(Protocol):
     async def save_opportunities(
         self, *, workspace_id: str, opportunities: list[ExploreOpportunity]
     ) -> list[ExploreOpportunity]:
-        """执行 save_opportunities 的业务流程并返回该流程的结果。"""
+        """执行 save_opportunities 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    opportunities: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_opportunities(
         self, *, workspace_id: str, limit: int
     ) -> list[ExploreOpportunity]:
-        """读取指定工作区已保存的选品机会快照。"""
+        """读取指定工作区已保存的选品机会快照。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,7 +72,14 @@ class ExploreFilters:
 def filter_opportunities(
     opportunities: list[ExploreOpportunity], filters: ExploreFilters
 ) -> list[ExploreOpportunity]:
-    """Filter scored opportunities without changing the score or source facts."""
+    """Filter scored opportunities without changing the score or source facts.
+
+Args:
+    opportunities: 参数语义、输入边界和安全约束。
+    filters: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return [
         item
         for item in opportunities
@@ -75,7 +96,13 @@ def filter_opportunities(
     ]
 
 def explore_opportunities(items: list[ExploreInput]) -> list[ExploreOpportunity]:
-    """融合搜索热度、公开样本和自有覆盖缺口，生成可复核的机会候选。"""
+    """融合搜索热度、公开样本和自有覆盖缺口，生成可复核的机会候选。
+
+Args:
+    items: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     if not items:
         return []
     max_search = max(item.search_count for item in items) or 1

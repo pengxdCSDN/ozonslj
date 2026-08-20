@@ -28,7 +28,13 @@ class ListingRiskPayload(BaseModel):
 
 @router.post("/check", response_model=ListingRiskReport)
 async def check_listing_risks(payload: ListingRiskPayload) -> ListingRiskReport:
-    """执行 check_listing_risks 的业务流程并返回该流程的结果。"""
+    """执行 check_listing_risks 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return detect_listing_risks(
         payload.text,
         authorized_brands=set(payload.authorized_brands),
@@ -43,7 +49,20 @@ async def check_and_save_listing_risks(
     gateway: Annotated[ListingRiskGateway, Depends(get_listing_risk_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> ListingRiskReport:
-    """执行 check_and_save_listing_risks 的业务流程并返回该流程的结果。"""
+    """执行 check_and_save_listing_risks 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     report = await check_listing_risks(payload)
@@ -59,7 +78,20 @@ async def list_listing_risk_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[ListingRiskReport]:
-    """返回内容风险历史，供人工确认品牌、疗效和认证风险。"""
+    """返回内容风险历史，供人工确认品牌、疗效和认证风险。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_reports(workspace_id=workspace_id, limit=limit)

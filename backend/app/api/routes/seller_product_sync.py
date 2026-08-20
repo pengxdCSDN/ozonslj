@@ -27,7 +27,17 @@ class SellerProductSyncPayload(BaseModel):
 
 @router.post("/sync-preview", response_model=SellerProductSyncPreview)
 async def sync_preview(payload: SellerProductSyncPayload) -> SellerProductSyncPreview:
-    """执行 sync_preview 的业务流程并返回该流程的结果。"""
+    """执行 sync_preview 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     try:
         return map_seller_product_response(payload.response, cursor=payload.cursor)
     except ValueError as error:
@@ -47,7 +57,20 @@ async def sync_and_save(
     gateway: Annotated[SellerProductSnapshotGateway, Depends(get_seller_product_snapshot_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> SellerProductSyncPreview:
-    """执行 sync_and_save 的业务流程并返回该流程的结果。"""
+    """执行 sync_and_save 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -70,7 +93,20 @@ async def list_snapshots(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = Query(default=20, ge=1, le=100),
 ) -> list[SellerProductSyncPreview]:
-    """执行 list_snapshots 的业务流程并返回该流程的结果。"""
+    """执行 list_snapshots 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_snapshots(workspace_id=workspace_id, limit=limit)

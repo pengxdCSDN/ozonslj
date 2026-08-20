@@ -29,7 +29,13 @@ class TaskFinishPayload(BaseModel):
 
 
 def _task_response(task: RagWorkerTask) -> dict[str, object]:
-    """执行内部步骤 _task_response，供同一模块的公开流程复用。"""
+    """执行内部步骤 _task_response，供同一模块的公开流程复用。
+
+Args:
+    task: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return {
         "task_id": task.task_id, "task_type": task.task_type,
         "organization_id": task.organization_id, "status": task.status,
@@ -47,7 +53,15 @@ async def create_knowledge_task(
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
     queue: Annotated[RedisRagTaskQueue, Depends(get_rag_task_queue)],
 ) -> dict[str, object]:
-    """执行 create_knowledge_task 的业务流程并返回该流程的结果。"""
+    """执行 create_knowledge_task 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    queue: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     task = await gateway.create(
         payload.task_type, payload.idempotency_key, payload.source_id,
         payload.document_version_id,
@@ -62,7 +76,15 @@ async def list_knowledge_tasks(
     organization_id: str | None = None,
     include_archived: bool = False,
 ) -> list[dict[str, object]]:
-    """返回任务状态，供管理页显示排队、租约过期和失败原因。"""
+    """返回任务状态，供管理页显示排队、租约过期和失败原因。
+
+Args:
+    gateway: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    include_archived: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     tasks = await gateway.list_tasks(include_archived=include_archived)
     return [
@@ -77,7 +99,14 @@ async def cleanup_knowledge_tasks(
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
     older_than_days: int = Query(default=30, ge=1, le=3650),
 ) -> dict[str, int]:
-    """清理已归档且超过保留期的失败/取消任务；默认保留 30 天。"""
+    """清理已归档且超过保留期的失败/取消任务；默认保留 30 天。
+
+Args:
+    gateway: 参数语义、输入边界和安全约束。
+    older_than_days: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return {"deleted_count": await gateway.cleanup_archived(older_than_days)}
 
 
@@ -89,7 +118,19 @@ async def claim_knowledge_task(
         PostgresRagTaskGateway, Depends(get_rag_task_gateway)
     ],
 ) -> dict[str, object]:
-    """执行 claim_knowledge_task 的业务流程并返回该流程的结果。"""
+    """执行 claim_knowledge_task 的业务流程并返回该流程的结果。
+
+Args:
+    task_id: 参数语义、输入边界和安全约束。
+    organization_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     claimed = await gateway.claim(task_id, "rag-api-claim", 300)
     if claimed is None or claimed.organization_id != organization_id:
         raise HTTPException(status_code=409, detail="任务当前不可领取")
@@ -101,7 +142,19 @@ async def finish_knowledge_task(
     task_id: str, payload: TaskFinishPayload,
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
 ) -> dict[str, object]:
-    """执行 finish_knowledge_task 的业务流程并返回该流程的结果。"""
+    """执行 finish_knowledge_task 的业务流程并返回该流程的结果。
+
+Args:
+    task_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     finished = await gateway.finish(task_id, payload.status, payload.error_code)
     if finished is None:
         raise HTTPException(status_code=409, detail="任务不存在或不在 running 状态")
@@ -113,7 +166,18 @@ async def cancel_knowledge_task(
     task_id: str,
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
 ) -> dict[str, object]:
-    """执行 cancel_knowledge_task 的业务流程并返回该流程的结果。"""
+    """执行 cancel_knowledge_task 的业务流程并返回该流程的结果。
+
+Args:
+    task_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     task = await gateway.cancel(task_id)
     if task is None:
         raise HTTPException(status_code=409, detail="任务当前不可取消")
@@ -125,7 +189,18 @@ async def archive_knowledge_task(
     task_id: str,
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
 ) -> dict[str, object]:
-    """执行 archive_knowledge_task 的业务流程并返回该流程的结果。"""
+    """执行 archive_knowledge_task 的业务流程并返回该流程的结果。
+
+Args:
+    task_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     task = await gateway.archive(task_id)
     if task is None:
         raise HTTPException(status_code=409, detail="只有失败或已取消任务可以归档")
@@ -138,7 +213,19 @@ async def retry_knowledge_task(
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
     queue: Annotated[RedisRagTaskQueue, Depends(get_rag_task_queue)],
 ) -> dict[str, object]:
-    """执行 retry_knowledge_task 的业务流程并返回该流程的结果。"""
+    """执行 retry_knowledge_task 的业务流程并返回该流程的结果。
+
+Args:
+    task_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    queue: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     task = await gateway.retry(task_id)
     if task is None:
         raise HTTPException(status_code=409, detail="只有失败或已取消任务可以重试")

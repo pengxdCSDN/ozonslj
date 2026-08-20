@@ -31,7 +31,13 @@ class SampleScopePayload(BaseModel):
 
 @router.post("/scope", response_model=SampleScope)
 async def sample_scope(payload: SampleScopePayload) -> SampleScope:
-    """执行 sample_scope 的业务流程并返回该流程的结果。"""
+    """执行 sample_scope 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return summarize_sample_scope([record.model_dump() for record in payload.records])
 
 
@@ -42,7 +48,20 @@ async def workspace_sample_scope(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> SampleScope:
-    """从已保存的公开快照生成可回溯的样本范围摘要。"""
+    """从已保存的公开快照生成可回溯的样本范围摘要。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     snapshots = await gateway.list_snapshots(workspace_id=workspace_id, limit=limit)

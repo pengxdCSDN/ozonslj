@@ -23,26 +23,62 @@ class PerformanceCredentialGateway(Protocol):
     async def save_client_credentials(
         self, *, workspace_id: str, client_id: str, client_secret: str,
     ) -> PerformanceCredentialStatus:
-        """执行 save_client_credentials 的业务流程并返回该流程的结果。"""
+        """执行 save_client_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    client_id: 参数语义、输入边界和安全约束。
+    client_secret: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def get_client_credentials(
         self, *, workspace_id: str,
     ) -> tuple[str, str] | None:
-        """执行 get_client_credentials 的业务流程并返回该流程的结果。"""
+        """执行 get_client_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def get_access_token(
         self, *, workspace_id: str,
     ) -> tuple[str, str] | None:
-        """执行 get_access_token 的业务流程并返回该流程的结果。"""
+        """执行 get_access_token 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def save_tokens(
         self, *, workspace_id: str, access_token: str, refresh_token: str | None,
         expires_at: str, client_id_present: bool,
     ) -> PerformanceCredentialStatus:
-        """执行 save_tokens 的业务流程并返回该流程的结果。"""
+        """执行 save_tokens 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    access_token: 参数语义、输入边界和安全约束。
+    refresh_token: 参数语义、输入边界和安全约束。
+    expires_at: 参数语义、输入边界和安全约束。
+    client_id_present: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def get_status(self, *, workspace_id: str) -> PerformanceCredentialStatus | None:
-        """执行 get_status 的业务流程并返回该流程的结果。"""
+        """执行 get_status 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def inspect_performance_credentials(
@@ -50,7 +86,21 @@ def inspect_performance_credentials(
     refresh_token: str | None, expires_at: str | None,
     client_secret: str | None = None,
 ) -> PerformanceCredentialStatus:
-    """执行 inspect_performance_credentials 的业务流程并返回该流程的结果。"""
+    """执行 inspect_performance_credentials 的业务流程并返回该流程的结果。
+
+Args:
+    client_id: 参数语义、输入边界和安全约束。
+    access_token: 参数语义、输入边界和安全约束。
+    refresh_token: 参数语义、输入边界和安全约束。
+    expires_at: 参数语义、输入边界和安全约束。
+    client_secret: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if any(
         value is not None and not isinstance(value, str)
         for value in (client_id, client_secret, access_token, refresh_token, expires_at)

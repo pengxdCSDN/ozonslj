@@ -21,19 +21,41 @@ class ParserAlertGateway(Protocol):
     async def create_alerts(
         self, *, workspace_id: str, url: str, changes: list[ParserChange]
     ) -> list[ParserChange]:
-        """执行 create_alerts 的业务流程并返回该流程的结果。"""
+        """执行 create_alerts 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    url: 参数语义、输入边界和安全约束。
+    changes: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_alerts(
         self, *, workspace_id: str, limit: int = 50
     ) -> list[ParserChange]:
-        """执行 list_alerts 的业务流程并返回该流程的结果。"""
+        """执行 list_alerts 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def detect_parser_changes(
     previous: dict[str, str | None],
     current: dict[str, str | None],
 ) -> list[ParserChange]:
-    """比较规范化字段，缺失关键字段时生成错误告警而不是静默覆盖。"""
+    """比较规范化字段，缺失关键字段时生成错误告警而不是静默覆盖。
+
+Args:
+    previous: 参数语义、输入边界和安全约束。
+    current: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     changes: list[ParserChange] = []
     for field_name in sorted(set(previous) | set(current)):
         old_value = previous.get(field_name)

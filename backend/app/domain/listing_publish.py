@@ -23,12 +23,28 @@ class ListingPublishGateway(Protocol):
     async def save_command(
         self, *, workspace_id: str, product_scope: str, command: PublishCommand
     ) -> PublishCommand:
-        """执行 save_command 的业务流程并返回该流程的结果。"""
+        """执行 save_command 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    command: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_commands(
         self, *, workspace_id: str, product_scope: str, limit: int
     ) -> list[PublishCommand]:
-        """执行 list_commands 的业务流程并返回该流程的结果。"""
+        """执行 list_commands 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    product_scope: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 def execute_controlled_publish(
@@ -39,7 +55,21 @@ def execute_controlled_publish(
     requested_text: str,
     readback_text: str | None = None,
 ) -> PublishCommand:
-    """执行 execute_controlled_publish 的业务流程并返回该流程的结果。"""
+    """执行 execute_controlled_publish 的业务流程并返回该流程的结果。
+
+Args:
+    idempotency_key: 参数语义、输入边界和安全约束。
+    version: 参数语义、输入边界和安全约束。
+    status: 参数语义、输入边界和安全约束。
+    requested_text: 参数语义、输入边界和安全约束。
+    readback_text: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     if not idempotency_key.strip():
         raise ValueError("发布命令必须包含幂等键")
     if version < 1:

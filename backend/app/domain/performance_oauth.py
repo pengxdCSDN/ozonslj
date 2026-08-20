@@ -14,7 +14,9 @@ class PerformanceToken:
 
     @property
     def needs_refresh(self) -> bool:
-        """执行 needs_refresh 的业务流程并返回该流程的结果。"""
+        """执行 needs_refresh 的业务流程并返回该流程的结果。
+Returns:
+    返回调用完成后的领域结果。"""
         return self.expires_at <= datetime.now(UTC) + timedelta(minutes=5)
 
 
@@ -25,7 +27,19 @@ class PerformanceOAuthError(ValueError):
 def build_performance_token(
     access_token: str, expires_at: datetime, refresh_token: str | None
 ) -> PerformanceToken:
-    """执行 build_performance_token 的业务流程并返回该流程的结果。"""
+    """执行 build_performance_token 的业务流程并返回该流程的结果。
+
+Args:
+    access_token: 参数语义、输入边界和安全约束。
+    expires_at: 参数语义、输入边界和安全约束。
+    refresh_token: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    PerformanceOAuthError: 业务约束或外部依赖失败时抛出。
+"""
     if not access_token.strip():
         raise PerformanceOAuthError("访问令牌不能为空")
     if expires_at.tzinfo is None:

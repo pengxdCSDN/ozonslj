@@ -24,7 +24,17 @@ SOURCE_LABELS: dict[DataSource, tuple[str, bool, str]] = {
 
 
 def get_data_source_label(source: str) -> DataSourceLabel:
-    """执行 get_data_source_label 的业务流程并返回该流程的结果。"""
+    """执行 get_data_source_label 的业务流程并返回该流程的结果。
+
+Args:
+    source: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     normalized = source.strip().lower()
     if normalized not in SOURCE_LABELS:
         raise ValueError("数据来源标签无效")

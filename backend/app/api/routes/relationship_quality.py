@@ -24,7 +24,13 @@ class RelationshipPayload(BaseModel):
 
 @router.post("/relationship-check", response_model=list[RelationshipFinding])
 async def relationship_check(payload: RelationshipPayload) -> list[RelationshipFinding]:
-    """执行 relationship_check 的业务流程并返回该流程的结果。"""
+    """执行 relationship_check 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return check_relationship_and_time(
         payload.rows, parent_ids=payload.parent_ids, id_field=payload.id_field,
         parent_field=payload.parent_field, time_field=payload.time_field,
@@ -41,7 +47,20 @@ async def relationship_check_and_isolate(
     gateway: Annotated[QualityFindingGateway, Depends(get_quality_finding_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[RelationshipFinding]:
-    """将孤儿、重复和时间倒退记录写入质量隔离区。"""
+    """将孤儿、重复和时间倒退记录写入质量隔离区。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     findings = await relationship_check(payload)

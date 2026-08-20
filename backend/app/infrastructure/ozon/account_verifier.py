@@ -23,7 +23,17 @@ class StubSellerAccountVerifier(SellerAccountVerifier):
     """Stub 模式只验证本地输入边界，绝不访问真实 Ozon。"""
 
     async def verify(self, credentials: OzonCredentials) -> None:
-        """执行 verify 的业务流程并返回该流程的结果。"""
+        """执行 verify 的业务流程并返回该流程的结果。
+
+Args:
+    credentials: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    OzonAuthenticationError: 业务约束或外部依赖失败时抛出。
+"""
         if not credentials.client_id.strip() or not credentials.api_key.strip():
             raise OzonAuthenticationError("Ozon 凭据不能为空")
 
@@ -37,12 +47,33 @@ class HttpOzonSellerAccountVerifier(SellerAccountVerifier):
         *,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        """初始化对象依赖和运行时状态。"""
+        """初始化对象依赖和运行时状态。
+
+Args:
+    base_url: 参数语义、输入边界和安全约束。
+    transport: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
         self._base_url = base_url.rstrip("/")
         self._transport = transport
 
     async def verify(self, credentials: OzonCredentials) -> None:
-        """执行 verify 的业务流程并返回该流程的结果。"""
+        """执行 verify 的业务流程并返回该流程的结果。
+
+Args:
+    credentials: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    OzonAuthenticationError: 业务约束或外部依赖失败时抛出。
+    OzonPermissionError: 业务约束或外部依赖失败时抛出。
+    OzonRateLimitError: 业务约束或外部依赖失败时抛出。
+    OzonTemporaryError: 业务约束或外部依赖失败时抛出。
+    OzonMalformedResponseError: 业务约束或外部依赖失败时抛出。
+"""
         try:
             async with httpx.AsyncClient(
                 base_url=self._base_url,

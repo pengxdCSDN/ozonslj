@@ -29,7 +29,20 @@ async def get_quality_summary(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     finding_status: Annotated[QualityFindingStatus | None, Query(alias="status")] = None,
 ) -> QualitySummaryResponse:
-    """返回质量中心摘要；只读查询，不改变隔离记录和业务事实。"""
+    """返回质量中心摘要；只读查询，不改变隔离记录和业务事实。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    finding_status: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
 
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:

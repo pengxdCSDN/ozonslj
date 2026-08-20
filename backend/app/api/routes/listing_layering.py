@@ -26,7 +26,13 @@ class LayeringPayload(BaseModel):
 
 @router.post("/classify", response_model=list[LayeredKeyword])
 async def classify_keywords(payload: LayeringPayload) -> list[LayeredKeyword]:
-    """执行 classify_keywords 的业务流程并返回该流程的结果。"""
+    """执行 classify_keywords 的业务流程并返回该流程的结果。
+
+Args:
+    payload: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
     return classify_listing_keywords(
         payload.keywords,
         core_terms=set(payload.core_terms),
@@ -45,7 +51,20 @@ async def classify_and_save_keywords(
     gateway: Annotated[ListingLayerGateway, Depends(get_listing_layer_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[LayeredKeyword]:
-    """执行 classify_and_save_keywords 的业务流程并返回该流程的结果。"""
+    """执行 classify_and_save_keywords 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    payload: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     layers = classify_listing_keywords(
@@ -64,7 +83,20 @@ async def list_layer_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[LayeredKeyword]:
-    """返回最近分层结果，支持运营复核规则原因和人工确认状态。"""
+    """返回最近分层结果，支持运营复核规则原因和人工确认状态。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    gateway: 参数语义、输入边界和安全约束。
+    workspace_gateway: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    HTTPException: 业务约束或外部依赖失败时抛出。
+"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_layers(workspace_id=workspace_id, limit=limit)

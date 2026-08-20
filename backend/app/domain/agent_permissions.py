@@ -21,12 +21,26 @@ class AgentPermissionGateway(Protocol):
     async def save_decision(
         self, *, workspace_id: str, decision: AgentPermissionDecision
     ) -> AgentPermissionDecision:
-        """执行 save_decision 的业务流程并返回该流程的结果。"""
+        """执行 save_decision 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    decision: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
     async def list_decisions(
         self, *, workspace_id: str, limit: int
     ) -> list[AgentPermissionDecision]:
-        """执行 list_decisions 的业务流程并返回该流程的结果。"""
+        """执行 list_decisions 的业务流程并返回该流程的结果。
+
+Args:
+    workspace_id: 参数语义、输入边界和安全约束。
+    limit: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。"""
 
 
 READ_CAPABILITIES = frozenset({
@@ -37,7 +51,18 @@ READ_CAPABILITIES = frozenset({
 def evaluate_agent_permissions(
     agent: str, requested_capabilities: list[str]
 ) -> AgentPermissionDecision:
-    """执行 evaluate_agent_permissions 的业务流程并返回该流程的结果。"""
+    """执行 evaluate_agent_permissions 的业务流程并返回该流程的结果。
+
+Args:
+    agent: 参数语义、输入边界和安全约束。
+    requested_capabilities: 参数语义、输入边界和安全约束。
+
+Returns:
+    返回调用完成后的领域结果。
+
+Raises:
+    ValueError: 业务约束或外部依赖失败时抛出。
+"""
     normalized_agent = agent.strip()
     if not normalized_agent:
         raise ValueError("Agent 名称不能为空")
