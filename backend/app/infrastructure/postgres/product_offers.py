@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from decimal import Decimal
 
 from psycopg.rows import dict_row
@@ -14,6 +16,7 @@ class PostgresProductOfferGateway:
     """从 PostgreSQL 读取工作区隔离的商品报价。"""
 
     def __init__(self, pool: AsyncConnectionPool) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._pool = pool
 
     async def list_product_offers(
@@ -23,6 +26,7 @@ class PostgresProductOfferGateway:
         cursor: str | None,
         limit: int,
     ) -> ProductOfferPage:
+        """执行 list_product_offers 的业务流程并返回该流程的结果。"""
         start = int(cursor) if cursor is not None else 0
         async with (
             self._pool.connection() as connection,

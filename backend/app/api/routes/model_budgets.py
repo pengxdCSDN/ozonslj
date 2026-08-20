@@ -56,6 +56,7 @@ class BudgetMetricPayload(BaseModel):
 
 
 class BudgetResponse(BaseModel):
+    """说明 BudgetResponse 的职责、状态边界和对外协作关系。"""
     provider_id: str
     purpose: BudgetPurpose
     policy: BudgetPolicyPayload
@@ -69,6 +70,7 @@ class BudgetResponse(BaseModel):
 def _response(
     provider_id: str, policy: ModelBudgetPolicy, usage: ModelBudgetUsage
 ) -> BudgetResponse:
+    """执行内部步骤 _response，供同一模块的公开流程复用。"""
     decision = decide_budget(policy, usage)
     # 四项预算必须全部回传；用户需要知道到底是 Token、请求次数还是费用触发阻断。
     metric_values = [
@@ -121,6 +123,7 @@ async def upsert_model_budget(
     gateway: Annotated[PostgresModelBudgetGateway, Depends(get_model_budget_gateway)],
 ) -> BudgetResponse:
     # 币种是接口层的显式契约字段，领域策略当前固定按 RMB 核算，不把它重复写入策略对象。
+    """执行 upsert_model_budget 的业务流程并返回该流程的结果。"""
     policy = ModelBudgetPolicy(
         provider_id=provider_id,
         **payload.model_dump(exclude={"budget_currency"}),
@@ -138,6 +141,7 @@ async def list_model_budgets(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresModelBudgetGateway, Depends(get_model_budget_gateway)],
 ) -> list[BudgetResponse]:
+    """执行 list_model_budgets 的业务流程并返回该流程的结果。"""
     policies = await gateway.list_policies()
     return [
         _response(
@@ -159,6 +163,7 @@ async def get_model_budget(
     gateway: Annotated[PostgresModelBudgetGateway, Depends(get_model_budget_gateway)],
     purpose: BudgetPurpose = "answer_generation",
 ) -> BudgetResponse:
+    """执行 get_model_budget 的业务流程并返回该流程的结果。"""
     policy = await gateway.get_policy(provider_id=provider_id, purpose=purpose)
     if policy is None:
         raise HTTPException(status_code=404, detail="供应商额度策略不存在")
@@ -176,6 +181,7 @@ async def evaluate_model_budget(
     gateway: Annotated[PostgresModelBudgetGateway, Depends(get_model_budget_gateway)],
     purpose: BudgetPurpose = "answer_generation",
 ) -> BudgetResponse:
+    """执行 evaluate_model_budget 的业务流程并返回该流程的结果。"""
     policy = await gateway.get_policy(provider_id=provider_id, purpose=purpose)
     if policy is None:
         raise HTTPException(status_code=404, detail="供应商额度策略不存在")

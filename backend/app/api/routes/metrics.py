@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from fastapi import APIRouter, Response
 
 from backend.app.infrastructure.observability import METRICS, update_resource_metrics

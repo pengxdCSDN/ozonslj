@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Any
 
 import httpx
@@ -21,6 +23,7 @@ class StubSellerAccountVerifier(SellerAccountVerifier):
     """Stub 模式只验证本地输入边界，绝不访问真实 Ozon。"""
 
     async def verify(self, credentials: OzonCredentials) -> None:
+        """执行 verify 的业务流程并返回该流程的结果。"""
         if not credentials.client_id.strip() or not credentials.api_key.strip():
             raise OzonAuthenticationError("Ozon 凭据不能为空")
 
@@ -34,10 +37,12 @@ class HttpOzonSellerAccountVerifier(SellerAccountVerifier):
         *,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._base_url = base_url.rstrip("/")
         self._transport = transport
 
     async def verify(self, credentials: OzonCredentials) -> None:
+        """执行 verify 的业务流程并返回该流程的结果。"""
         try:
             async with httpx.AsyncClient(
                 base_url=self._base_url,

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from datetime import datetime
 from typing import Any, Literal
@@ -26,13 +28,16 @@ class PostgresStoreWorkspaceGateway:
         sessions: PostgresSessionFactory,
         tenant_context: TenantContext,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._tenant_context = tenant_context
 
     async def list_workspaces(self) -> list[StoreWorkspace]:
+        """执行 list_workspaces 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list_workspaces)
 
     async def get_workspace(self, workspace_id: str) -> StoreWorkspace | None:
+        """执行 get_workspace 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._get_workspace, workspace_id)
 
     async def create_workspace(
@@ -43,6 +48,7 @@ class PostgresStoreWorkspaceGateway:
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> StoreWorkspace:
+        """执行 create_workspace 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(
             self._create_workspace,
             display_name.strip(),
@@ -59,6 +65,7 @@ class PostgresStoreWorkspaceGateway:
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> StoreWorkspace | None:
+        """执行 replace_credentials 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(
             self._replace_credentials,
             workspace_id,
@@ -68,6 +75,7 @@ class PostgresStoreWorkspaceGateway:
         )
 
     async def load_credentials(self, workspace_id: str) -> tuple[str, bytes, int] | None:
+        """执行 load_credentials 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._load_credentials, workspace_id)
 
     async def set_verification_status(
@@ -79,6 +87,7 @@ class PostgresStoreWorkspaceGateway:
         audit_result: Literal["success", "failed"],
         audit_detail: dict[str, str] | None = None,
     ) -> StoreWorkspace | None:
+        """执行 set_verification_status 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(
             self._set_verification_status,
             workspace_id,
@@ -89,6 +98,7 @@ class PostgresStoreWorkspaceGateway:
         )
 
     def _list_workspaces(self) -> list[StoreWorkspace]:
+        """执行内部步骤 _list_workspaces，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._tenant_context) as connection:
             rows = connection.execute(
                 f"{_WORKSPACE_SELECT} ORDER BY w.created_at, w.id",
@@ -97,6 +107,7 @@ class PostgresStoreWorkspaceGateway:
         return [_workspace_from_row(row) for row in rows]
 
     def _get_workspace(self, workspace_id: str) -> StoreWorkspace | None:
+        """执行内部步骤 _get_workspace，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._tenant_context) as connection:
             row = connection.execute(
                 f"{_WORKSPACE_SELECT} AND w.id = %s",
@@ -111,6 +122,7 @@ class PostgresStoreWorkspaceGateway:
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> StoreWorkspace:
+        """执行内部步骤 _create_workspace，供同一模块的公开流程复用。"""
         seller_id = str(uuid4())
         workspace_id = str(uuid4())
         try:
@@ -169,6 +181,7 @@ class PostgresStoreWorkspaceGateway:
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> StoreWorkspace | None:
+        """执行内部步骤 _replace_credentials，供同一模块的公开流程复用。"""
         try:
             with self._sessions.transaction(self._tenant_context) as connection:
                 cursor = connection.execute(
@@ -212,6 +225,7 @@ class PostgresStoreWorkspaceGateway:
         return self._get_workspace(workspace_id)
 
     def _load_credentials(self, workspace_id: str) -> tuple[str, bytes, int] | None:
+        """执行内部步骤 _load_credentials，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._tenant_context) as connection:
             row = connection.execute(
                 """
@@ -241,6 +255,7 @@ class PostgresStoreWorkspaceGateway:
         audit_result: Literal["success", "failed"],
         audit_detail: dict[str, str] | None,
     ) -> StoreWorkspace | None:
+        """执行内部步骤 _set_verification_status，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._tenant_context) as connection:
             cursor = connection.execute(
                 """
@@ -290,6 +305,7 @@ WHERE w.organization_id = %s
 
 
 def _workspace_from_row(row: dict[str, Any]) -> StoreWorkspace:
+    """执行内部步骤 _workspace_from_row，供同一模块的公开流程复用。"""
     return StoreWorkspace.model_validate(row)
 
 

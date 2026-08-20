@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
@@ -25,6 +27,7 @@ router = APIRouter(prefix="/v1/advertising/performance-oauth", tags=["advertisin
 
 
 class PerformanceTokenPayload(BaseModel):
+    """说明 PerformanceTokenPayload 的职责、状态边界和对外协作关系。"""
     access_token: str
     expires_at: datetime
     refresh_token: str | None = None
@@ -40,12 +43,14 @@ class SavePerformanceCredentialPayload(BaseModel):
 
 
 class SavePerformanceClientCredentialsPayload(BaseModel):
+    """说明 SavePerformanceClientCredentialsPayload 的职责、状态边界和对外协作关系。"""
     client_id: str
     client_secret: SecretStr
 
 
 @router.post("/inspect", response_model=PerformanceToken)
 async def inspect_performance_token(payload: PerformanceTokenPayload) -> PerformanceToken:
+    """执行 inspect_performance_token 的业务流程并返回该流程的结果。"""
     try:
         return build_performance_token(
             payload.access_token, payload.expires_at, payload.refresh_token
@@ -67,6 +72,7 @@ async def save_performance_credentials(
     gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> PerformanceCredentialStatus:
+    """执行 save_performance_credentials 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -97,6 +103,7 @@ async def get_performance_credentials_status(
     gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> PerformanceCredentialStatus:
+    """执行 get_performance_credentials_status 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     status_result = await gateway.get_status(workspace_id=workspace_id)
@@ -115,6 +122,7 @@ async def save_performance_client_credentials(
     gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> PerformanceCredentialStatus:
+    """执行 save_performance_client_credentials 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -139,6 +147,7 @@ async def refresh_performance_token(
     gateway: Annotated[PerformanceCredentialGateway, Depends(get_performance_credential_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> PerformanceCredentialStatus:
+    """执行 refresh_performance_token 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     credentials = await gateway.get_client_credentials(workspace_id=workspace_id)

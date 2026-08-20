@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -7,6 +9,7 @@ from backend.app.domain.data_freshness import check_data_freshness
 
 @dataclass(frozen=True, slots=True)
 class DiffPreview:
+    """说明 DiffPreview 的职责、状态边界和对外协作关系。"""
     field: str
     old_value: str | None
     new_value: str | None
@@ -20,9 +23,11 @@ class StalePreviewError(ValueError):
 
 
 class DiffPreviewGateway(Protocol):
+    """说明 DiffPreviewGateway 的职责、状态边界和对外协作关系。"""
     async def save_preview(
         self, *, workspace_id: str, previews: list[DiffPreview]
-    ) -> list[DiffPreview]: ...
+    ) -> list[DiffPreview]:
+        """执行 save_preview 的业务流程并返回该流程的结果。"""
 
 
 def build_diff_preview(
@@ -32,6 +37,7 @@ def build_diff_preview(
     max_age_seconds: int | None = None,
     now: datetime | None = None,
 ) -> list[DiffPreview]:
+    """执行 build_diff_preview 的业务流程并返回该流程的结果。"""
     if not source.strip() or not impact.strip():
         raise ValueError("差异预览必须包含来源和影响说明")
     # 只要提供新鲜度元数据，就把它作为预览硬门槛，避免过期状态进入审核链路。

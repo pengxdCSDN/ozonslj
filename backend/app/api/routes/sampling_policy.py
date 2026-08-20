@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,6 +14,7 @@ router = APIRouter(prefix="/v1/sampling-policy", tags=["sampling-policy"])
 
 
 class SamplingPolicyRequest(BaseModel):
+    """说明 SamplingPolicyRequest 的职责、状态边界和对外协作关系。"""
     url: str
     robots_allowed: bool
     rate_limited: bool = False
@@ -20,6 +23,7 @@ class SamplingPolicyRequest(BaseModel):
 
 @router.post("/check", response_model=SamplingPolicyDecision)
 async def check_policy(payload: SamplingPolicyRequest) -> SamplingPolicyDecision:
+    """执行 check_policy 的业务流程并返回该流程的结果。"""
     return check_sampling_policy(
         payload.url,
         robots_allowed=payload.robots_allowed,

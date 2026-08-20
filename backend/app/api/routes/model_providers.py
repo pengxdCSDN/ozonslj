@@ -18,6 +18,7 @@ _bindings: dict[str, dict[str, object]] = {}
 
 
 class ProviderCreatePayload(BaseModel):
+    """说明 ProviderCreatePayload 的职责、状态边界和对外协作关系。"""
     name: str = Field(min_length=1, max_length=80)
     adapter_type: str = Field(pattern="^(dashscope|deepseek|minimax|openai|openai_compatible)$")
     model: str = Field(min_length=1, max_length=100)
@@ -27,6 +28,7 @@ class ProviderCreatePayload(BaseModel):
 
 
 class ProviderResponse(BaseModel):
+    """说明 ProviderResponse 的职责、状态边界和对外协作关系。"""
     provider_id: str
     name: str
     adapter_type: str
@@ -39,11 +41,13 @@ class ProviderResponse(BaseModel):
 
 
 class BindingPayload(BaseModel):
+    """说明 BindingPayload 的职责、状态边界和对外协作关系。"""
     primary_provider_id: str
     fallback_provider_ids: list[str] = Field(default_factory=list, max_length=3)
 
 
 def _response(provider_id: str, item: dict[str, object]) -> ProviderResponse:
+    """执行内部步骤 _response，供同一模块的公开流程复用。"""
     api_key = str(item["api_key"])
     return ProviderResponse(
         provider_id=provider_id,
@@ -60,6 +64,7 @@ def _response(provider_id: str, item: dict[str, object]) -> ProviderResponse:
 
 @router.post("", response_model=ProviderResponse, status_code=201)
 async def create_model_provider(payload: ProviderCreatePayload) -> ProviderResponse:
+    """执行 create_model_provider 的业务流程并返回该流程的结果。"""
     provider_id = str(uuid4())
     _providers[provider_id] = {**payload.model_dump(), "enabled": True}
     return _response(provider_id, _providers[provider_id])
@@ -67,11 +72,13 @@ async def create_model_provider(payload: ProviderCreatePayload) -> ProviderRespo
 
 @router.get("", response_model=list[ProviderResponse])
 async def list_model_providers() -> list[ProviderResponse]:
+    """执行 list_model_providers 的业务流程并返回该流程的结果。"""
     return [_response(provider_id, item) for provider_id, item in _providers.items()]
 
 
 @router.post("/{provider_id}/disable", response_model=ProviderResponse)
 async def disable_model_provider(provider_id: str) -> ProviderResponse:
+    """执行 disable_model_provider 的业务流程并返回该流程的结果。"""
     item = _providers.get(provider_id)
     if item is None:
         raise HTTPException(status_code=404, detail="模型供应商不存在")
@@ -81,6 +88,7 @@ async def disable_model_provider(provider_id: str) -> ProviderResponse:
 
 @router.put("/bindings/{purpose}", response_model=dict[str, object])
 async def bind_model_purpose(purpose: str, payload: BindingPayload) -> dict[str, object]:
+    """执行 bind_model_purpose 的业务流程并返回该流程的结果。"""
     provider_ids = [payload.primary_provider_id, *payload.fallback_provider_ids]
     if len(set(provider_ids)) != len(provider_ids):
         raise HTTPException(status_code=400, detail="主备供应商不能重复")

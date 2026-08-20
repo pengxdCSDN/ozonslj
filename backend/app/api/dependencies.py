@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from functools import lru_cache
 from typing import Annotated, Protocol, cast
 
@@ -211,24 +213,31 @@ from backend.app.infrastructure.redis_rag_tasks import RedisRagTaskQueue
 
 
 class LoginRateLimiter(Protocol):
-    async def retry_after(self, email: str, client_key: str) -> int | None: ...
+    """说明 LoginRateLimiter 的职责、状态边界和对外协作关系。"""
+    async def retry_after(self, email: str, client_key: str) -> int | None:
+        """执行 retry_after 的业务流程并返回该流程的结果。"""
 
-    async def record_failure(self, email: str, client_key: str) -> None: ...
+    async def record_failure(self, email: str, client_key: str) -> None:
+        """执行 record_failure 的业务流程并返回该流程的结果。"""
 
-    async def clear(self, email: str, client_key: str) -> None: ...
+    async def clear(self, email: str, client_key: str) -> None:
+        """执行 clear 的业务流程并返回该流程的结果。"""
 
 
 class _LegacySellerCredentialProtector:
     """兼容旧 SellerAccountService 测试端口，实际密文仍由统一保护器生成。"""
 
     def __init__(self, protector: CredentialProtector) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._protector = protector
 
     @property
     def key_version(self) -> int:
+        """执行 key_version 的业务流程并返回该流程的结果。"""
         return self._protector.key_version
 
     def encrypt(self, api_key: str) -> bytes:
+        """执行 encrypt 的业务流程并返回该流程的结果。"""
         return self._protector.protect(api_key)
 
 
@@ -236,9 +245,11 @@ class _LegacySellerCredentialVerifier:
     """将旧的分离参数校验端口转换为当前凭据对象端口。"""
 
     def __init__(self, verifier: SellerAccountVerifier) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._verifier = verifier
 
     async def verify(self, *, client_id: str, api_key: str) -> None:
+        """执行 verify 的业务流程并返回该流程的结果。"""
         await self._verifier.verify(OzonCredentials(client_id=client_id, api_key=api_key))
 
 
@@ -246,9 +257,11 @@ class _LegacySellerAccountGateway:
     """将历史卖家账户服务适配到当前工作区聚合，避免重复维护凭据写入逻辑。"""
 
     def __init__(self, gateway: StoreWorkspaceGateway) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._gateway = gateway
 
     async def create(self, **values: object) -> CreatedSellerAccount:
+        """执行 create 的业务流程并返回该流程的结果。"""
         workspace = await self._gateway.create_workspace(
             display_name=str(values["display_name"]),
             client_id=str(values["client_id"]),
@@ -264,11 +277,14 @@ class _LegacySellerAccountGateway:
 
 
 class ReadinessProbe(Protocol):
-    async def check(self) -> None: ...
+    """说明 ReadinessProbe 的职责、状态边界和对外协作关系。"""
+    async def check(self) -> None:
+        """执行 check 的业务流程并返回该流程的结果。"""
 
 
 @lru_cache
 def get_postgres_sessions() -> PostgresSessionFactory:
+    """执行 get_postgres_sessions 的业务流程并返回该流程的结果。"""
     settings = get_settings()
     if settings.database_url is None:
         raise RuntimeError("DATABASE_URL 未配置")
@@ -286,6 +302,7 @@ def close_postgres_sessions() -> None:
 
 @lru_cache
 def get_redis_client() -> Redis:
+    """执行 get_redis_client 的业务流程并返回该流程的结果。"""
     settings = get_settings()
     if settings.redis_url is None:
         raise RuntimeError("REDIS_URL 未配置")
@@ -293,6 +310,7 @@ def get_redis_client() -> Redis:
 
 
 async def close_redis_client() -> None:
+    """执行 close_redis_client 的业务流程并返回该流程的结果。"""
     if get_redis_client.cache_info().currsize > 0:
         await get_redis_client().aclose()
         get_redis_client.cache_clear()
@@ -301,12 +319,14 @@ async def close_redis_client() -> None:
 def get_identity_service(
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> IdentityService:
+    """执行 get_identity_service 的业务流程并返回该流程的结果。"""
     return IdentityService(PostgresIdentityGateway(sessions))
 
 
 def get_login_rate_limiter(
     redis: Annotated[Redis, Depends(get_redis_client)],
 ) -> LoginRateLimiter:
+    """执行 get_login_rate_limiter 的业务流程并返回该流程的结果。"""
     settings = get_settings()
     return RedisLoginRateLimiter(
         redis,
@@ -319,10 +339,12 @@ def get_readiness_probe(
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
     redis: Annotated[Redis, Depends(get_redis_client)],
 ) -> ReadinessProbe:
+    """执行 get_readiness_probe 的业务流程并返回该流程的结果。"""
     return InfrastructureReadinessProbe(sessions, redis)
 
 
 def get_session_cookie_secure() -> bool:
+    """执行 get_session_cookie_secure 的业务流程并返回该流程的结果。"""
     return get_settings().session_cookie_secure
 
 
@@ -335,6 +357,7 @@ def get_request_session_token(
     session: str | None = Cookie(default=None, alias="ozonslj_session"),
     authorization: str | None = Header(default=None),
 ) -> str | None:
+    """执行 get_request_session_token 的业务流程并返回该流程的结果。"""
     if session:
         return session
     if authorization is None:
@@ -349,6 +372,7 @@ async def get_current_user(
     service: Annotated[IdentityService, Depends(get_identity_service)],
     token: Annotated[str | None, Depends(get_request_session_token)],
 ) -> AuthenticatedUser:
+    """执行 get_current_user 的业务流程并返回该流程的结果。"""
     user = await service.authenticate(token) if token else None
     if user is None:
         raise HTTPException(
@@ -381,6 +405,7 @@ def get_product_offer_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ProductOfferGateway:
+    """执行 get_product_offer_gateway 的业务流程并返回该流程的结果。"""
     return PostgresProductOfferGateway(sessions, context)
 
 
@@ -412,6 +437,7 @@ def get_keyword_import_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> KeywordImportGateway:
+    """执行 get_keyword_import_gateway 的业务流程并返回该流程的结果。"""
     return PostgresKeywordImportGateway(sessions, context)
 
 
@@ -419,6 +445,7 @@ def get_listing_keyword_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ListingKeywordGateway:
+    """执行 get_listing_keyword_gateway 的业务流程并返回该流程的结果。"""
     return PostgresListingKeywordGateway(sessions, context)
 
 
@@ -426,6 +453,7 @@ def get_listing_layer_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ListingLayerGateway:
+    """执行 get_listing_layer_gateway 的业务流程并返回该流程的结果。"""
     return PostgresListingLayerGateway(sessions, context)
 
 
@@ -433,6 +461,7 @@ def get_listing_title_draft_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ListingTitleDraftGateway:
+    """执行 get_listing_title_draft_gateway 的业务流程并返回该流程的结果。"""
     return PostgresListingTitleDraftGateway(sessions, context)
 
 
@@ -440,6 +469,7 @@ def get_listing_fabe_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ListingFabeGateway:
+    """执行 get_listing_fabe_gateway 的业务流程并返回该流程的结果。"""
     return PostgresListingFabeGateway(sessions, context)
 
 
@@ -447,6 +477,7 @@ def get_listing_risk_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ListingRiskGateway:
+    """执行 get_listing_risk_gateway 的业务流程并返回该流程的结果。"""
     return PostgresListingRiskGateway(sessions, context)
 
 
@@ -454,6 +485,7 @@ def get_listing_version_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ListingVersionGateway:
+    """执行 get_listing_version_gateway 的业务流程并返回该流程的结果。"""
     return PostgresListingVersionGateway(sessions, context)
 
 
@@ -461,6 +493,7 @@ def get_listing_publish_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ListingPublishGateway:
+    """执行 get_listing_publish_gateway 的业务流程并返回该流程的结果。"""
     return PostgresListingPublishGateway(sessions, context)
 
 
@@ -468,6 +501,7 @@ def get_advertising_keyword_diagnosis_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> AdvertisingKeywordDiagnosisGateway:
+    """执行 get_advertising_keyword_diagnosis_gateway 的业务流程并返回该流程的结果。"""
     return PostgresAdvertisingKeywordDiagnosisGateway(sessions, context)
 
 
@@ -475,6 +509,7 @@ def get_advertising_threshold_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> AdvertisingThresholdGateway:
+    """执行 get_advertising_threshold_gateway 的业务流程并返回该流程的结果。"""
     return PostgresAdvertisingThresholdGateway(sessions, context)
 
 
@@ -482,6 +517,7 @@ def get_advertising_calendar_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> AdvertisingCalendarGateway:
+    """执行 get_advertising_calendar_gateway 的业务流程并返回该流程的结果。"""
     return PostgresAdvertisingCalendarGateway(sessions, context)
 
 
@@ -489,6 +525,7 @@ def get_advertising_boundary_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> AdvertisingBoundaryGateway:
+    """执行 get_advertising_boundary_gateway 的业务流程并返回该流程的结果。"""
     return PostgresAdvertisingBoundaryGateway(sessions, context)
 
 
@@ -496,6 +533,7 @@ def get_model_adapter_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ModelAdapterGateway:
+    """执行 get_model_adapter_gateway 的业务流程并返回该流程的结果。"""
     return PostgresModelAdapterGateway(sessions, context)
 
 
@@ -548,6 +586,7 @@ def get_readonly_tool_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ReadonlyToolGateway:
+    """执行 get_readonly_tool_gateway 的业务流程并返回该流程的结果。"""
     return PostgresReadonlyToolGateway(sessions, context)
 
 
@@ -555,6 +594,7 @@ def get_sales_analysis_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> SalesAnalysisGateway:
+    """执行 get_sales_analysis_gateway 的业务流程并返回该流程的结果。"""
     return PostgresSalesAnalysisGateway(sessions, context)
 
 
@@ -562,6 +602,7 @@ def get_inventory_analysis_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> InventoryAnalysisGateway:
+    """执行 get_inventory_analysis_gateway 的业务流程并返回该流程的结果。"""
     return PostgresInventoryAnalysisGateway(sessions, context)
 
 
@@ -569,6 +610,7 @@ def get_advertising_analysis_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> AdvertisingAnalysisGateway:
+    """执行 get_advertising_analysis_gateway 的业务流程并返回该流程的结果。"""
     return PostgresAdvertisingAnalysisGateway(sessions, context)
 
 
@@ -576,6 +618,7 @@ def get_competitor_selection_analysis_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> CompetitorSelectionAnalysisGateway:
+    """执行 get_competitor_selection_analysis_gateway 的业务流程并返回该流程的结果。"""
     return PostgresCompetitorSelectionAnalysisGateway(sessions, context)
 
 
@@ -583,6 +626,7 @@ def get_summary_report_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> SummaryReportGateway:
+    """执行 get_summary_report_gateway 的业务流程并返回该流程的结果。"""
     return PostgresSummaryReportGateway(sessions, context)
 
 
@@ -590,6 +634,7 @@ def get_agent_trigger_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> AgentTriggerGateway:
+    """执行 get_agent_trigger_gateway 的业务流程并返回该流程的结果。"""
     return PostgresAgentTriggerGateway(sessions, context)
 
 
@@ -597,6 +642,7 @@ def get_agent_permission_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> AgentPermissionGateway:
+    """执行 get_agent_permission_gateway 的业务流程并返回该流程的结果。"""
     return PostgresAgentPermissionGateway(sessions, context)
 
 
@@ -604,6 +650,7 @@ def get_external_notification_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ExternalNotificationGateway:
+    """执行 get_external_notification_gateway 的业务流程并返回该流程的结果。"""
     return PostgresExternalNotificationGateway(sessions, context)
 
 
@@ -611,6 +658,7 @@ def get_diff_preview_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> DiffPreviewGateway:
+    """执行 get_diff_preview_gateway 的业务流程并返回该流程的结果。"""
     return PostgresDiffPreviewGateway(sessions, context)
 
 
@@ -618,6 +666,7 @@ def get_manual_approval_gateway(
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
     context: Annotated[TenantContext, Depends(get_tenant_context)],
 ) -> ManualApprovalGateway:
+    """执行 get_manual_approval_gateway 的业务流程并返回该流程的结果。"""
     return PostgresManualApprovalGateway(sessions, context)
 
 
@@ -625,6 +674,7 @@ def get_execution_result_gateway(
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
     context: Annotated[TenantContext, Depends(get_tenant_context)],
 ) -> ExecutionResultGateway:
+    """执行 get_execution_result_gateway 的业务流程并返回该流程的结果。"""
     return PostgresExecutionResultGateway(sessions, context)
 
 
@@ -632,6 +682,7 @@ def get_readback_verification_gateway(
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
     context: Annotated[TenantContext, Depends(get_tenant_context)],
 ) -> ReadbackVerificationGateway:
+    """执行 get_readback_verification_gateway 的业务流程并返回该流程的结果。"""
     return PostgresReadbackVerificationGateway(sessions, context)
 
 
@@ -639,6 +690,7 @@ def get_audit_event_gateway(
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
     context: Annotated[TenantContext, Depends(get_tenant_context)],
 ) -> AuditEventGateway:
+    """执行 get_audit_event_gateway 的业务流程并返回该流程的结果。"""
     return PostgresAuditEventGateway(sessions, context)
 
 
@@ -646,6 +698,7 @@ def get_data_freshness_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> DataFreshnessGateway:
+    """执行 get_data_freshness_gateway 的业务流程并返回该流程的结果。"""
     return PostgresDataFreshnessGateway(sessions, context)
 
 
@@ -653,6 +706,7 @@ def get_data_provenance_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> DataProvenanceGateway:
+    """执行 get_data_provenance_gateway 的业务流程并返回该流程的结果。"""
     return PostgresDataProvenanceGateway(sessions, context)
 
 
@@ -660,6 +714,7 @@ def get_search_attributes_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> SearchAttributesGateway:
+    """执行 get_search_attributes_gateway 的业务流程并返回该流程的结果。"""
     return PostgresSearchAttributesGateway(sessions, context)
 
 
@@ -667,6 +722,7 @@ def get_smart_search_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> SmartSearchGateway:
+    """执行 get_smart_search_gateway 的业务流程并返回该流程的结果。"""
     return PostgresSmartSearchGateway(sessions, context)
 
 
@@ -674,6 +730,7 @@ def get_competitor_seed_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> CompetitorSeedGateway:
+    """执行 get_competitor_seed_gateway 的业务流程并返回该流程的结果。"""
     return PostgresCompetitorSeedGateway(sessions, context)
 
 
@@ -681,6 +738,7 @@ def get_competition_analysis_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> CompetitionAnalysisGateway:
+    """执行 get_competition_analysis_gateway 的业务流程并返回该流程的结果。"""
     return PostgresCompetitionAnalysisGateway(sessions, context)
 
 
@@ -688,6 +746,7 @@ def get_cost_sensitivity_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> CostSensitivityGateway:
+    """执行 get_cost_sensitivity_gateway 的业务流程并返回该流程的结果。"""
     return PostgresCostSensitivityGateway(sessions, context)
 
 
@@ -695,6 +754,7 @@ def get_profit_model_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ProfitModelGateway:
+    """执行 get_profit_model_gateway 的业务流程并返回该流程的结果。"""
     return PostgresProfitModelGateway(sessions, context)
 
 
@@ -702,6 +762,7 @@ def get_public_snapshot_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> PublicSnapshotGateway:
+    """执行 get_public_snapshot_gateway 的业务流程并返回该流程的结果。"""
     return PostgresPublicSnapshotGateway(sessions, context)
 
 
@@ -709,6 +770,7 @@ def get_parser_alert_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ParserAlertGateway:
+    """执行 get_parser_alert_gateway 的业务流程并返回该流程的结果。"""
     return PostgresParserAlertGateway(sessions, context)
 
 
@@ -716,6 +778,7 @@ def get_explore_opportunity_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ExploreOpportunityGateway:
+    """执行 get_explore_opportunity_gateway 的业务流程并返回该流程的结果。"""
     return PostgresExploreOpportunityGateway(sessions, context)
 
 
@@ -723,6 +786,7 @@ def get_validate_result_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ValidateResultGateway:
+    """执行 get_validate_result_gateway 的业务流程并返回该流程的结果。"""
     return PostgresValidateResultGateway(sessions, context)
 
 
@@ -730,6 +794,7 @@ def get_selection_decision_book_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> SelectionDecisionBookGateway:
+    """执行 get_selection_decision_book_gateway 的业务流程并返回该流程的结果。"""
     return PostgresSelectionDecisionBookGateway(sessions, context)
 
 
@@ -737,6 +802,7 @@ def get_expand_result_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> ExpandResultGateway:
+    """执行 get_expand_result_gateway 的业务流程并返回该流程的结果。"""
     return PostgresExpandResultGateway(sessions, context)
 
 
@@ -768,6 +834,7 @@ def get_store_workspace_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> StoreWorkspaceGateway:
+    """执行 get_store_workspace_gateway 的业务流程并返回该流程的结果。"""
     return PostgresStoreWorkspaceGateway(
         sessions,
         context,
@@ -778,6 +845,7 @@ def get_seller_order_snapshot_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> SellerOrderSnapshotGateway:
+    """执行 get_seller_order_snapshot_gateway 的业务流程并返回该流程的结果。"""
     return PostgresSellerOrderSnapshotGateway(sessions, context)
 
 
@@ -785,6 +853,7 @@ def get_seller_stock_snapshot_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> SellerStockSnapshotGateway:
+    """执行 get_seller_stock_snapshot_gateway 的业务流程并返回该流程的结果。"""
     return PostgresSellerStockSnapshotGateway(sessions, context)
 
 
@@ -792,6 +861,7 @@ def get_seller_fulfillment_snapshot_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> SellerFulfillmentSnapshotGateway:
+    """执行 get_seller_fulfillment_snapshot_gateway 的业务流程并返回该流程的结果。"""
     return PostgresSellerFulfillmentSnapshotGateway(sessions, context)
 
 
@@ -799,11 +869,13 @@ def get_seller_product_snapshot_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> SellerProductSnapshotGateway:
+    """执行 get_seller_product_snapshot_gateway 的业务流程并返回该流程的结果。"""
     return PostgresSellerProductSnapshotGateway(sessions, context)
 
 
 @lru_cache
 def get_credential_protector() -> CredentialProtector:
+    """执行 get_credential_protector 的业务流程并返回该流程的结果。"""
     settings = get_settings()
     return FernetCredentialProtector(
         settings.ozon_credential_key_file,
@@ -824,6 +896,7 @@ def get_advertising_campaign_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> AdvertisingCampaignGateway:
+    """执行 get_advertising_campaign_gateway 的业务流程并返回该流程的结果。"""
     return PostgresAdvertisingCampaignGateway(sessions, context)
 
 
@@ -831,6 +904,7 @@ def get_advertising_report_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> AdvertisingReportGateway:
+    """执行 get_advertising_report_gateway 的业务流程并返回该流程的结果。"""
     return PostgresAdvertisingReportGateway(sessions, context)
 
 
@@ -838,11 +912,13 @@ def get_advertising_metrics_gateway(
     context: Annotated[TenantContext, Depends(get_tenant_context)],
     sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
 ) -> AdvertisingMetricsGateway:
+    """执行 get_advertising_metrics_gateway 的业务流程并返回该流程的结果。"""
     return PostgresAdvertisingMetricsGateway(sessions, context)
 
 
 @lru_cache
 def get_seller_account_verifier() -> SellerAccountVerifier:
+    """执行 get_seller_account_verifier 的业务流程并返回该流程的结果。"""
     settings = get_settings()
     if settings.ozon_mode == "stub":
         return StubSellerAccountVerifier()

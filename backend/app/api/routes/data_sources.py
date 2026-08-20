@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -7,11 +9,13 @@ router = APIRouter(prefix="/v1/data-sources", tags=["data-quality"])
 
 
 class DataSourcePayload(BaseModel):
+    """说明 DataSourcePayload 的职责、状态边界和对外协作关系。"""
     source: str = Field(min_length=1)
 
 
 @router.post("/label", response_model=DataSourceLabel)
 async def label_source(payload: DataSourcePayload) -> DataSourceLabel:
+    """执行 label_source 的业务流程并返回该流程的结果。"""
     try:
         return get_data_source_label(payload.source)
     except ValueError as error:

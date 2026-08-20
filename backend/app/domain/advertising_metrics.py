@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class AdvertisingMetrics:
+    """说明 AdvertisingMetrics 的职责、状态边界和对外协作关系。"""
     acos_percent: float | None
     tacos_percent: float | None
     cpc_minor: float | None
@@ -17,19 +20,23 @@ class AdvertisingMetrics:
 
 
 class AdvertisingMetricsGateway(Protocol):
+    """说明 AdvertisingMetricsGateway 的职责、状态边界和对外协作关系。"""
     async def save_snapshot(
         self, *, workspace_id: str, inputs: dict[str, object], metrics: AdvertisingMetrics
-    ) -> AdvertisingMetrics: ...
+    ) -> AdvertisingMetrics:
+        """执行 save_snapshot 的业务流程并返回该流程的结果。"""
 
     async def list_snapshots(
         self, *, workspace_id: str, limit: int
-    ) -> list[AdvertisingMetrics]: ...
+    ) -> list[AdvertisingMetrics]:
+        """执行 list_snapshots 的业务流程并返回该流程的结果。"""
 
 
 def calculate_advertising_metrics(
     *, impressions: int, clicks: int, orders: int, ad_sales_minor: int,
     total_sales_minor: int, spend_minor: int, currency: str, window: str,
 ) -> AdvertisingMetrics:
+    """执行 calculate_advertising_metrics 的业务流程并返回该流程的结果。"""
     if min(impressions, clicks, orders, ad_sales_minor, total_sales_minor, spend_minor) < 0:
         raise ValueError("广告指标输入不能为负数")
     if clicks > impressions or orders > clicks:
@@ -57,4 +64,5 @@ def calculate_advertising_metrics(
 
 
 def _ratio(numerator: int, denominator: int) -> float | None:
+    """执行内部步骤 _ratio，供同一模块的公开流程复用。"""
     return numerator / denominator * 100 if denominator else None

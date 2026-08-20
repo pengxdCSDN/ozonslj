@@ -15,9 +15,11 @@ class PostgresKnowledgeGovernanceGateway(KnowledgeGovernanceGateway):
     """将领域治理对象映射到 0090 migration 建立的关系表。"""
 
     def __init__(self, pool: AsyncConnectionPool) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._pool = pool
 
     async def create_source(self, source: KnowledgeSource) -> KnowledgeSource:
+        """执行 create_source 的业务流程并返回该流程的结果。"""
         async with self._pool.connection() as connection, connection.transaction():
             await connection.execute(
                 """
@@ -33,6 +35,7 @@ class PostgresKnowledgeGovernanceGateway(KnowledgeGovernanceGateway):
         return source
 
     async def create_version(self, version: KnowledgeVersion) -> KnowledgeVersion:
+        """执行 create_version 的业务流程并返回该流程的结果。"""
         async with self._pool.connection() as connection, connection.transaction():
             await connection.execute(
                 """
@@ -48,6 +51,7 @@ class PostgresKnowledgeGovernanceGateway(KnowledgeGovernanceGateway):
         return version
 
     async def create_job(self, job: IngestionJob) -> IngestionJob:
+        """执行 create_job 的业务流程并返回该流程的结果。"""
         async with self._pool.connection() as connection, connection.transaction():
             await connection.execute(
                 """
@@ -65,6 +69,7 @@ class PostgresKnowledgeGovernanceGateway(KnowledgeGovernanceGateway):
     async def set_version_status(
         self, *, organization_id: str, version_id: str, status: str
     ) -> KnowledgeVersion:
+        """执行 set_version_status 的业务流程并返回该流程的结果。"""
         async with (
             self._pool.connection() as connection,
             connection.transaction(),
@@ -87,6 +92,7 @@ class PostgresKnowledgeGovernanceGateway(KnowledgeGovernanceGateway):
     async def set_source_status(
         self, *, organization_id: str, source_id: str, status: str
     ) -> KnowledgeSource:
+        """执行 set_source_status 的业务流程并返回该流程的结果。"""
         async with (
             self._pool.connection() as connection,
             connection.transaction(),
@@ -108,6 +114,7 @@ class PostgresKnowledgeGovernanceGateway(KnowledgeGovernanceGateway):
 
 
 def _source_from_row(row: dict[str, object]) -> KnowledgeSource:
+    """执行内部步骤 _source_from_row，供同一模块的公开流程复用。"""
     return KnowledgeSource(**{key: str(row[key]) for key in (
         "id", "organization_id", "source_type", "business_domain", "title",
         "authority_level", "sensitivity", "status", "source_locator",
@@ -115,6 +122,7 @@ def _source_from_row(row: dict[str, object]) -> KnowledgeSource:
 
 
 def _version_from_row(row: dict[str, object]) -> KnowledgeVersion:
+    """执行内部步骤 _version_from_row，供同一模块的公开流程复用。"""
     return KnowledgeVersion(
         id=str(row["id"]), organization_id=str(row["organization_id"]),
         source_id=str(row["source_id"]), version_number=int(str(row["version_number"])),

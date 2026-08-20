@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from uuid import uuid4
 
@@ -9,15 +11,18 @@ class PostgresModelAdapterGateway:
     """保存模型适配器元配置；不保存 API Key，也不发起模型请求。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def save_config(
         self, *, workspace_id: str, config: ModelAdapterConfig
     ) -> ModelAdapterConfig:
+        """执行 save_config 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._save, workspace_id, config)
 
     def _save(self, workspace_id: str, config: ModelAdapterConfig) -> ModelAdapterConfig:
+        """执行内部步骤 _save，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -37,12 +42,15 @@ class PostgresModelAdapterGateway:
     async def list_configs(
         self, *, workspace_id: str, limit: int
     ) -> list[ModelAdapterConfig]:
+        """执行 list_configs 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list_configs, workspace_id, limit)
 
     async def get_active_config(self, *, workspace_id: str) -> ModelAdapterConfig | None:
+        """执行 get_active_config 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._get_active_config, workspace_id)
 
     def _get_active_config(self, workspace_id: str) -> ModelAdapterConfig | None:
+        """执行内部步骤 _get_active_config，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """SELECT adapter, provider, model, base_url, enabled,
@@ -60,6 +68,7 @@ class PostgresModelAdapterGateway:
         )
 
     def _list_configs(self, workspace_id: str, limit: int) -> list[ModelAdapterConfig]:
+        """执行内部步骤 _list_configs，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT adapter, provider, model, base_url, enabled,

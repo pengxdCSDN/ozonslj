@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from typing import Annotated
 
@@ -16,6 +18,7 @@ router = APIRouter(prefix="/v1/review/freshness", tags=["review"])
 
 
 class FreshnessPayload(BaseModel):
+    """说明 FreshnessPayload 的职责、状态边界和对外协作关系。"""
     data_domain: str = Field(min_length=1, max_length=100)
     observed_at: datetime
     max_age_seconds: int = Field(ge=0)
@@ -29,6 +32,7 @@ class FreshnessPayload(BaseModel):
 
 @router.post("/check", response_model=DataFreshnessDecision)
 async def check_freshness(payload: FreshnessPayload) -> DataFreshnessDecision:
+    """执行 check_freshness 的业务流程并返回该流程的结果。"""
     return check_data_freshness(**payload.model_dump())
 
 
@@ -42,6 +46,7 @@ async def check_and_save_freshness(
     gateway: Annotated[DataFreshnessGateway, Depends(get_data_freshness_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> DataFreshnessDecision:
+    """执行 check_and_save_freshness 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     decision = await check_freshness(payload)

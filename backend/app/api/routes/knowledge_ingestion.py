@@ -14,6 +14,7 @@ router = APIRouter(prefix="/v1/knowledge-ingestion", tags=["knowledge-ingestion"
 
 
 class IngestionPayload(BaseModel):
+    """说明 IngestionPayload 的职责、状态边界和对外协作关系。"""
     document_id: str = Field(default="api-document", min_length=1, max_length=100)
     document_version_id: str = Field(default="api-version", min_length=1, max_length=100)
     source_type: str = Field(pattern="^(markdown|postgres_schema|pdf)$")
@@ -27,6 +28,7 @@ class IngestionPayload(BaseModel):
 
 
 class IngestionResponse(BaseModel):
+    """说明 IngestionResponse 的职责、状态边界和对外协作关系。"""
     document_id: str
     document_version_id: str
     parser_name: str
@@ -39,6 +41,7 @@ class IngestionResponse(BaseModel):
 
 @router.post("/run", response_model=IngestionResponse)
 async def run_knowledge_ingestion(payload: IngestionPayload) -> IngestionResponse:
+    """执行 run_knowledge_ingestion 的业务流程并返回该流程的结果。"""
     try:
         result = ingest_and_chunk(
             document_id=payload.document_id, document_version_id=payload.document_version_id,

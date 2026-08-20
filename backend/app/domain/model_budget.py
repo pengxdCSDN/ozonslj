@@ -11,6 +11,7 @@ BudgetPurpose = Literal["embedding", "translation", "intent_rewrite", "rerank", 
 
 @dataclass(frozen=True, slots=True)
 class ModelBudgetPolicy:
+    """说明 ModelBudgetPolicy 的职责、状态边界和对外协作关系。"""
     provider_id: str
     daily_token_limit: int
     monthly_token_limit: int
@@ -21,6 +22,7 @@ class ModelBudgetPolicy:
 
 @dataclass(frozen=True, slots=True)
 class ModelBudgetUsage:
+    """说明 ModelBudgetUsage 的职责、状态边界和对外协作关系。"""
     daily_tokens: int
     monthly_tokens: int
     daily_requests: int
@@ -29,12 +31,14 @@ class ModelBudgetUsage:
 
 @dataclass(frozen=True, slots=True)
 class BudgetDecision:
+    """说明 BudgetDecision 的职责、状态边界和对外协作关系。"""
     state: BudgetState
     allowed: bool
     reason: str | None
 
 
 def decide_budget(policy: ModelBudgetPolicy, usage: ModelBudgetUsage) -> BudgetDecision:
+    """执行 decide_budget 的业务流程并返回该流程的结果。"""
     ratios = [
         usage.daily_tokens / max(policy.daily_token_limit, 1),
         usage.monthly_tokens / max(policy.monthly_token_limit, 1),

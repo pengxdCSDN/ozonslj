@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import hashlib
 import re
 from dataclasses import dataclass
@@ -166,6 +168,7 @@ def migrate_postgres(dsn: str) -> None:
 
 
 def _load_authoritative_migrations() -> tuple[Migration, ...]:
+    """执行内部步骤 _load_authoritative_migrations，供同一模块的公开流程复用。"""
     migrations: list[Migration] = []
     for path in sorted(_MIGRATIONS_PATH.glob("[0-9][0-9][0-9][0-9]_*.sql")):
         version_text, _, name_with_suffix = path.name.partition("_")
@@ -191,6 +194,7 @@ def _migration(
     *,
     source_version: int | None = None,
 ) -> Migration:
+    """执行内部步骤 _migration，供同一模块的公开流程复用。"""
     return Migration(
         version=version,
         name=name,

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from redis.asyncio import Redis
 from redis.exceptions import ResponseError
 
@@ -15,6 +17,7 @@ class RedisSyncJobConsumer:
         stream_name: str = "sync_jobs",
         group_name: str = "sync_workers",
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._redis = redis
         self._consumer_name = consumer_name
         self._stream_name = stream_name
@@ -22,6 +25,7 @@ class RedisSyncJobConsumer:
         self._group_ready = False
 
     async def read_one(self, *, block_ms: int) -> SyncJobMessage | None:
+        """执行 read_one 的业务流程并返回该流程的结果。"""
         await self._ensure_group()
         streams = await self._redis.xreadgroup(
             self._group_name,
@@ -41,9 +45,11 @@ class RedisSyncJobConsumer:
         return SyncJobMessage(message_id=str(message_id), job_id=job_id)
 
     async def acknowledge(self, message_id: str) -> None:
+        """执行 acknowledge 的业务流程并返回该流程的结果。"""
         await self._redis.xack(self._stream_name, self._group_name, message_id)
 
     async def _ensure_group(self) -> None:
+        """执行内部步骤 _ensure_group，供同一模块的公开流程复用。"""
         if self._group_ready:
             return
         try:

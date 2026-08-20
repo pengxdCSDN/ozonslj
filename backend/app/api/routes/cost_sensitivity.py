@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,6 +19,7 @@ router = APIRouter(prefix="/v1/selection/cost-sensitivity", tags=["selection"])
 
 
 class CostSensitivityPayload(BaseModel):
+    """说明 CostSensitivityPayload 的职责、状态边界和对外协作关系。"""
     selling_price_minor: int = Field(ge=0)
     purchase_cost_minor: int = Field(ge=0)
     logistics_cost_minor: int = Field(ge=0)
@@ -27,6 +30,7 @@ class CostSensitivityPayload(BaseModel):
 
 @router.post("/analyze", response_model=list[CostSensitivityScenario])
 async def analyze_costs(payload: CostSensitivityPayload) -> list[CostSensitivityScenario]:
+    """执行 analyze_costs 的业务流程并返回该流程的结果。"""
     return list(analyze_cost_sensitivity(CostSensitivityInput(**payload.model_dump())))
 
 
@@ -40,6 +44,7 @@ async def analyze_and_save_costs(
     gateway: Annotated[CostSensitivityGateway, Depends(get_cost_sensitivity_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[CostSensitivityScenario]:
+    """执行 analyze_and_save_costs 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     assumptions = payload.model_dump()

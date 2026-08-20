@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from __future__ import annotations
 
 import asyncio
@@ -14,15 +16,18 @@ class PostgresExecutionResultGateway:
     """保存批量执行结果，避免前端刷新后丢失部分成功和失败证据。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def save(
         self, *, workspace_id: str, result: BatchExecutionResult
     ) -> StoredExecutionResult:
+        """执行 save 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._save, workspace_id, result)
 
     def _save(self, workspace_id: str, result: BatchExecutionResult) -> StoredExecutionResult:
+        """执行内部步骤 _save，供同一模块的公开流程复用。"""
         result_id = str(uuid4())
         payload = {
             "total": result.total,
@@ -47,9 +52,11 @@ class PostgresExecutionResultGateway:
         return _stored_result_from_row(row)
 
     async def list_results(self, *, workspace_id: str, limit: int) -> list[StoredExecutionResult]:
+        """执行 list_results 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list, workspace_id, limit)
 
     def _list(self, workspace_id: str, limit: int) -> list[StoredExecutionResult]:
+        """执行内部步骤 _list，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT id, workspace_id, result, created_at FROM execution_results
@@ -61,6 +68,7 @@ class PostgresExecutionResultGateway:
 
 
 def _stored_result_from_row(row: dict[str, object]) -> StoredExecutionResult:
+    """执行内部步骤 _stored_result_from_row，供同一模块的公开流程复用。"""
     payload = row["result"]
     if not isinstance(payload, dict):
         raise RuntimeError("执行结果 JSON 结构无效")

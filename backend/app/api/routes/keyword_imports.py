@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import base64
 from typing import Annotated
 
@@ -24,22 +26,26 @@ router = APIRouter(prefix="/v1/store-workspaces", tags=["keyword-imports"])
 
 
 class KeywordImportPreview(BaseModel):
+    """说明 KeywordImportPreview 的职责、状态边界和对外协作关系。"""
     rows: list[KeywordImportRow]
     total: int
     fingerprint: str
 
 
 class MappedKeywordImportRequest(BaseModel):
+    """说明 MappedKeywordImportRequest 的职责、状态边界和对外协作关系。"""
     content: str
     column_mapping: dict[str, str]
 
 
 class MappedXlsxKeywordImportRequest(BaseModel):
+    """说明 MappedXlsxKeywordImportRequest 的职责、状态边界和对外协作关系。"""
     content_base64: str
     column_mapping: dict[str, str]
 
 
 class CommitKeywordImportRequest(BaseModel):
+    """说明 CommitKeywordImportRequest 的职责、状态边界和对外协作关系。"""
     fingerprint: str
     rows: list[KeywordImportRow]
 
@@ -50,6 +56,7 @@ async def preview_keyword_import(
     request: Request,
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> KeywordImportPreview:
+    """执行 preview_keyword_import 的业务流程并返回该流程的结果。"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(
@@ -83,6 +90,7 @@ async def preview_mapped_keyword_import(
     payload: MappedKeywordImportRequest,
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> KeywordImportPreview:
+    """执行 preview_mapped_keyword_import 的业务流程并返回该流程的结果。"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
@@ -109,6 +117,7 @@ async def preview_xlsx_keyword_import(
     request: Request,
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> KeywordImportPreview:
+    """执行 preview_xlsx_keyword_import 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     content = await request.body()
@@ -135,6 +144,7 @@ async def preview_mapped_xlsx_keyword_import(
     payload: MappedXlsxKeywordImportRequest,
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> KeywordImportPreview:
+    """执行 preview_mapped_xlsx_keyword_import 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -163,6 +173,7 @@ async def commit_keyword_import(
     gateway: Annotated[KeywordImportGateway, Depends(get_keyword_import_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> KeywordImportBatch:
+    """执行 commit_keyword_import 的业务流程并返回该流程的结果。"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})

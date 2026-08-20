@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class FabePoint:
+    """说明 FabePoint 的职责、状态边界和对外协作关系。"""
     feature: str
     advantage: str
     benefit: str
@@ -13,6 +16,7 @@ class FabePoint:
 
 @dataclass(frozen=True, slots=True)
 class ListingFabeDraft:
+    """说明 ListingFabeDraft 的职责、状态边界和对外协作关系。"""
     bullets: tuple[FabePoint, ...]
     long_description: str
     image_copy_suggestions: tuple[str, ...]
@@ -21,16 +25,20 @@ class ListingFabeDraft:
 
 
 class ListingFabeGateway(Protocol):
+    """说明 ListingFabeGateway 的职责、状态边界和对外协作关系。"""
     async def save_draft(
         self, *, workspace_id: str, product_scope: str, draft: ListingFabeDraft
-    ) -> ListingFabeDraft: ...
+    ) -> ListingFabeDraft:
+        """执行 save_draft 的业务流程并返回该流程的结果。"""
 
     async def list_drafts(
         self, *, workspace_id: str, limit: int = 50
-    ) -> list[ListingFabeDraft]: ...
+    ) -> list[ListingFabeDraft]:
+        """执行 list_drafts 的业务流程并返回该流程的结果。"""
 
 
 def generate_fabe_draft(points: list[FabePoint], *, product_name: str) -> ListingFabeDraft:
+    """执行 generate_fabe_draft 的业务流程并返回该流程的结果。"""
     if not product_name.strip():
         raise ValueError("FABE 草稿必须包含商品名称")
     normalized = tuple(

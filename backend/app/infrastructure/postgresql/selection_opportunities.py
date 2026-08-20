@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 import json
 from uuid import uuid4
@@ -10,17 +12,20 @@ class PostgresExploreOpportunityGateway:
     """保存 Explore 结果快照，保留评分原因和估算边界。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def save_opportunities(
         self, *, workspace_id: str, opportunities: list[ExploreOpportunity]
     ) -> list[ExploreOpportunity]:
+        """执行 save_opportunities 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._save, workspace_id, opportunities)
 
     def _save(
         self, workspace_id: str, opportunities: list[ExploreOpportunity]
     ) -> list[ExploreOpportunity]:
+        """执行内部步骤 _save，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             for item in opportunities:
                 connection.execute(
@@ -43,9 +48,11 @@ class PostgresExploreOpportunityGateway:
     async def list_opportunities(
         self, *, workspace_id: str, limit: int
     ) -> list[ExploreOpportunity]:
+        """执行 list_opportunities 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list_opportunities, workspace_id, limit)
 
     def _list_opportunities(self, workspace_id: str, limit: int) -> list[ExploreOpportunity]:
+        """执行内部步骤 _list_opportunities，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT keyword, score, search_count, conversion_rate, sample_count,

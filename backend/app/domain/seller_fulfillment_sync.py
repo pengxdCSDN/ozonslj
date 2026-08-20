@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal, cast
@@ -7,6 +9,7 @@ FulfillmentType = Literal["FBO", "FBS"]
 
 @dataclass(frozen=True, slots=True)
 class SellerFulfillmentSyncItem:
+    """说明 SellerFulfillmentSyncItem 的职责、状态边界和对外协作关系。"""
     posting_id: str
     fulfillment_type: FulfillmentType
     status: str
@@ -18,6 +21,7 @@ class SellerFulfillmentSyncItem:
 
 @dataclass(frozen=True, slots=True)
 class SellerFulfillmentSyncPreview:
+    """说明 SellerFulfillmentSyncPreview 的职责、状态边界和对外协作关系。"""
     items: list[SellerFulfillmentSyncItem]
     total: int
     next_cursor: str | None
@@ -27,6 +31,7 @@ class SellerFulfillmentSyncPreview:
 
 
 def map_seller_fulfillment_response(payload: dict[str, object]) -> SellerFulfillmentSyncPreview:
+    """执行 map_seller_fulfillment_response 的业务流程并返回该流程的结果。"""
     raw_items = payload.get("items", [])
     if not isinstance(raw_items, list):
         raise ValueError("Seller 履约响应 items 必须是数组")
@@ -66,6 +71,7 @@ def map_seller_fulfillment_response(payload: dict[str, object]) -> SellerFulfill
 
 
 def _text(raw: dict[str, object], field: str) -> str:
+    """执行内部步骤 _text，供同一模块的公开流程复用。"""
     value = raw.get(field)
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"Seller 履约字段 {field} 无效")
@@ -73,6 +79,7 @@ def _text(raw: dict[str, object], field: str) -> str:
 
 
 def _quantity(raw: dict[str, object], field: str) -> int:
+    """执行内部步骤 _quantity，供同一模块的公开流程复用。"""
     value = raw.get(field)
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise ValueError(f"Seller 履约字段 {field} 必须是非负整数")

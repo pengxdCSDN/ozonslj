@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Protocol
@@ -5,6 +7,7 @@ from typing import Protocol
 
 @dataclass(frozen=True, slots=True)
 class AdvertisingCalendarDay:
+    """说明 AdvertisingCalendarDay 的职责、状态边界和对外协作关系。"""
     day: int
     date: date
     phase: str
@@ -13,14 +16,17 @@ class AdvertisingCalendarDay:
 
 
 class AdvertisingCalendarGateway(Protocol):
+    """说明 AdvertisingCalendarGateway 的职责、状态边界和对外协作关系。"""
     async def save_calendar(
         self, *, workspace_id: str, start_date: date,
         days: list[AdvertisingCalendarDay]
-    ) -> list[AdvertisingCalendarDay]: ...
+    ) -> list[AdvertisingCalendarDay]:
+        """执行 save_calendar 的业务流程并返回该流程的结果。"""
 
     async def list_calendars(
         self, *, workspace_id: str, limit: int
-    ) -> list[list[AdvertisingCalendarDay]]: ...
+    ) -> list[list[AdvertisingCalendarDay]]:
+        """执行 list_calendars 的业务流程并返回该流程的结果。"""
 
 
 def build_advertising_calendar(start_date: date) -> list[AdvertisingCalendarDay]:

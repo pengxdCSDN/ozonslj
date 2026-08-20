@@ -57,6 +57,7 @@ class IdentityService:
         password_hasher: PasswordHasher | None = None,
         session_ttl: timedelta = timedelta(hours=12),
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._gateway = gateway
         self._password_hasher = password_hasher or PasswordHasher()
         self._session_ttl = session_ttl
@@ -100,4 +101,5 @@ class IdentityService:
 
     @staticmethod
     def _token_hash(token: str) -> str:
+        """执行内部步骤 _token_hash，供同一模块的公开流程复用。"""
         return hashlib.sha256(token.encode()).hexdigest()

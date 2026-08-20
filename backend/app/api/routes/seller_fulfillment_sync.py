@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -18,11 +20,13 @@ router = APIRouter(prefix="/v1/seller/fulfillment", tags=["seller-api"])
 
 
 class SellerFulfillmentSyncPayload(BaseModel):
+    """说明 SellerFulfillmentSyncPayload 的职责、状态边界和对外协作关系。"""
     response: dict[str, object]
 
 
 @router.post("/sync-preview", response_model=SellerFulfillmentSyncPreview)
 async def sync_preview(payload: SellerFulfillmentSyncPayload) -> SellerFulfillmentSyncPreview:
+    """执行 sync_preview 的业务流程并返回该流程的结果。"""
     try:
         return map_seller_fulfillment_response(payload.response)
     except ValueError as error:
@@ -45,6 +49,7 @@ async def sync_and_save(
     ],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> SellerFulfillmentSyncPreview:
+    """执行 sync_and_save 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -70,6 +75,7 @@ async def list_snapshots(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = Query(default=20, ge=1, le=100),
 ) -> list[SellerFulfillmentSyncPreview]:
+    """执行 list_snapshots 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_snapshots(workspace_id=workspace_id, limit=limit)

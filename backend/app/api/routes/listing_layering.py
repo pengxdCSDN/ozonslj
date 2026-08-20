@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,6 +17,7 @@ router = APIRouter(prefix="/v1/listing/keywords", tags=["listing"])
 
 
 class LayeringPayload(BaseModel):
+    """说明 LayeringPayload 的职责、状态边界和对外协作关系。"""
     keywords: list[str]
     core_terms: list[str] = []
     attribute_terms: list[str] = []
@@ -23,6 +26,7 @@ class LayeringPayload(BaseModel):
 
 @router.post("/classify", response_model=list[LayeredKeyword])
 async def classify_keywords(payload: LayeringPayload) -> list[LayeredKeyword]:
+    """执行 classify_keywords 的业务流程并返回该流程的结果。"""
     return classify_listing_keywords(
         payload.keywords,
         core_terms=set(payload.core_terms),
@@ -41,6 +45,7 @@ async def classify_and_save_keywords(
     gateway: Annotated[ListingLayerGateway, Depends(get_listing_layer_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[LayeredKeyword]:
+    """执行 classify_and_save_keywords 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     layers = classify_listing_keywords(

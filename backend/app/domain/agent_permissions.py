@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class AgentPermissionDecision:
+    """说明 AgentPermissionDecision 的职责、状态边界和对外协作关系。"""
     agent: str
     allowed_capabilities: list[str]
     denied_capabilities: list[str]
@@ -14,13 +17,16 @@ class AgentPermissionDecision:
 
 
 class AgentPermissionGateway(Protocol):
+    """说明 AgentPermissionGateway 的职责、状态边界和对外协作关系。"""
     async def save_decision(
         self, *, workspace_id: str, decision: AgentPermissionDecision
-    ) -> AgentPermissionDecision: ...
+    ) -> AgentPermissionDecision:
+        """执行 save_decision 的业务流程并返回该流程的结果。"""
 
     async def list_decisions(
         self, *, workspace_id: str, limit: int
-    ) -> list[AgentPermissionDecision]: ...
+    ) -> list[AgentPermissionDecision]:
+        """执行 list_decisions 的业务流程并返回该流程的结果。"""
 
 
 READ_CAPABILITIES = frozenset({
@@ -31,6 +37,7 @@ READ_CAPABILITIES = frozenset({
 def evaluate_agent_permissions(
     agent: str, requested_capabilities: list[str]
 ) -> AgentPermissionDecision:
+    """执行 evaluate_agent_permissions 的业务流程并返回该流程的结果。"""
     normalized_agent = agent.strip()
     if not normalized_agent:
         raise ValueError("Agent 名称不能为空")

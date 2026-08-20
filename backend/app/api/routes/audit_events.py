@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from typing import Annotated
 
@@ -13,6 +15,7 @@ router = APIRouter(prefix="/v1/review/audit-events", tags=["review"])
 
 
 class AuditEventPayload(BaseModel):
+    """说明 AuditEventPayload 的职责、状态边界和对外协作关系。"""
     event_type: str = Field(min_length=1, max_length=100)
     subject_id: str = Field(min_length=1, max_length=200)
     detail: dict[str, object] = Field(default_factory=dict)
@@ -20,6 +23,7 @@ class AuditEventPayload(BaseModel):
 
 
 class StoredAuditEventResponse(BaseModel):
+    """说明 StoredAuditEventResponse 的职责、状态边界和对外协作关系。"""
     event_id: str
     workspace_id: str
     event: AuditEvent
@@ -27,6 +31,7 @@ class StoredAuditEventResponse(BaseModel):
 
 @router.post("/build", response_model=AuditEvent)
 async def build_event(payload: AuditEventPayload) -> AuditEvent:
+    """执行 build_event 的业务流程并返回该流程的结果。"""
     return create_audit_event(**payload.model_dump())
 
 
@@ -37,6 +42,7 @@ async def save_event(
     gateway: Annotated[AuditEventGateway, Depends(get_audit_event_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> StoredAuditEvent:
+    """执行 save_event 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.save(
@@ -51,6 +57,7 @@ async def list_events(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[StoredAuditEvent]:
+    """执行 list_events 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 200:

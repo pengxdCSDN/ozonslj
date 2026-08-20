@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
 
 @dataclass(frozen=True, slots=True)
 class MoneyInventoryFinding:
+    """说明 MoneyInventoryFinding 的职责、状态边界和对外协作关系。"""
     field: str
     rule_code: str
     message: str
@@ -12,6 +15,7 @@ class MoneyInventoryFinding:
 def check_money_inventory(
     record: dict[str, object], *, allowed_currencies: set[str] | None = None
 ) -> list[MoneyInventoryFinding]:
+    """执行 check_money_inventory 的业务流程并返回该流程的结果。"""
     currencies = allowed_currencies or {"RUB", "CNY", "USD", "EUR"}
     findings: list[MoneyInventoryFinding] = []
     currency = record.get("currency")

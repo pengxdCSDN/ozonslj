@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,6 +18,7 @@ router = APIRouter(prefix="/v1/listing/publish", tags=["listing"])
 
 
 class PublishPayload(BaseModel):
+    """说明 PublishPayload 的职责、状态边界和对外协作关系。"""
     idempotency_key: str
     version: int
     status: PublishStatus
@@ -25,6 +28,7 @@ class PublishPayload(BaseModel):
 
 @router.post("/execute", response_model=PublishCommand)
 async def publish_listing(payload: PublishPayload) -> PublishCommand:
+    """执行 publish_listing 的业务流程并返回该流程的结果。"""
     return execute_controlled_publish(**payload.model_dump())
 
 
@@ -35,6 +39,7 @@ async def execute_workspace_listing_publish(
     gateway: Annotated[ListingPublishGateway, Depends(get_listing_publish_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> PublishCommand:
+    """执行 execute_workspace_listing_publish 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     command = await publish_listing(payload)
@@ -50,6 +55,7 @@ async def list_workspace_listing_publishes(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[PublishCommand]:
+    """执行 list_workspace_listing_publishes 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

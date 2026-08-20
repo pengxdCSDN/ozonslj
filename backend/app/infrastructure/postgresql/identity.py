@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from datetime import datetime
 from typing import Any
@@ -13,6 +15,7 @@ class PostgresIdentityGateway(IdentityGateway):
     """保存服务端会话，并在读取组织成员前建立数据库 RLS 上下文。"""
 
     def __init__(self, sessions: PostgresSessionFactory) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
 
     async def find_login_identity(
@@ -20,6 +23,7 @@ class PostgresIdentityGateway(IdentityGateway):
         email: str,
         organization_id: str,
     ) -> tuple[AuthenticatedUser, str] | None:
+        """执行 find_login_identity 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(
             self._find_login_identity,
             email,
@@ -33,6 +37,7 @@ class PostgresIdentityGateway(IdentityGateway):
         token_hash: str,
         expires_at: datetime,
     ) -> None:
+        """执行 create_session 的业务流程并返回该流程的结果。"""
         await asyncio.to_thread(
             self._create_session,
             user_id,
@@ -45,9 +50,11 @@ class PostgresIdentityGateway(IdentityGateway):
         self,
         token_hash: str,
     ) -> AuthenticatedUser | None:
+        """执行 find_user_by_session_hash 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._find_user_by_session_hash, token_hash)
 
     async def revoke_session(self, token_hash: str) -> None:
+        """执行 revoke_session 的业务流程并返回该流程的结果。"""
         await asyncio.to_thread(self._revoke_session, token_hash)
 
     def _find_login_identity(
@@ -55,6 +62,7 @@ class PostgresIdentityGateway(IdentityGateway):
         email: str,
         organization_id: str,
     ) -> tuple[AuthenticatedUser, str] | None:
+        """执行内部步骤 _find_login_identity，供同一模块的公开流程复用。"""
         with self._sessions.authentication_transaction() as connection:
             user_row = connection.execute(
                 """
@@ -94,6 +102,7 @@ class PostgresIdentityGateway(IdentityGateway):
         token_hash: str,
         expires_at: datetime,
     ) -> None:
+        """执行内部步骤 _create_session，供同一模块的公开流程复用。"""
         with self._sessions.transaction(
             TenantContext(organization_id=organization_id, user_id=user_id)
         ) as connection:
@@ -110,6 +119,7 @@ class PostgresIdentityGateway(IdentityGateway):
             )
 
     def _find_user_by_session_hash(self, token_hash: str) -> AuthenticatedUser | None:
+        """执行内部步骤 _find_user_by_session_hash，供同一模块的公开流程复用。"""
         with self._sessions.authentication_transaction() as connection:
             session_row = connection.execute(
                 """
@@ -151,6 +161,7 @@ class PostgresIdentityGateway(IdentityGateway):
             return _authenticated_user(session_row, member_row, organization_id)
 
     def _revoke_session(self, token_hash: str) -> None:
+        """执行内部步骤 _revoke_session，供同一模块的公开流程复用。"""
         with self._sessions.authentication_transaction() as connection:
             connection.execute(
                 """
@@ -178,6 +189,7 @@ def _authenticated_user(
     member_row: dict[str, Any],
     organization_id: str,
 ) -> AuthenticatedUser:
+    """执行内部步骤 _authenticated_user，供同一模块的公开流程复用。"""
     return AuthenticatedUser(
         id=str(user_row.get("id", user_row.get("user_id"))),
         email=str(user_row["email"]),

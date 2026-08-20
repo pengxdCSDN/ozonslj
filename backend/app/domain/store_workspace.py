@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal, Protocol
@@ -55,18 +57,23 @@ class CredentialProtector(Protocol):
     """隔离版本化凭据保护能力，测试可以替换为内存实现。"""
 
     @property
-    def key_version(self) -> int: ...
-    def protect(self, plaintext: str) -> bytes: ...
+    def key_version(self) -> int:
+        """执行 key_version 的业务流程并返回该流程的结果。"""
+    def protect(self, plaintext: str) -> bytes:
+        """执行 protect 的业务流程并返回该流程的结果。"""
 
-    def unprotect(self, ciphertext: bytes, *, credential_version: int) -> str: ...
+    def unprotect(self, ciphertext: bytes, *, credential_version: int) -> str:
+        """执行 unprotect 的业务流程并返回该流程的结果。"""
 
 
 class StoreWorkspaceGateway(Protocol):
     """定义账户与工作区持久化所需的最小端口。"""
 
-    async def list_workspaces(self) -> list[StoreWorkspace]: ...
+    async def list_workspaces(self) -> list[StoreWorkspace]:
+        """执行 list_workspaces 的业务流程并返回该流程的结果。"""
 
-    async def get_workspace(self, workspace_id: str) -> StoreWorkspace | None: ...
+    async def get_workspace(self, workspace_id: str) -> StoreWorkspace | None:
+        """执行 get_workspace 的业务流程并返回该流程的结果。"""
 
     async def create_workspace(
         self,
@@ -75,7 +82,8 @@ class StoreWorkspaceGateway(Protocol):
         client_id: str,
         encrypted_api_key: bytes,
         credential_version: int,
-    ) -> StoreWorkspace: ...
+    ) -> StoreWorkspace:
+        """执行 create_workspace 的业务流程并返回该流程的结果。"""
 
     async def replace_credentials(
         self,
@@ -84,12 +92,14 @@ class StoreWorkspaceGateway(Protocol):
         client_id: str,
         encrypted_api_key: bytes,
         credential_version: int,
-    ) -> StoreWorkspace | None: ...
+    ) -> StoreWorkspace | None:
+        """执行 replace_credentials 的业务流程并返回该流程的结果。"""
 
     async def load_credentials(
         self,
         workspace_id: str,
-    ) -> tuple[str, bytes, int] | None: ...
+    ) -> tuple[str, bytes, int] | None:
+        """执行 load_credentials 的业务流程并返回该流程的结果。"""
 
     async def set_verification_status(
         self,
@@ -99,13 +109,15 @@ class StoreWorkspaceGateway(Protocol):
         verified_at: datetime | None,
         audit_result: Literal["success", "failed"],
         audit_detail: dict[str, str] | None = None,
-    ) -> StoreWorkspace | None: ...
+    ) -> StoreWorkspace | None:
+        """执行 set_verification_status 的业务流程并返回该流程的结果。"""
 
 
 class SellerAccountVerifier(Protocol):
     """验证凭据能否访问当前卖家账户，不向调用方泄漏原始响应。"""
 
-    async def verify(self, credentials: OzonCredentials) -> None: ...
+    async def verify(self, credentials: OzonCredentials) -> None:
+        """执行 verify 的业务流程并返回该流程的结果。"""
 
 
 class CredentialProtectionError(RuntimeError):

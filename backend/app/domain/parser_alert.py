@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
@@ -6,6 +8,7 @@ AlertSeverity = Literal["warning", "error"]
 
 @dataclass(frozen=True, slots=True)
 class ParserChange:
+    """说明 ParserChange 的职责、状态边界和对外协作关系。"""
     field_name: str
     old_value: str | None
     new_value: str | None
@@ -14,13 +17,16 @@ class ParserChange:
 
 
 class ParserAlertGateway(Protocol):
+    """说明 ParserAlertGateway 的职责、状态边界和对外协作关系。"""
     async def create_alerts(
         self, *, workspace_id: str, url: str, changes: list[ParserChange]
-    ) -> list[ParserChange]: ...
+    ) -> list[ParserChange]:
+        """执行 create_alerts 的业务流程并返回该流程的结果。"""
 
     async def list_alerts(
         self, *, workspace_id: str, limit: int = 50
-    ) -> list[ParserChange]: ...
+    ) -> list[ParserChange]:
+        """执行 list_alerts 的业务流程并返回该流程的结果。"""
 
 
 def detect_parser_changes(

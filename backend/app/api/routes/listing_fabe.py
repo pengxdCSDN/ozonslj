@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,6 +18,7 @@ router = APIRouter(prefix="/v1/listing/fabe", tags=["listing"])
 
 
 class FabePointPayload(BaseModel):
+    """说明 FabePointPayload 的职责、状态边界和对外协作关系。"""
     feature: str
     advantage: str
     benefit: str
@@ -24,12 +27,14 @@ class FabePointPayload(BaseModel):
 
 
 class FabePayload(BaseModel):
+    """说明 FabePayload 的职责、状态边界和对外协作关系。"""
     product_name: str
     points: list[FabePointPayload]
 
 
 @router.post("/generate", response_model=ListingFabeDraft)
 async def generate_fabe(payload: FabePayload) -> ListingFabeDraft:
+    """执行 generate_fabe 的业务流程并返回该流程的结果。"""
     return generate_fabe_draft(
         [
             FabePoint(
@@ -52,6 +57,7 @@ async def generate_and_save_fabe(
     gateway: Annotated[ListingFabeGateway, Depends(get_listing_fabe_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> ListingFabeDraft:
+    """执行 generate_and_save_fabe 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     draft = await generate_fabe(payload)

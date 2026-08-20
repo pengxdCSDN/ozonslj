@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 import logging
 import os
@@ -60,6 +62,7 @@ def _build_handlers(settings: Settings) -> dict[SyncResourceType, SyncHandler]:
 def _install_shutdown_handlers(stop: asyncio.Event) -> None:
     """把容器 SIGTERM 和终端中断转换为协作式停止信号。"""
     def request_stop(_signum: int, _frame: object) -> None:
+        """执行 request_stop 的业务流程并返回该流程的结果。"""
         stop.set()
 
     for signum in (signal.SIGINT, signal.SIGTERM):
@@ -83,6 +86,7 @@ async def run_scheduler(settings: Settings) -> None:
         evaluation_queue = RedisRagEvaluationTaskQueue(redis)
 
         async def dispatch_once() -> int:
+            """执行 dispatch_once 的业务流程并返回该流程的结果。"""
             count = await dispatcher.dispatch_due_jobs(limit=settings.sync_dispatch_batch_size)
             METRICS.set_gauge("ozonslj_scheduler_dispatched_jobs", count)
             METRICS.inc("ozonslj_scheduler_cycles_total")
@@ -146,6 +150,7 @@ async def run_worker(settings: Settings) -> None:
         )
 
         async def process_one() -> bool:
+            """执行 process_one 的业务流程并返回该流程的结果。"""
             processed = await worker.process_one(block_ms=settings.sync_worker_block_ms)
             METRICS.inc(
                 "ozonslj_worker_processed_jobs_total",
@@ -162,6 +167,7 @@ async def run_worker(settings: Settings) -> None:
         )
 
         async def process_rag_one() -> bool:
+            """执行 process_rag_one 的业务流程并返回该流程的结果。"""
             processed = await rag_worker.process_one(block_ms=settings.sync_worker_block_ms)
             METRICS.inc(
                 "ozonslj_worker_processed_jobs_total",
@@ -182,6 +188,7 @@ async def run_worker(settings: Settings) -> None:
         )
 
         async def process_evaluation_one() -> bool:
+            """执行 process_evaluation_one 的业务流程并返回该流程的结果。"""
             processed = await evaluation_worker.process_one(
                 block_ms=settings.sync_worker_block_ms
             )
@@ -203,10 +210,12 @@ async def run_worker(settings: Settings) -> None:
 
 
 def scheduler_main() -> None:
+    """执行 scheduler_main 的业务流程并返回该流程的结果。"""
     logging.basicConfig(level=get_settings().log_level)
     asyncio.run(run_scheduler(get_settings()))
 
 
 def worker_main() -> None:
+    """执行 worker_main 的业务流程并返回该流程的结果。"""
     logging.basicConfig(level=get_settings().log_level)
     asyncio.run(run_worker(get_settings()))

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import math
 from dataclasses import dataclass
 from typing import Protocol
@@ -5,6 +7,7 @@ from typing import Protocol
 
 @dataclass(frozen=True, slots=True)
 class AdvertisingAnalysis:
+    """说明 AdvertisingAnalysis 的职责、状态边界和对外协作关系。"""
     acos_percent: float | None
     tacos_percent: float | None
     roi_percent: float | None
@@ -15,13 +18,16 @@ class AdvertisingAnalysis:
 
 
 class AdvertisingAnalysisGateway(Protocol):
+    """说明 AdvertisingAnalysisGateway 的职责、状态边界和对外协作关系。"""
     async def save_report(
         self, *, workspace_id: str, report: AdvertisingAnalysis
-    ) -> AdvertisingAnalysis: ...
+    ) -> AdvertisingAnalysis:
+        """执行 save_report 的业务流程并返回该流程的结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
-    ) -> list[AdvertisingAnalysis]: ...
+    ) -> list[AdvertisingAnalysis]:
+        """执行 list_reports 的业务流程并返回该流程的结果。"""
 
 
 def analyze_advertising(
@@ -29,6 +35,7 @@ def analyze_advertising(
     keyword_count: int, unconverted_keyword_count: int,
     acos_alert_percent: float,
 ) -> AdvertisingAnalysis:
+    """执行 analyze_advertising 的业务流程并返回该流程的结果。"""
     values = (
         spend_minor, ad_sales_minor, total_sales_minor,
         keyword_count, unconverted_keyword_count,

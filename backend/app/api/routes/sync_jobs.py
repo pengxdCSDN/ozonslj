@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
@@ -11,6 +13,7 @@ router = APIRouter(tags=["sync-jobs"])
 
 
 class CreateSyncJobRequest(BaseModel):
+    """说明 CreateSyncJobRequest 的职责、状态边界和对外协作关系。"""
     resource_type: SyncResourceType
 
 
@@ -29,6 +32,7 @@ async def create_sync_job(
     ],
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=120)],
 ) -> SyncJob:
+    """执行 create_sync_job 的业务流程并返回该流程的结果。"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
@@ -51,6 +55,7 @@ async def get_sync_job(
     response: Response,
     gateway: Annotated[SyncJobGateway, Depends(get_sync_job_gateway)],
 ) -> SyncJob:
+    """执行 get_sync_job 的业务流程并返回该流程的结果。"""
     job = await gateway.get_sync_job(job_id)
     if job is None:
         raise HTTPException(

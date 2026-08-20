@@ -21,12 +21,14 @@ _registry = build_default_chunk_registry()
 
 
 class PdfPagePayload(BaseModel):
+    """说明 PdfPagePayload 的职责、状态边界和对外协作关系。"""
     page_number: int = Field(ge=1)
     text: str = Field(max_length=100_000)
     layout_blocks: list[str] = Field(default_factory=list)
 
 
 class ChunkPreviewPayload(BaseModel):
+    """说明 ChunkPreviewPayload 的职责、状态边界和对外协作关系。"""
     source_type: str = Field(pattern="^(markdown|postgres_schema|pdf)$")
     business_domain: str = Field(min_length=1, max_length=40)
     strategy: str = Field(min_length=1, max_length=60)
@@ -39,6 +41,7 @@ class ChunkPreviewPayload(BaseModel):
 
 
 class ChunkPreviewItem(BaseModel):
+    """说明 ChunkPreviewItem 的职责、状态边界和对外协作关系。"""
     chunk_id: str
     content: str
     ordinal: int
@@ -49,6 +52,7 @@ class ChunkPreviewItem(BaseModel):
 
 
 class ChunkPreviewResponse(BaseModel):
+    """说明 ChunkPreviewResponse 的职责、状态边界和对外协作关系。"""
     strategy: str
     strategy_version: str
     chunks: list[ChunkPreviewItem]
@@ -57,6 +61,7 @@ class ChunkPreviewResponse(BaseModel):
 
 @router.post("", response_model=ChunkPreviewResponse)
 async def preview_knowledge_chunks(payload: ChunkPreviewPayload) -> ChunkPreviewResponse:
+    """执行 preview_knowledge_chunks 的业务流程并返回该流程的结果。"""
     metadata = ChunkMetadata(
         document_id="preview-document", document_version_id="preview-version",
         business_domain=cast(Literal[

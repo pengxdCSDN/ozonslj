@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from decimal import Decimal
 from typing import Literal
 
@@ -7,6 +9,7 @@ ProductOfferSource = Literal["ozon", "postgresql", "stub"]
 
 
 class ProductOffer(BaseModel):
+    """说明 ProductOffer 的职责、状态边界和对外协作关系。"""
     model_config = ConfigDict(frozen=True)
 
     offer_id: str = Field(min_length=1)
@@ -18,6 +21,7 @@ class ProductOffer(BaseModel):
 
 
 class ProductOfferPage(BaseModel):
+    """说明 ProductOfferPage 的职责、状态边界和对外协作关系。"""
     items: list[ProductOffer]
     total: int = Field(ge=0)
     next_cursor: str | None = None

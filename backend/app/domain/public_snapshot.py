@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -7,6 +9,7 @@ from urllib.parse import urlparse
 
 @dataclass(frozen=True, slots=True)
 class PublicSnapshot:
+    """说明 PublicSnapshot 的职责、状态边界和对外协作关系。"""
     url: str
     sampled_at: datetime
     title: str | None
@@ -21,13 +24,16 @@ class PublicSnapshot:
 
 
 class PublicSnapshotGateway(Protocol):
+    """说明 PublicSnapshotGateway 的职责、状态边界和对外协作关系。"""
     async def save_snapshot(
         self, *, workspace_id: str, snapshot: PublicSnapshot
-    ) -> PublicSnapshot: ...
+    ) -> PublicSnapshot:
+        """执行 save_snapshot 的业务流程并返回该流程的结果。"""
 
     async def list_snapshots(
         self, *, workspace_id: str, limit: int = 50
-    ) -> list[PublicSnapshot]: ...
+    ) -> list[PublicSnapshot]:
+        """执行 list_snapshots 的业务流程并返回该流程的结果。"""
 
 
 class PublicSnapshotError(ValueError):
@@ -71,6 +77,7 @@ def normalize_public_snapshot(raw: dict[str, object], *, sampled_at: datetime) -
 
 
 def _integer(value: object, field: str) -> int | None:
+    """执行内部步骤 _integer，供同一模块的公开流程复用。"""
     if value is None or value == "":
         return None
     if not isinstance(value, (int, str)):
@@ -85,6 +92,7 @@ def _integer(value: object, field: str) -> int | None:
 
 
 def _decimal(value: object, field: str) -> Decimal | None:
+    """执行内部步骤 _decimal，供同一模块的公开流程复用。"""
     if value is None or value == "":
         return None
     try:
@@ -94,4 +102,5 @@ def _decimal(value: object, field: str) -> Decimal | None:
 
 
 def _optional_text(value: object) -> str | None:
+    """执行内部步骤 _optional_text，供同一模块的公开流程复用。"""
     return str(value).strip() or None if value is not None else None

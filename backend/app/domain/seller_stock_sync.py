@@ -1,8 +1,11 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
 class SellerStockSyncItem:
+    """说明 SellerStockSyncItem 的职责、状态边界和对外协作关系。"""
     offer_id: str
     warehouse_id: str
     available_quantity: int
@@ -12,6 +15,7 @@ class SellerStockSyncItem:
 
 @dataclass(frozen=True, slots=True)
 class SellerStockSyncPreview:
+    """说明 SellerStockSyncPreview 的职责、状态边界和对外协作关系。"""
     items: list[SellerStockSyncItem]
     total: int
     next_cursor: str | None
@@ -21,6 +25,7 @@ class SellerStockSyncPreview:
 
 
 def map_seller_stock_response(payload: dict[str, object]) -> SellerStockSyncPreview:
+    """执行 map_seller_stock_response 的业务流程并返回该流程的结果。"""
     raw_items = payload.get("items", [])
     if not isinstance(raw_items, list):
         raise ValueError("Seller 库存响应 items 必须是数组")
@@ -50,6 +55,7 @@ def map_seller_stock_response(payload: dict[str, object]) -> SellerStockSyncPrev
 
 
 def _text(raw: dict[str, object], field: str) -> str:
+    """执行内部步骤 _text，供同一模块的公开流程复用。"""
     value = raw.get(field)
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"Seller 库存字段 {field} 无效")
@@ -57,6 +63,7 @@ def _text(raw: dict[str, object], field: str) -> str:
 
 
 def _quantity(raw: dict[str, object], field: str) -> int:
+    """执行内部步骤 _quantity，供同一模块的公开流程复用。"""
     value = raw.get(field)
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise ValueError(f"Seller 库存字段 {field} 必须是非负整数")

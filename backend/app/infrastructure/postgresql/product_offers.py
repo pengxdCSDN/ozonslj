@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from decimal import Decimal
 from typing import Any
@@ -19,6 +21,7 @@ class PostgresProductOfferGateway:
         sessions: PostgresSessionFactory,
         tenant_context: TenantContext,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._tenant_context = tenant_context
 
@@ -29,6 +32,7 @@ class PostgresProductOfferGateway:
         cursor: str | None,
         limit: int,
     ) -> ProductOfferPage:
+        """执行 list_product_offers 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(
             self._list_product_offers,
             workspace_id,
@@ -42,6 +46,7 @@ class PostgresProductOfferGateway:
         offset: int,
         limit: int,
     ) -> ProductOfferPage:
+        """执行内部步骤 _list_product_offers，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._tenant_context) as connection:
             count_row = connection.execute(
                 """

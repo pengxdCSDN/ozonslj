@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,12 +17,14 @@ router = APIRouter(prefix="/v1/review/approvals", tags=["review"])
 
 
 class ApprovalPayload(BaseModel):
+    """说明 ApprovalPayload 的职责、状态边界和对外协作关系。"""
     command_type: str = Field(min_length=1, max_length=100)
     payload: dict[str, object] = Field(default_factory=dict)
     idempotency_key: str = Field(min_length=1, max_length=200)
 
 
 class ApprovalDecision(BaseModel):
+    """说明 ApprovalDecision 的职责、状态边界和对外协作关系。"""
     reviewer: str = Field(min_length=1, max_length=200)
 
 
@@ -31,6 +35,7 @@ async def create_approval(
     gateway: Annotated[ManualApprovalGateway, Depends(get_manual_approval_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> ManualApproval:
+    """执行 create_approval 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     validate_approval_request(**payload.model_dump())
@@ -43,6 +48,7 @@ async def approve(
     decision: ApprovalDecision,
     gateway: Annotated[ManualApprovalGateway, Depends(get_manual_approval_gateway)],
 ) -> ManualApproval:
+    """执行 approve 的业务流程并返回该流程的结果。"""
     result = await gateway.approve(approval_id=approval_id, reviewer=decision.reviewer)
     if result is None:
         raise HTTPException(
@@ -61,6 +67,7 @@ async def list_pending_approvals(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[ManualApproval]:
+    """执行 list_pending_approvals 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

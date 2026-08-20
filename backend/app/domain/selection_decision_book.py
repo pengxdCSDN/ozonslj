@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class SelectionDecisionBook:
+    """说明 SelectionDecisionBook 的职责、状态边界和对外协作关系。"""
     opportunity_summary: str
     customer_scene: str
     market_sample: str
@@ -19,16 +22,20 @@ class SelectionDecisionBook:
 
 
 class SelectionDecisionBookGateway(Protocol):
+    """说明 SelectionDecisionBookGateway 的职责、状态边界和对外协作关系。"""
     async def save_book(
         self, *, workspace_id: str, book: SelectionDecisionBook
-    ) -> SelectionDecisionBook: ...
+    ) -> SelectionDecisionBook:
+        """执行 save_book 的业务流程并返回该流程的结果。"""
 
     async def list_books(
         self, *, workspace_id: str, limit: int
-    ) -> list[SelectionDecisionBook]: ...
+    ) -> list[SelectionDecisionBook]:
+        """执行 list_books 的业务流程并返回该流程的结果。"""
 
 
 def validate_decision_book(book: SelectionDecisionBook) -> None:
+    """执行 validate_decision_book 的业务流程并返回该流程的结果。"""
     required_text = (
         book.opportunity_summary, book.customer_scene, book.market_sample,
         book.profit_calculation, book.price_range, book.stock_recommendation,
@@ -41,5 +48,6 @@ def validate_decision_book(book: SelectionDecisionBook) -> None:
 
 
 def validate_confirmation_status(status: str) -> None:
+    """执行 validate_confirmation_status 的业务流程并返回该流程的结果。"""
     if status not in {"confirmed", "rejected"}:
         raise ValueError("人工确认状态必须是 confirmed 或 rejected")

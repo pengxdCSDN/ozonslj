@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from datetime import date, datetime
 from typing import Any
@@ -10,6 +12,7 @@ class PostgresPostingGateway:
     """读取 PostgreSQL 中按内部组织和工作区隔离的履约摘要。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
@@ -20,6 +23,7 @@ class PostgresPostingGateway:
         cursor: str | None,
         limit: int,
     ) -> PostingPage:
+        """执行 list_postings 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(
             self._list_postings,
             workspace_id,
@@ -29,6 +33,7 @@ class PostgresPostingGateway:
 
     def _list_postings(self, workspace_id: str, offset: int, limit: int) -> PostingPage:
         # tracking_number 和商品明细不属于列表摘要，SQL 不选择这些字段。
+        """执行内部步骤 _list_postings，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             count_row = connection.execute(
                 """
@@ -88,6 +93,7 @@ def _posting_from_row(row: dict[str, Any]) -> PostingSummary:
 
 
 def _optional_date(value: object) -> date | None:
+    """执行内部步骤 _optional_date，供同一模块的公开流程复用。"""
     if value is None:
         return None
     if not isinstance(value, date):
@@ -96,6 +102,7 @@ def _optional_date(value: object) -> date | None:
 
 
 def _required_datetime(value: object) -> datetime:
+    """执行内部步骤 _required_datetime，供同一模块的公开流程复用。"""
     if not isinstance(value, datetime):
         raise ValueError("履约单 synced_at 不是有效时间")
     return value

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,6 +19,7 @@ router = APIRouter(prefix="/v1/selection/validate", tags=["selection"])
 
 
 class ValidatePayload(BaseModel):
+    """说明 ValidatePayload 的职责、状态边界和对外协作关系。"""
     sku: str
     selling_price_minor: int = Field(ge=0)
     purchase_cost_minor: int = Field(ge=0)
@@ -33,6 +36,7 @@ class ValidatePayload(BaseModel):
 
 @router.post("/run", response_model=ValidateResult)
 async def run_validate(payload: ValidatePayload) -> ValidateResult:
+    """执行 run_validate 的业务流程并返回该流程的结果。"""
     return validate_product(ValidateInput(**payload.model_dump()))
 
 
@@ -43,6 +47,7 @@ async def run_and_save_validate(
     gateway: Annotated[ValidateResultGateway, Depends(get_validate_result_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> ValidateResult:
+    """执行 run_and_save_validate 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     assumptions = payload.model_dump()
@@ -60,6 +65,7 @@ async def list_validation_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[ValidateResult]:
+    """执行 list_validation_history 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

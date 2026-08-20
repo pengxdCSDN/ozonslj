@@ -32,6 +32,7 @@ class MetricsRegistry:
     """进程内聚合指标注册表，标签值必须来自受控枚举，禁止接收用户输入。"""
 
     def __init__(self) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._lock = threading.Lock()
         self._counters: dict[tuple[str, tuple[tuple[str, str], ...]], int] = defaultdict(int)
         self._gauges: dict[tuple[str, tuple[tuple[str, str], ...]], float] = {}
@@ -40,16 +41,19 @@ class MetricsRegistry:
         )
 
     def inc(self, name: str, *, labels: dict[str, str] | None = None, value: int = 1) -> None:
+        """执行 inc 的业务流程并返回该流程的结果。"""
         key = (name, _labels(labels))
         with self._lock:
             self._counters[key] += value
 
     def set_gauge(self, name: str, value: float, *, labels: dict[str, str] | None = None) -> None:
+        """执行 set_gauge 的业务流程并返回该流程的结果。"""
         key = (name, _labels(labels))
         with self._lock:
             self._gauges[key] = value
 
     def observe(self, name: str, value: float, *, labels: dict[str, str] | None = None) -> None:
+        """执行 observe 的业务流程并返回该流程的结果。"""
         key = (name, _labels(labels))
         with self._lock:
             buckets = self._histograms[key]
@@ -87,10 +91,12 @@ METRICS = MetricsRegistry()
 
 
 def _labels(labels: dict[str, str] | None) -> tuple[tuple[str, str], ...]:
+    """执行内部步骤 _labels，供同一模块的公开流程复用。"""
     return tuple(sorted((key, value) for key, value in (labels or {}).items()))
 
 
 def _format_labels(labels: tuple[tuple[str, str], ...]) -> str:
+    """执行内部步骤 _format_labels，供同一模块的公开流程复用。"""
     if not labels:
         return ""
     escaped = (
@@ -146,6 +152,7 @@ def collect_resource_snapshot(*, path: str = "/") -> ResourceSnapshot:
 
 
 def update_resource_metrics() -> ResourceSnapshot:
+    """执行 update_resource_metrics 的业务流程并返回该流程的结果。"""
     snapshot = collect_resource_snapshot()
     if snapshot.memory_bytes is not None:
         METRICS.set_gauge("ozonslj_memory_available_bytes", snapshot.memory_bytes)
@@ -157,6 +164,7 @@ def update_resource_metrics() -> ResourceSnapshot:
 
 
 def _read_meminfo(field: str) -> int | None:
+    """执行内部步骤 _read_meminfo，供同一模块的公开流程复用。"""
     try:
         with open("/proc/meminfo", encoding="ascii") as meminfo:
             for line in meminfo:

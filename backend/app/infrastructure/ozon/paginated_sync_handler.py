@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from dataclasses import dataclass
 from typing import Protocol
@@ -17,26 +19,31 @@ class RetryableSyncError(RuntimeError):
     """上游限流或临时不可用错误，可按 Retry-After 重试。"""
 
     def __init__(self, message: str = "上游暂时不可用", retry_after_seconds: float = 0.0) -> None:
+        """初始化对象依赖和运行时状态。"""
         super().__init__(message)
         self.retry_after_seconds = max(retry_after_seconds, 0.0)
 
 
 class SyncPageFetcher(Protocol):
+    """说明 SyncPageFetcher 的职责、状态边界和对外协作关系。"""
     async def fetch_page(
         self, *, workspace_id: str, resource_type: str, cursor: str | None
-    ) -> SyncPage: ...
+    ) -> SyncPage:
+        """执行 fetch_page 的业务流程并返回该流程的结果。"""
 
 
 class SyncPageSink(Protocol):
     """将已成功读取的页面映射并保存为 PostgreSQL 事实。"""
 
-    async def save_page(self, *, job: SyncJob, page: SyncPage) -> None: ...
+    async def save_page(self, *, job: SyncJob, page: SyncPage) -> None:
+        """执行 save_page 的业务流程并返回该流程的结果。"""
 
 
 class SyncWatermarkStore(Protocol):
     """仅在完整同步成功后保存长期水位，避免失败任务推进水位。"""
 
-    async def advance(self, *, job: SyncJob, cursor: str | None) -> None: ...
+    async def advance(self, *, job: SyncJob, cursor: str | None) -> None:
+        """执行 advance 的业务流程并返回该流程的结果。"""
 
 
 class PaginatedSyncHandler:
@@ -52,6 +59,7 @@ class PaginatedSyncHandler:
         max_retries: int = 3,
         retry_base_seconds: float = 0.0,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         if max_pages < 1 or max_pages > 1000:
             raise ValueError("max_pages 必须在 1 到 1000 之间")
         if max_retries < 0 or max_retries > 10:
@@ -64,6 +72,7 @@ class PaginatedSyncHandler:
         self._retry_base_seconds = max(retry_base_seconds, 0.0)
 
     async def run(self, job: SyncJob) -> SyncResult:
+        """执行 run 的业务流程并返回该流程的结果。"""
         cursor: str | None = None
         seen_cursors: set[str | None] = set()
         processed = 0
@@ -84,6 +93,7 @@ class PaginatedSyncHandler:
         raise RuntimeError("同步超过最大分页数，已停止同步")
 
     async def _fetch_page_with_retry(self, job: SyncJob, cursor: str | None) -> SyncPage:
+        """执行内部步骤 _fetch_page_with_retry，供同一模块的公开流程复用。"""
         for attempt in range(self._max_retries + 1):
             try:
                 return await self._fetcher.fetch_page(

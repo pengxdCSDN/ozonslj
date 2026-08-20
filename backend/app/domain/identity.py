@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal, Protocol
@@ -47,11 +49,13 @@ class AuthenticatedUser:
 
     @property
     def role(self) -> str:
+        """执行 role 的业务流程并返回该流程的结果。"""
         return self.organization_role
 
 
 @dataclass(frozen=True, slots=True)
 class LoginResult:
+    """说明 LoginResult 的职责、状态边界和对外协作关系。"""
     token: str
     expires_at: datetime
     user: AuthenticatedUser
@@ -64,7 +68,8 @@ class IdentityGateway(Protocol):
         self,
         email: str,
         organization_id: str,
-    ) -> tuple[AuthenticatedUser, str] | None: ...
+    ) -> tuple[AuthenticatedUser, str] | None:
+        """执行 find_login_identity 的业务流程并返回该流程的结果。"""
 
     async def create_session(
         self,
@@ -72,11 +77,14 @@ class IdentityGateway(Protocol):
         organization_id: str,
         token_hash: str,
         expires_at: datetime,
-    ) -> None: ...
+    ) -> None:
+        """执行 create_session 的业务流程并返回该流程的结果。"""
 
     async def find_user_by_session_hash(
         self,
         token_hash: str,
-    ) -> AuthenticatedUser | None: ...
+    ) -> AuthenticatedUser | None:
+        """执行 find_user_by_session_hash 的业务流程并返回该流程的结果。"""
 
-    async def revoke_session(self, token_hash: str) -> None: ...
+    async def revoke_session(self, token_hash: str) -> None:
+        """执行 revoke_session 的业务流程并返回该流程的结果。"""

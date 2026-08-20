@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -17,6 +19,7 @@ router = APIRouter(prefix="/v1/public-snapshots", tags=["public-snapshots"])
 
 
 class PublicSnapshotPayload(BaseModel):
+    """说明 PublicSnapshotPayload 的职责、状态边界和对外协作关系。"""
     url: str
     title: str | None = None
     price_minor: int | None = Field(default=None, ge=0)
@@ -30,6 +33,7 @@ class PublicSnapshotPayload(BaseModel):
 
 @router.post("/normalize", response_model=PublicSnapshot)
 async def normalize_snapshot(payload: PublicSnapshotPayload) -> PublicSnapshot:
+    """执行 normalize_snapshot 的业务流程并返回该流程的结果。"""
     try:
         return normalize_public_snapshot(payload.model_dump(), sampled_at=datetime.now(UTC))
     except PublicSnapshotError as error:
@@ -46,6 +50,7 @@ async def save_snapshot(
     gateway: Annotated[PublicSnapshotGateway, Depends(get_public_snapshot_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> PublicSnapshot:
+    """执行 save_snapshot 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:

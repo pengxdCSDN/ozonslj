@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
@@ -6,6 +8,7 @@ KeywordLayer = Literal["core", "attribute", "scene", "long_tail"]
 
 @dataclass(frozen=True, slots=True)
 class LayeredKeyword:
+    """说明 LayeredKeyword 的职责、状态边界和对外协作关系。"""
     keyword: str
     layer: KeywordLayer
     reason: str
@@ -13,11 +16,14 @@ class LayeredKeyword:
 
 
 class ListingLayerGateway(Protocol):
+    """说明 ListingLayerGateway 的职责、状态边界和对外协作关系。"""
     async def save_layers(
         self, *, workspace_id: str, layers: list[LayeredKeyword]
-    ) -> list[LayeredKeyword]: ...
+    ) -> list[LayeredKeyword]:
+        """执行 save_layers 的业务流程并返回该流程的结果。"""
 
-    async def list_layers(self, *, workspace_id: str, limit: int = 50) -> list[LayeredKeyword]: ...
+    async def list_layers(self, *, workspace_id: str, limit: int = 50) -> list[LayeredKeyword]:
+        """执行 list_layers 的业务流程并返回该流程的结果。"""
 
 
 def classify_listing_keywords(
@@ -54,6 +60,7 @@ def classify_listing_keywords(
 
 
 def _unique(values: list[str]) -> list[str]:
+    """执行内部步骤 _unique，供同一模块的公开流程复用。"""
     seen: set[str] = set()
     result: list[str] = []
     for value in values:

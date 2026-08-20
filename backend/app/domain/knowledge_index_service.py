@@ -16,6 +16,7 @@ from backend.app.domain.knowledge_retrieval import EmbeddingPort, VectorIndexPor
 
 @dataclass(frozen=True, slots=True)
 class IndexingResult:
+    """说明 IndexingResult 的职责、状态边界和对外协作关系。"""
     operation: str
     chunk_count: int
     vector_index_updated: bool
@@ -31,6 +32,7 @@ class KnowledgeIndexService:
         embedding: EmbeddingPort,
         vector_index: VectorIndexPort,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._chunk_gateway = chunk_gateway
         self._embedding = embedding
         self._vector_index = vector_index
@@ -38,6 +40,7 @@ class KnowledgeIndexService:
     async def publish(
         self, *, organization_id: str, chunks: list[KnowledgeChunk]
     ) -> IndexingResult:
+        """执行 publish 的业务流程并返回该流程的结果。"""
         if not chunks:
             raise ValueError("禁止发布空切片集合")
         published = [
@@ -54,6 +57,7 @@ class KnowledgeIndexService:
     async def withdraw(
         self, *, organization_id: str, chunks: list[KnowledgeChunk]
     ) -> IndexingResult:
+        """执行 withdraw 的业务流程并返回该流程的结果。"""
         chunk_ids = [chunk.chunk_id for chunk in chunks]
         if not chunk_ids:
             return IndexingResult("withdraw", 0, True)

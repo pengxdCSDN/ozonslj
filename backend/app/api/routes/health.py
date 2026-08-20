@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import os
 from typing import Annotated, Literal, cast
 
@@ -12,16 +14,19 @@ router = APIRouter(prefix="/health", tags=["health"])
 
 
 class HealthResponse(BaseModel):
+    """说明 HealthResponse 的职责、状态边界和对外协作关系。"""
     status: Literal["ok"]
 
 
 class RagHealthResponse(BaseModel):
+    """说明 RagHealthResponse 的职责、状态边界和对外协作关系。"""
     state: Literal["healthy", "not_configured"]
     latency_ms: int | None
     detail: str | None
 
 
 class OpsHealthResponse(BaseModel):
+    """说明 OpsHealthResponse 的职责、状态边界和对外协作关系。"""
     status: Literal["ok", "warning"]
     disk_used_ratio: float | None
     memory_available_bytes: int | None
@@ -30,6 +35,7 @@ class OpsHealthResponse(BaseModel):
 
 @router.get("/live", response_model=HealthResponse)
 async def liveness() -> HealthResponse:
+    """执行 liveness 的业务流程并返回该流程的结果。"""
     return HealthResponse(status="ok")
 
 
@@ -37,6 +43,7 @@ async def liveness() -> HealthResponse:
 async def readiness(
     probe: Annotated[ReadinessProbe, Depends(get_readiness_probe)],
 ) -> HealthResponse:
+    """执行 readiness 的业务流程并返回该流程的结果。"""
     try:
         await probe.check()
     except Exception as error:

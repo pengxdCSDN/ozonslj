@@ -9,6 +9,7 @@ from backend.app.domain.knowledge_retrieval import RetrievalHit
 
 @dataclass(frozen=True, slots=True)
 class ClaimSupport:
+    """说明 ClaimSupport 的职责、状态边界和对外协作关系。"""
     claim_id: str
     text: str
     citation_ids: tuple[str, ...]

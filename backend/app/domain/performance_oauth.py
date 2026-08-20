@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 
 @dataclass(frozen=True, slots=True)
 class PerformanceToken:
+    """说明 PerformanceToken 的职责、状态边界和对外协作关系。"""
     access_token: str
     expires_at: datetime
     refresh_token_present: bool
@@ -11,6 +14,7 @@ class PerformanceToken:
 
     @property
     def needs_refresh(self) -> bool:
+        """执行 needs_refresh 的业务流程并返回该流程的结果。"""
         return self.expires_at <= datetime.now(UTC) + timedelta(minutes=5)
 
 
@@ -21,6 +25,7 @@ class PerformanceOAuthError(ValueError):
 def build_performance_token(
     access_token: str, expires_at: datetime, refresh_token: str | None
 ) -> PerformanceToken:
+    """执行 build_performance_token 的业务流程并返回该流程的结果。"""
     if not access_token.strip():
         raise PerformanceOAuthError("访问令牌不能为空")
     if expires_at.tzinfo is None:

@@ -19,22 +19,30 @@ class RetrievalHit:
 
 
 class EmbeddingPort(Protocol):
+    """说明 EmbeddingPort 的职责、状态边界和对外协作关系。"""
     model_id: str
     dimension: int
 
-    async def embed(self, texts: list[str]) -> list[list[float]]: ...
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """执行 embed 的业务流程并返回该流程的结果。"""
 
 
 class KeywordSearchPort(Protocol):
-    async def search(self, query: str, *, limit: int) -> list[RetrievalHit]: ...
+    """说明 KeywordSearchPort 的职责、状态边界和对外协作关系。"""
+    async def search(self, query: str, *, limit: int) -> list[RetrievalHit]:
+        """执行 search 的业务流程并返回该流程的结果。"""
 
 
 class VectorIndexPort(Protocol):
-    async def upsert(self, chunks: list[KnowledgeChunk], embeddings: list[list[float]]) -> None: ...
+    """说明 VectorIndexPort 的职责、状态边界和对外协作关系。"""
+    async def upsert(self, chunks: list[KnowledgeChunk], embeddings: list[list[float]]) -> None:
+        """执行 upsert 的业务流程并返回该流程的结果。"""
 
-    async def delete(self, chunk_ids: list[str]) -> None: ...
+    async def delete(self, chunk_ids: list[str]) -> None:
+        """执行 delete 的业务流程并返回该流程的结果。"""
 
-    async def search(self, embedding: list[float], *, limit: int) -> list[RetrievalHit]: ...
+    async def search(self, embedding: list[float], *, limit: int) -> list[RetrievalHit]:
+        """执行 search 的业务流程并返回该流程的结果。"""
 
 
 class DeterministicEmbedding:
@@ -44,6 +52,7 @@ class DeterministicEmbedding:
     dimension = 32
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        """执行 embed 的业务流程并返回该流程的结果。"""
         return [_hash_vector(text, self.dimension) for text in texts]
 
 
@@ -51,10 +60,12 @@ class InMemoryVectorIndex:
     """Chroma 契约的内存替身，用于不依赖外部服务的契约测试。"""
 
     def __init__(self, *, dimension: int) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._dimension = dimension
         self._items: dict[str, tuple[KnowledgeChunk, list[float]]] = {}
 
     async def upsert(self, chunks: list[KnowledgeChunk], embeddings: list[list[float]]) -> None:
+        """执行 upsert 的业务流程并返回该流程的结果。"""
         if len(chunks) != len(embeddings):
             raise ValueError("切片和向量数量不一致")
         for chunk, embedding in zip(chunks, embeddings, strict=True):
@@ -63,10 +74,12 @@ class InMemoryVectorIndex:
             self._items[chunk.chunk_id] = (chunk, embedding)
 
     async def delete(self, chunk_ids: list[str]) -> None:
+        """执行 delete 的业务流程并返回该流程的结果。"""
         for chunk_id in chunk_ids:
             self._items.pop(chunk_id, None)
 
     async def search(self, embedding: list[float], *, limit: int) -> list[RetrievalHit]:
+        """执行 search 的业务流程并返回该流程的结果。"""
         if len(embedding) != self._dimension:
             raise ValueError("查询向量维度不匹配")
         ranked = sorted(
@@ -83,13 +96,16 @@ class InMemoryKeywordIndex:
     """确定性关键词替身；生产实现由 PostgreSQL FTS 适配器承载。"""
 
     def __init__(self) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._chunks: dict[str, KnowledgeChunk] = {}
 
     async def replace(self, chunks: list[KnowledgeChunk]) -> None:
+        """执行 replace 的业务流程并返回该流程的结果。"""
         self._chunks = {chunk.chunk_id: chunk for chunk in chunks}
 
     async def search(self, query: str, *, limit: int) -> list[RetrievalHit]:
         # 中文没有稳定的空格分词；同时保留空格词和连续汉字单字，避免中文问题完全失去关键词通道。
+        """执行 search 的业务流程并返回该流程的结果。"""
         terms = {term.casefold() for term in query.split() if term.strip()}
         terms.update(character for character in query if "\u4e00" <= character <= "\u9fff")
         hits = []
@@ -135,6 +151,7 @@ async def hybrid_retrieve(
 
 
 def _hash_vector(text: str, dimension: int) -> list[float]:
+    """执行内部步骤 _hash_vector，供同一模块的公开流程复用。"""
     values = [0.0] * dimension
     for index, byte in enumerate(text.encode("utf-8")):
         values[index % dimension] += (byte - 127) / 127
@@ -143,4 +160,5 @@ def _hash_vector(text: str, dimension: int) -> list[float]:
 
 
 def _cosine(left: list[float], right: list[float]) -> float:
+    """执行内部步骤 _cosine，供同一模块的公开流程复用。"""
     return sum(a * b for a, b in zip(left, right, strict=True))

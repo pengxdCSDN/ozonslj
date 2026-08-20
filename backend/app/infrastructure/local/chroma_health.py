@@ -15,6 +15,7 @@ import httpx
 
 @dataclass(frozen=True, slots=True)
 class ChromaHealthStatus:
+    """说明 ChromaHealthStatus 的职责、状态边界和对外协作关系。"""
     state: str
     latency_ms: int | None
     detail: str | None
@@ -30,11 +31,13 @@ class ChromaHealthProbe:
         timeout_seconds: float = 2.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._base_url = base_url.rstrip("/") if base_url else None
         self._timeout_seconds = timeout_seconds
         self._transport = transport
 
     async def check(self) -> ChromaHealthStatus:
+        """执行 check 的业务流程并返回该流程的结果。"""
         if not self._base_url:
             return ChromaHealthStatus("not_configured", None, "CHROMA_URL 未配置")
         started = monotonic()

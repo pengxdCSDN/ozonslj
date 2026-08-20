@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from uuid import uuid4
 
@@ -9,17 +11,20 @@ class PostgresAdvertisingReportGateway:
     """保存按活动和日期幂等的 Performance 广告报表只读事实。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def save_rows(
         self, *, workspace_id: str, rows: list[AdvertisingReportRow]
     ) -> list[AdvertisingReportRow]:
+        """执行 save_rows 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._save, workspace_id, rows)
 
     def _save(
         self, workspace_id: str, rows: list[AdvertisingReportRow]
     ) -> list[AdvertisingReportRow]:
+        """执行内部步骤 _save，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             for row in rows:
                 connection.execute(
@@ -45,9 +50,11 @@ class PostgresAdvertisingReportGateway:
     async def list_rows(
         self, *, workspace_id: str, limit: int
     ) -> list[AdvertisingReportRow]:
+        """执行 list_rows 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list, workspace_id, limit)
 
     def _list(self, workspace_id: str, limit: int) -> list[AdvertisingReportRow]:
+        """执行内部步骤 _list，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """

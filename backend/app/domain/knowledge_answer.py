@@ -19,6 +19,7 @@ AnswerStatus = Literal[
 
 @dataclass(frozen=True, slots=True)
 class IntentSegment:
+    """说明 IntentSegment 的职责、状态边界和对外协作关系。"""
     text: str
     intent: Intent
     confidence: float
@@ -28,6 +29,7 @@ class IntentSegment:
 
 @dataclass(frozen=True, slots=True)
 class RewriteResult:
+    """说明 RewriteResult 的职责、状态边界和对外协作关系。"""
     original: str
     normalized: str
     variants: tuple[str, ...]
@@ -36,6 +38,7 @@ class RewriteResult:
 
 @dataclass(frozen=True, slots=True)
 class EvidenceDecision:
+    """说明 EvidenceDecision 的职责、状态边界和对外协作关系。"""
     status: AnswerStatus
     supported_hits: tuple[RetrievalHit, ...]
     reason: str | None

@@ -9,6 +9,7 @@ from backend.app.domain.knowledge_retrieval import RetrievalHit
 
 @dataclass(frozen=True, slots=True)
 class RerankPolicy:
+    """说明 RerankPolicy 的职责、状态边界和对外协作关系。"""
     max_candidates: int = 30
     min_score: float = 0.0
     authority_bonus: float = 0.05

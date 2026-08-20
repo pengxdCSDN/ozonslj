@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class CompetitorObservation:
+    """说明 CompetitorObservation 的职责、状态边界和对外协作关系。"""
     seller: str
     brand: str | None
     price_minor: int
@@ -13,6 +16,7 @@ class CompetitorObservation:
 
 @dataclass(frozen=True, slots=True)
 class CompetitionAnalysis:
+    """说明 CompetitionAnalysis 的职责、状态边界和对外协作关系。"""
     sample_count: int
     competition_score: float
     median_price_minor: int | None
@@ -25,16 +29,20 @@ class CompetitionAnalysis:
 
 
 class CompetitionAnalysisGateway(Protocol):
+    """说明 CompetitionAnalysisGateway 的职责、状态边界和对外协作关系。"""
     async def save_analysis(
         self, *, workspace_id: str, analysis: CompetitionAnalysis
-    ) -> CompetitionAnalysis: ...
+    ) -> CompetitionAnalysis:
+        """执行 save_analysis 的业务流程并返回该流程的结果。"""
 
     async def list_analyses(
         self, *, workspace_id: str, limit: int
-    ) -> list[CompetitionAnalysis]: ...
+    ) -> list[CompetitionAnalysis]:
+        """执行 list_analyses 的业务流程并返回该流程的结果。"""
 
 
 def analyze_competition(items: list[CompetitorObservation]) -> CompetitionAnalysis:
+    """执行 analyze_competition 的业务流程并返回该流程的结果。"""
     if not items:
         return CompetitionAnalysis(
             0, 0.0, None, None, None, 0.0, 0.0, True, "没有公开样本，无法判断竞争度"
@@ -61,6 +69,7 @@ def analyze_competition(items: list[CompetitorObservation]) -> CompetitionAnalys
 
 
 def _concentration(values: list[str]) -> float:
+    """执行内部步骤 _concentration，供同一模块的公开流程复用。"""
     if not values:
         return 0.0
     counts: dict[str, int] = {}

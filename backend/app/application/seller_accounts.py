@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from uuid import uuid4
 
 from backend.app.domain.seller_account import (
@@ -17,6 +19,7 @@ class SellerAccountService:
         verifier: SellerCredentialVerifier,
         protector: CredentialProtector,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._gateway = gateway
         self._verifier = verifier
         self._protector = protector
@@ -30,6 +33,7 @@ class SellerAccountService:
         client_id: str,
         api_key: str,
     ) -> CreatedSellerAccount:
+        """执行 create 的业务流程并返回该流程的结果。"""
         normalized_client_id = client_id.strip()
         normalized_api_key = api_key.strip()
         await self._verifier.verify(client_id=normalized_client_id, api_key=normalized_api_key)

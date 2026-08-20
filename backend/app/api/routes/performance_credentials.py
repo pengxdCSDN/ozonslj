@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -10,6 +12,7 @@ router = APIRouter(prefix="/v1/performance/credentials", tags=["advertising"])
 
 
 class PerformanceCredentialPayload(BaseModel):
+    """说明 PerformanceCredentialPayload 的职责、状态边界和对外协作关系。"""
     client_id: str | None = None
     client_secret: str | None = None
     access_token: str | None = None
@@ -19,6 +22,7 @@ class PerformanceCredentialPayload(BaseModel):
 
 @router.post("/inspect", response_model=PerformanceCredentialStatus)
 async def inspect(payload: PerformanceCredentialPayload) -> PerformanceCredentialStatus:
+    """执行 inspect 的业务流程并返回该流程的结果。"""
     try:
         return inspect_performance_credentials(**payload.model_dump())
     except ValueError as error:

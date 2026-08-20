@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class AdvertisingReadOnlyDecision:
+    """说明 AdvertisingReadOnlyDecision 的职责、状态边界和对外协作关系。"""
     action: str
     allowed: bool
     reason: str
@@ -11,13 +14,16 @@ class AdvertisingReadOnlyDecision:
 
 
 class AdvertisingBoundaryGateway(Protocol):
+    """说明 AdvertisingBoundaryGateway 的职责、状态边界和对外协作关系。"""
     async def save_check(
         self, *, workspace_id: str, decision: AdvertisingReadOnlyDecision
-    ) -> AdvertisingReadOnlyDecision: ...
+    ) -> AdvertisingReadOnlyDecision:
+        """执行 save_check 的业务流程并返回该流程的结果。"""
 
     async def list_checks(
         self, *, workspace_id: str, limit: int
-    ) -> list[AdvertisingReadOnlyDecision]: ...
+    ) -> list[AdvertisingReadOnlyDecision]:
+        """执行 list_checks 的业务流程并返回该流程的结果。"""
 
 
 READ_ONLY_ACTIONS = frozenset({"diagnose", "build_calendar", "calculate_metrics", "read_report"})
@@ -25,6 +31,7 @@ WRITE_ACTIONS = frozenset({"change_budget", "change_bid", "change_negative_keywo
 
 
 def check_advertising_action(action: str) -> AdvertisingReadOnlyDecision:
+    """执行 check_advertising_action 的业务流程并返回该流程的结果。"""
     normalized = action.strip().lower()
     if normalized in READ_ONLY_ACTIONS:
         return AdvertisingReadOnlyDecision(normalized, True, "广告功能仅生成只读分析结果", False)

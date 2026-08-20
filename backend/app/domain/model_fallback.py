@@ -13,6 +13,7 @@ RolloutMode = Literal["disabled", "shadow", "pilot", "internal"]
 
 @dataclass(frozen=True, slots=True)
 class ProviderCandidate:
+    """说明 ProviderCandidate 的职责、状态边界和对外协作关系。"""
     provider: str
     model: str
     priority: int
@@ -21,13 +22,16 @@ class ProviderCandidate:
 
 @dataclass(frozen=True, slots=True)
 class RolloutFlag:
+    """说明 RolloutFlag 的职责、状态边界和对外协作关系。"""
     name: str
     mode: RolloutMode
     pilot_until: str | None = None
 
 
 class ModelClient(Protocol):
-    async def invoke(self, prompt: str) -> str: ...
+    """说明 ModelClient 的职责、状态边界和对外协作关系。"""
+    async def invoke(self, prompt: str) -> str:
+        """执行 invoke 的业务流程并返回该流程的结果。"""
 
 
 class ProviderFallbackRouter:
@@ -36,10 +40,12 @@ class ProviderFallbackRouter:
     def __init__(
         self, clients: dict[str, ModelClient], candidates: tuple[ProviderCandidate, ...]
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._clients = clients
         self._candidates = candidates
 
     async def invoke(self, prompt: str) -> tuple[str, ProviderCandidate]:
+        """执行 invoke 的业务流程并返回该流程的结果。"""
         errors: list[str] = []
         for candidate in sorted(self._candidates, key=lambda item: item.priority):
             if candidate.status != "available" or candidate.provider not in self._clients:
@@ -60,11 +66,13 @@ class BudgetAwareProviderRouter(ProviderFallbackRouter):
         candidates: tuple[ProviderCandidate, ...],
         budgets: dict[str, tuple[ModelBudgetPolicy, ModelBudgetUsage]],
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         super().__init__(clients, candidates)
         self._budget_candidates = candidates
         self._budgets = budgets
 
     async def invoke(self, prompt: str) -> tuple[str, ProviderCandidate]:
+        """执行 invoke 的业务流程并返回该流程的结果。"""
         eligible = tuple(
             candidate
             for candidate in self._budget_candidates
@@ -79,6 +87,7 @@ def _budget_allows(
     candidate: ProviderCandidate,
     budgets: dict[str, tuple[ModelBudgetPolicy, ModelBudgetUsage]],
 ) -> bool:
+    """执行内部步骤 _budget_allows，供同一模块的公开流程复用。"""
     configured = budgets.get(candidate.provider)
     if configured is None:
         return True

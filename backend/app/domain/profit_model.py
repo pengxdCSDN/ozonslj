@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class ProfitModelInput:
+    """说明 ProfitModelInput 的职责、状态边界和对外协作关系。"""
     selling_price_minor: int
     purchase_cost_minor: int
     fbo_logistics_minor: int
@@ -16,6 +19,7 @@ class ProfitModelInput:
 
 @dataclass(frozen=True, slots=True)
 class ProfitScenario:
+    """说明 ProfitScenario 的职责、状态边界和对外协作关系。"""
     fulfillment_type: str
     contribution_profit_minor: int
     contribution_margin_percent: float
@@ -27,16 +31,19 @@ class ProfitScenario:
 
 
 class ProfitModelGateway(Protocol):
+    """说明 ProfitModelGateway 的职责、状态边界和对外协作关系。"""
     async def save_model(
         self,
         *,
         workspace_id: str,
         assumptions: dict[str, object],
         scenarios: tuple[ProfitScenario, ProfitScenario],
-    ) -> tuple[ProfitScenario, ProfitScenario]: ...
+    ) -> tuple[ProfitScenario, ProfitScenario]:
+        """执行 save_model 的业务流程并返回该流程的结果。"""
 
 
 def calculate_profit_model(item: ProfitModelInput) -> tuple[ProfitScenario, ProfitScenario]:
+    """执行 calculate_profit_model 的业务流程并返回该流程的结果。"""
     _validate_inputs(item)
     return (
         _scenario("FBO", item, item.fbo_logistics_minor),
@@ -45,6 +52,7 @@ def calculate_profit_model(item: ProfitModelInput) -> tuple[ProfitScenario, Prof
 
 
 def _validate_inputs(item: ProfitModelInput) -> None:
+    """执行内部步骤 _validate_inputs，供同一模块的公开流程复用。"""
     values = (
         item.selling_price_minor,
         item.purchase_cost_minor,
@@ -62,6 +70,7 @@ def _validate_inputs(item: ProfitModelInput) -> None:
 
 
 def _scenario(kind: str, item: ProfitModelInput, logistics: int) -> ProfitScenario:
+    """执行内部步骤 _scenario，供同一模块的公开流程复用。"""
     profit = _profit(item, logistics, item.ad_cost_minor, item.purchase_cost_minor)
     cost = (
         item.purchase_cost_minor
@@ -83,6 +92,7 @@ def _scenario(kind: str, item: ProfitModelInput, logistics: int) -> ProfitScenar
 
 
 def _profit(item: ProfitModelInput, logistics: float, ad_cost: float, purchase: float) -> int:
+    """执行内部步骤 _profit，供同一模块的公开流程复用。"""
     return round(
         item.selling_price_minor
         - purchase

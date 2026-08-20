@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
@@ -6,6 +8,7 @@ RiskType = Literal["absolute", "medical", "brand", "certification"]
 
 @dataclass(frozen=True, slots=True)
 class ListingRiskFinding:
+    """说明 ListingRiskFinding 的职责、状态边界和对外协作关系。"""
     risk_type: RiskType
     matched_text: str
     severity: Literal["warning", "error"]
@@ -15,19 +18,23 @@ class ListingRiskFinding:
 
 @dataclass(frozen=True, slots=True)
 class ListingRiskReport:
+    """说明 ListingRiskReport 的职责、状态边界和对外协作关系。"""
     findings: tuple[ListingRiskFinding, ...]
     original_text: str
     safe_to_review: bool
 
 
 class ListingRiskGateway(Protocol):
+    """说明 ListingRiskGateway 的职责、状态边界和对外协作关系。"""
     async def save_report(
         self, *, workspace_id: str, product_scope: str, report: ListingRiskReport
-    ) -> ListingRiskReport: ...
+    ) -> ListingRiskReport:
+        """执行 save_report 的业务流程并返回该流程的结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int = 50
-    ) -> list[ListingRiskReport]: ...
+    ) -> list[ListingRiskReport]:
+        """执行 list_reports 的业务流程并返回该流程的结果。"""
 
 
 def detect_listing_risks(
@@ -36,6 +43,7 @@ def detect_listing_risks(
     authorized_brands: set[str] | None = None,
     verified_certifications: set[str] | None = None,
 ) -> ListingRiskReport:
+    """执行 detect_listing_risks 的业务流程并返回该流程的结果。"""
     authorized_brands = {value.casefold() for value in (authorized_brands or set())}
     verified_certifications = {value.casefold() for value in (verified_certifications or set())}
     findings: list[ListingRiskFinding] = []
@@ -75,6 +83,7 @@ def _find_phrase(
     findings: list[ListingRiskFinding], text: str, phrases: tuple[str, ...],
     risk_type: RiskType, message: str, suggestion: str,
 ) -> None:
+    """执行内部步骤 _find_phrase，供同一模块的公开流程复用。"""
     folded = text.casefold()
     for phrase in phrases:
         if phrase.casefold() in folded:
@@ -88,4 +97,5 @@ def _find_phrase(
 
 
 def _tokens(text: str) -> list[str]:
+    """执行内部步骤 _tokens，供同一模块的公开流程复用。"""
     return [token.strip(".,;:!?()[]") for token in text.split() if token.strip()]

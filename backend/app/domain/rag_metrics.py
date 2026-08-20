@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class EvaluationObservation:
+    """说明 EvaluationObservation 的职责、状态边界和对外协作关系。"""
     expected_chunk_ids: frozenset[str]
     retrieved_chunk_ids: frozenset[str]
     cited_chunk_ids: frozenset[str]
@@ -23,6 +24,7 @@ class EvaluationObservation:
 
 @dataclass(frozen=True, slots=True)
 class RagQualityMetrics:
+    """说明 RagQualityMetrics 的职责、状态边界和对外协作关系。"""
     recall: float
     precision: float
     citation_support_rate: float
@@ -70,6 +72,7 @@ def calculate_metrics(observations: list[EvaluationObservation]) -> RagQualityMe
     ranked = [item.ranked_retrieved_chunk_ids or tuple(sorted(item.retrieved_chunk_ids))
               for item in observations]
     def recall_at(limit: int) -> float:
+        """执行 recall_at 的业务流程并返回该流程的结果。"""
         denominator = sum(bool(item.expected_chunk_ids) for item in observations)
         hits = sum(
             bool(item.expected_chunk_ids & set(items[:limit]))

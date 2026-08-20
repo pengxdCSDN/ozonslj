@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -121,6 +123,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
     """记录方法、受控路径、状态和耗时，不记录查询参数、请求体、Cookie 或响应正文。"""
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """执行 dispatch 的业务流程并返回该流程的结果。"""
         started = time.perf_counter()
         try:
             response = await call_next(request)
@@ -173,6 +176,7 @@ def create_app(
     credential_protector: CredentialProtector | None = None,
     seller_account_verifier: SellerAccountVerifier | None = None,
 ) -> FastAPI:
+    """执行 create_app 的业务流程并返回该流程的结果。"""
     app = FastAPI(
         title="Ozon Seller Operations API",
         version="0.1.0",

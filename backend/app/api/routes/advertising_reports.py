@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,11 +17,13 @@ router = APIRouter(prefix="/v1/advertising/reports", tags=["advertising"])
 
 
 class AdvertisingReportPayload(BaseModel):
+    """说明 AdvertisingReportPayload 的职责、状态边界和对外协作关系。"""
     rows: list[dict[str, object]]
 
 
 @router.post("/sync-preview", response_model=list[AdvertisingReportRow])
 async def sync_report_preview(payload: AdvertisingReportPayload) -> list[AdvertisingReportRow]:
+    """执行 sync_report_preview 的业务流程并返回该流程的结果。"""
     try:
         return [normalize_advertising_report(row) for row in payload.rows]
     except (TypeError, ValueError) as error:
@@ -39,6 +43,7 @@ async def sync_and_save_reports(
     gateway: Annotated[AdvertisingReportGateway, Depends(get_advertising_report_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[AdvertisingReportRow]:
+    """执行 sync_and_save_reports 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -58,6 +63,7 @@ async def list_saved_reports(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 100,
 ) -> list[AdvertisingReportRow]:
+    """执行 list_saved_reports 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_rows(workspace_id=workspace_id, limit=limit)

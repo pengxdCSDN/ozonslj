@@ -27,12 +27,14 @@ class RagEvaluationWorker:
         worker_id: str,
         lease_seconds: int = 300,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._runs = runs
         self._consumer = consumer
         self._worker_id = worker_id
         self._lease_seconds = lease_seconds
 
     async def process_one(self, *, block_ms: int = 1_000) -> bool:
+        """执行 process_one 的业务流程并返回该流程的结果。"""
         message = await self._consumer.read_one(block_ms=block_ms)
         if message is None:
             return False
@@ -113,6 +115,7 @@ class RagEvaluationWorker:
         return saved is not None
 
     async def _heartbeat(self, run_id: str) -> None:
+        """执行内部步骤 _heartbeat，供同一模块的公开流程复用。"""
         interval = max(1, self._lease_seconds // 3)
         while True:
             await asyncio.sleep(interval)

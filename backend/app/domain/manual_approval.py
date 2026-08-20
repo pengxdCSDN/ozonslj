@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class ManualApproval:
+    """说明 ManualApproval 的职责、状态边界和对外协作关系。"""
     approval_id: str
     workspace_id: str
     command_type: str
@@ -14,16 +17,20 @@ class ManualApproval:
 
 
 class ManualApprovalGateway(Protocol):
+    """说明 ManualApprovalGateway 的职责、状态边界和对外协作关系。"""
     async def create(
         self, *, workspace_id: str, command_type: str, payload: dict[str, object],
         idempotency_key: str,
-    ) -> ManualApproval: ...
+    ) -> ManualApproval:
+        """执行 create 的业务流程并返回该流程的结果。"""
 
-    async def approve(self, *, approval_id: str, reviewer: str) -> ManualApproval | None: ...
+    async def approve(self, *, approval_id: str, reviewer: str) -> ManualApproval | None:
+        """执行 approve 的业务流程并返回该流程的结果。"""
 
     async def list_pending(
         self, *, workspace_id: str, limit: int
-    ) -> list[ManualApproval]: ...
+    ) -> list[ManualApproval]:
+        """执行 list_pending 的业务流程并返回该流程的结果。"""
 
 
 def validate_approval_request(

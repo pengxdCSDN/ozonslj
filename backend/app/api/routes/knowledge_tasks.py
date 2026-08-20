@@ -14,6 +14,7 @@ from backend.app.infrastructure.redis_rag_tasks import RedisRagTaskQueue
 
 router = APIRouter(prefix="/v1/knowledge-tasks", tags=["knowledge-tasks"])
 class TaskCreatePayload(BaseModel):
+    """说明 TaskCreatePayload 的职责、状态边界和对外协作关系。"""
     task_type: str = Field(pattern="^(ingest|parse|chunk|index|withdraw|delete|rebuild)$")
     organization_id: str = Field(min_length=1, max_length=100)
     source_id: str = Field(min_length=1, max_length=100)
@@ -22,11 +23,13 @@ class TaskCreatePayload(BaseModel):
 
 
 class TaskFinishPayload(BaseModel):
+    """说明 TaskFinishPayload 的职责、状态边界和对外协作关系。"""
     status: str = Field(pattern="^(succeeded|failed|cancelled)$")
     error_code: str | None = Field(default=None, max_length=100)
 
 
 def _task_response(task: RagWorkerTask) -> dict[str, object]:
+    """执行内部步骤 _task_response，供同一模块的公开流程复用。"""
     return {
         "task_id": task.task_id, "task_type": task.task_type,
         "organization_id": task.organization_id, "status": task.status,
@@ -44,6 +47,7 @@ async def create_knowledge_task(
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
     queue: Annotated[RedisRagTaskQueue, Depends(get_rag_task_queue)],
 ) -> dict[str, object]:
+    """执行 create_knowledge_task 的业务流程并返回该流程的结果。"""
     task = await gateway.create(
         payload.task_type, payload.idempotency_key, payload.source_id,
         payload.document_version_id,
@@ -85,6 +89,7 @@ async def claim_knowledge_task(
         PostgresRagTaskGateway, Depends(get_rag_task_gateway)
     ],
 ) -> dict[str, object]:
+    """执行 claim_knowledge_task 的业务流程并返回该流程的结果。"""
     claimed = await gateway.claim(task_id, "rag-api-claim", 300)
     if claimed is None or claimed.organization_id != organization_id:
         raise HTTPException(status_code=409, detail="任务当前不可领取")
@@ -96,6 +101,7 @@ async def finish_knowledge_task(
     task_id: str, payload: TaskFinishPayload,
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
 ) -> dict[str, object]:
+    """执行 finish_knowledge_task 的业务流程并返回该流程的结果。"""
     finished = await gateway.finish(task_id, payload.status, payload.error_code)
     if finished is None:
         raise HTTPException(status_code=409, detail="任务不存在或不在 running 状态")
@@ -107,6 +113,7 @@ async def cancel_knowledge_task(
     task_id: str,
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
 ) -> dict[str, object]:
+    """执行 cancel_knowledge_task 的业务流程并返回该流程的结果。"""
     task = await gateway.cancel(task_id)
     if task is None:
         raise HTTPException(status_code=409, detail="任务当前不可取消")
@@ -118,6 +125,7 @@ async def archive_knowledge_task(
     task_id: str,
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
 ) -> dict[str, object]:
+    """执行 archive_knowledge_task 的业务流程并返回该流程的结果。"""
     task = await gateway.archive(task_id)
     if task is None:
         raise HTTPException(status_code=409, detail="只有失败或已取消任务可以归档")
@@ -130,6 +138,7 @@ async def retry_knowledge_task(
     gateway: Annotated[PostgresRagTaskGateway, Depends(get_rag_task_gateway)],
     queue: Annotated[RedisRagTaskQueue, Depends(get_rag_task_queue)],
 ) -> dict[str, object]:
+    """执行 retry_knowledge_task 的业务流程并返回该流程的结果。"""
     task = await gateway.retry(task_id)
     if task is None:
         raise HTTPException(status_code=409, detail="只有失败或已取消任务可以重试")

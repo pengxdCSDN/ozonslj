@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,6 +14,7 @@ router = APIRouter(prefix="/v1/data-quality", tags=["data-quality"])
 
 
 class RelationshipPayload(BaseModel):
+    """说明 RelationshipPayload 的职责、状态边界和对外协作关系。"""
     rows: list[dict[str, object]]
     parent_ids: set[str] = Field(default_factory=set)
     id_field: str = "id"
@@ -21,6 +24,7 @@ class RelationshipPayload(BaseModel):
 
 @router.post("/relationship-check", response_model=list[RelationshipFinding])
 async def relationship_check(payload: RelationshipPayload) -> list[RelationshipFinding]:
+    """执行 relationship_check 的业务流程并返回该流程的结果。"""
     return check_relationship_and_time(
         payload.rows, parent_ids=payload.parent_ids, id_field=payload.id_field,
         parent_field=payload.parent_field, time_field=payload.time_field,

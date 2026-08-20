@@ -24,18 +24,22 @@ router = APIRouter(prefix="/v1/knowledge-answers", tags=["knowledge-rag"])
 
 
 class KnowledgeQuestionPayload(BaseModel):
+    """说明 KnowledgeQuestionPayload 的职责、状态边界和对外协作关系。"""
     question: str = Field(min_length=1, max_length=4000)
 
 
 class KnowledgeTranslationPayload(BaseModel):
+    """说明 KnowledgeTranslationPayload 的职责、状态边界和对外协作关系。"""
     texts: list[str] = Field(min_length=1, max_length=50)
 
 
 class KnowledgeTranslationResponse(BaseModel):
+    """说明 KnowledgeTranslationResponse 的职责、状态边界和对外协作关系。"""
     texts: list[str]
 
 
 class KnowledgeIntentResponse(BaseModel):
+    """说明 KnowledgeIntentResponse 的职责、状态边界和对外协作关系。"""
     text: str
     intent: str
     confidence: float
@@ -46,6 +50,7 @@ class KnowledgeIntentResponse(BaseModel):
 
 
 class KnowledgeQuestionResponse(BaseModel):
+    """说明 KnowledgeQuestionResponse 的职责、状态边界和对外协作关系。"""
     answer_id: str | None = None
     trace_id: str | None = None
     status: str
@@ -54,6 +59,7 @@ class KnowledgeQuestionResponse(BaseModel):
 
 
 class KnowledgeCitationResponse(BaseModel):
+    """说明 KnowledgeCitationResponse 的职责、状态边界和对外协作关系。"""
     chunk_id: str
     source_locator: str
     title_path: list[str]
@@ -62,6 +68,7 @@ class KnowledgeCitationResponse(BaseModel):
 
 
 class KnowledgeAnswerSegmentResponse(BaseModel):
+    """说明 KnowledgeAnswerSegmentResponse 的职责、状态边界和对外协作关系。"""
     text: str
     intent: str
     status: str
@@ -72,6 +79,7 @@ class KnowledgeAnswerSegmentResponse(BaseModel):
 
 
 class KnowledgeAnswerResponse(BaseModel):
+    """说明 KnowledgeAnswerResponse 的职责、状态边界和对外协作关系。"""
     answer_id: str
     trace_id: str
     status: str
@@ -80,6 +88,7 @@ class KnowledgeAnswerResponse(BaseModel):
 
 
 class KnowledgeTraceResponse(BaseModel):
+    """说明 KnowledgeTraceResponse 的职责、状态边界和对外协作关系。"""
     trace_id: str
     answer_id: str
     question_hash: str
@@ -92,6 +101,7 @@ _traces: dict[str, KnowledgeTraceResponse] = {}
 
 
 class KnowledgeFeedbackPayload(BaseModel):
+    """说明 KnowledgeFeedbackPayload 的职责、状态边界和对外协作关系。"""
     reason: str = Field(
         pattern="^(helpful|incorrect|outdated_source|missing_answer|citation_mismatch)$"
     )
@@ -99,6 +109,7 @@ class KnowledgeFeedbackPayload(BaseModel):
 
 
 class KnowledgeFeedbackResponse(BaseModel):
+    """说明 KnowledgeFeedbackResponse 的职责、状态边界和对外协作关系。"""
     feedback_id: str
     answer_id: str
     reason: str
@@ -240,6 +251,7 @@ async def translate_knowledge_text(
 
 @router.get("/{answer_id}/trace", response_model=KnowledgeTraceResponse)
 async def get_knowledge_answer_trace(answer_id: str) -> KnowledgeTraceResponse:
+    """执行 get_knowledge_answer_trace 的业务流程并返回该流程的结果。"""
     for trace in _traces.values():
         if trace.answer_id == answer_id:
             return trace
@@ -248,6 +260,7 @@ async def get_knowledge_answer_trace(answer_id: str) -> KnowledgeTraceResponse:
 
 @router.get("/history", response_model=list[KnowledgeTraceResponse])
 async def list_knowledge_answer_history() -> list[KnowledgeTraceResponse]:
+    """执行 list_knowledge_answer_history 的业务流程并返回该流程的结果。"""
     return list(_traces.values())
 
 
@@ -255,6 +268,7 @@ async def list_knowledge_answer_history() -> list[KnowledgeTraceResponse]:
 async def create_knowledge_feedback(
     answer_id: str, payload: KnowledgeFeedbackPayload
 ) -> KnowledgeFeedbackResponse:
+    """执行 create_knowledge_feedback 的业务流程并返回该流程的结果。"""
     if answer_id not in _answers:
         raise HTTPException(status_code=404, detail="回答不存在或已过期")
     feedback = KnowledgeFeedbackResponse(
@@ -267,4 +281,5 @@ async def create_knowledge_feedback(
 
 @router.get("/feedback", response_model=list[KnowledgeFeedbackResponse])
 async def list_knowledge_feedback() -> list[KnowledgeFeedbackResponse]:
+    """执行 list_knowledge_feedback 的业务流程并返回该流程的结果。"""
     return list(_feedback.values())

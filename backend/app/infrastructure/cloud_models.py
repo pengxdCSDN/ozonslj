@@ -32,6 +32,7 @@ class CloudModelError(RuntimeError):
     """云端模型调用失败，已去除凭据和完整响应正文。"""
 
     def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        """初始化对象依赖和运行时状态。"""
         super().__init__(message)
         # 仅保留 HTTP 状态码，禁止保存或传播供应商原始响应和请求头。
         self.status_code = status_code
@@ -53,6 +54,7 @@ class CloudTranslationPort:
     """翻译端口；实现必须返回与输入顺序一致的中文译文。"""
 
     async def translate(self, texts: Sequence[str]) -> list[str]:
+        """执行 translate 的业务流程并返回该流程的结果。"""
         raise NotImplementedError
 
 
@@ -61,6 +63,7 @@ class OpenAICompatibleRerankClient:
 
     def __init__(self, *, api_key: str, model: str, base_url: str, timeout_seconds: float = 30.0,
                  transport: httpx.AsyncBaseTransport | None = None) -> None:
+        """初始化对象依赖和运行时状态。"""
         if not api_key.strip() or not model.strip() or not base_url.strip():
             raise ValueError("重排序供应商必须配置 API Key、模型和 HTTPS 地址")
         _validate_cloud_base_url(base_url)
@@ -73,6 +76,7 @@ class OpenAICompatibleRerankClient:
         self.last_usage = CloudModelUsage()
 
     async def rerank(self, *, query: str, documents: list[str]) -> list[dict[str, Any]]:
+        """执行 rerank 的业务流程并返回该流程的结果。"""
         if not query.strip() or not documents or any(not item.strip() for item in documents):
             raise ValueError("重排序请求的 query 和 documents 不能为空")
         payload = {
@@ -141,6 +145,7 @@ class OpenAICompatibleTextClient:
     def __init__(self, *, api_key: str, model: str, base_url: str,
                  timeout_seconds: float = 45.0,
                  transport: httpx.AsyncBaseTransport | None = None) -> None:
+        """初始化对象依赖和运行时状态。"""
         if not api_key.strip() or not model.strip() or not base_url.strip():
             raise ValueError("文本供应商必须配置 API Key、模型和 HTTPS 地址")
         _validate_cloud_base_url(base_url)
@@ -153,6 +158,7 @@ class OpenAICompatibleTextClient:
         self.last_usage = CloudModelUsage()
 
     async def complete(self, *, system: str, user: str) -> str:
+        """执行 complete 的业务流程并返回该流程的结果。"""
         if not system.strip() or not user.strip():
             raise ValueError("文本模型请求不能为空")
         payload = {"model": self.model_id, "temperature": 0, "messages": [
@@ -219,6 +225,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         send_dimensions: bool = True,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         if not api_key.strip():
             raise ValueError("Embedding API Key 不能为空")
         # 不在客户端硬编码供应商维度白名单；不同模型支持的维度集合不同。
@@ -247,6 +254,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         self.last_usage = CloudModelUsage()
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        """执行 embed 的业务流程并返回该流程的结果。"""
         if not texts:
             return []
         if any(not text.strip() for text in texts):
@@ -287,6 +295,7 @@ class DashScopeEmbeddingClient(EmbeddingPort):
         return vectors
 
     async def _post(self, payload: dict[str, object]) -> dict[str, Any]:
+        """执行内部步骤 _post，供同一模块的公开流程复用。"""
         started = time.perf_counter()
         try:
             async with httpx.AsyncClient(
@@ -344,6 +353,7 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
         timeout_seconds: float = 45.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         if not api_key.strip() or not model.strip() or not base_url.strip():
             raise ValueError("翻译供应商必须配置 API Key、模型和 HTTPS 地址")
         _validate_cloud_base_url(base_url)
@@ -355,6 +365,7 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
         self._transport = transport
 
     async def translate(self, texts: Sequence[str]) -> list[str]:
+        """执行 translate 的业务流程并返回该流程的结果。"""
         results: list[str] = []
         for text in texts:
             if not text.strip():
@@ -363,6 +374,7 @@ class OpenAICompatibleTranslationClient(CloudTranslationPort):
         return results
 
     async def _translate_one(self, text: str) -> str:
+        """执行内部步骤 _translate_one，供同一模块的公开流程复用。"""
         payload = {
             "model": self.model_id,
             "temperature": 0,
@@ -482,4 +494,5 @@ def _usage_from_response(response: dict[str, Any]) -> CloudModelUsage:
 
 
 def _non_negative_int(value: object) -> int:
+    """执行内部步骤 _non_negative_int，供同一模块的公开流程复用。"""
     return value if isinstance(value, int) and value >= 0 else 0

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from psycopg import errors
 from psycopg_pool import AsyncConnectionPool
 
@@ -11,6 +13,7 @@ class PostgresSellerAccountGateway:
     """原子写入卖家账号、工作区和创建者成员关系。"""
 
     def __init__(self, pool: AsyncConnectionPool) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._pool = pool
 
     async def create(
@@ -25,6 +28,7 @@ class PostgresSellerAccountGateway:
         encrypted_api_key: bytes,
         credential_version: int,
     ) -> CreatedSellerAccount:
+        """执行 create 的业务流程并返回该流程的结果。"""
         try:
             async with self._pool.connection() as connection, connection.transaction():
                 await connection.execute(

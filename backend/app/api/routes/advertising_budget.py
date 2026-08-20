@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,6 +16,7 @@ router = APIRouter(prefix="/v1/advertising/budget", tags=["advertising"])
 
 
 class AdvertisingBudgetPayload(BaseModel):
+    """说明 AdvertisingBudgetPayload 的职责、状态边界和对外协作关系。"""
     budget_minor: int = Field(gt=0)
     spend_minor: int = Field(ge=0)
     days_elapsed: int = Field(gt=0)
@@ -22,6 +25,7 @@ class AdvertisingBudgetPayload(BaseModel):
 
 @router.post("/analyze", response_model=AdvertisingBudgetAnalysis)
 async def analyze_budget(payload: AdvertisingBudgetPayload) -> AdvertisingBudgetAnalysis:
+    """执行 analyze_budget 的业务流程并返回该流程的结果。"""
     try:
         return analyze_advertising_budget(**payload.model_dump())
     except ValueError as error:
@@ -40,6 +44,7 @@ async def analyze_workspace_budget(
     payload: AdvertisingBudgetPayload,
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> AdvertisingBudgetAnalysis:
+    """执行 analyze_workspace_budget 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await analyze_budget(payload)

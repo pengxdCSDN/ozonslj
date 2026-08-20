@@ -155,6 +155,7 @@ def _observation(
     answers: tuple[KnowledgeSegmentAnswer, ...],
     latency_ms: int,
 ) -> EvaluationObservation:
+    """执行内部步骤 _observation，供同一模块的公开流程复用。"""
     statuses = {answer.status for answer in answers}
     actual_status = (
         "partially_answered" if len(statuses) > 1 else next(iter(statuses), "unsupported")

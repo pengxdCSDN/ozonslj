@@ -12,9 +12,11 @@ class PostgresKnowledgeChunkGateway(KnowledgeChunkGateway):
     """幂等写入切片正文和完整元数据，状态变更仅影响当前组织。"""
 
     def __init__(self, pool: AsyncConnectionPool) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._pool = pool
 
     async def upsert_chunks(self, *, organization_id: str, chunks: list[KnowledgeChunk]) -> None:
+        """执行 upsert_chunks 的业务流程并返回该流程的结果。"""
         if not organization_id.strip():
             raise ValueError("organization_id 不能为空")
         async with self._pool.connection() as connection, connection.transaction():
@@ -45,6 +47,7 @@ class PostgresKnowledgeChunkGateway(KnowledgeChunkGateway):
     async def set_chunk_status(
         self, *, organization_id: str, chunk_ids: list[str], status: str
     ) -> None:
+        """执行 set_chunk_status 的业务流程并返回该流程的结果。"""
         if not chunk_ids:
             return
         async with self._pool.connection() as connection, connection.transaction():

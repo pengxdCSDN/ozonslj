@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,11 +20,13 @@ router = APIRouter(prefix="/v1/advertising/boundary", tags=["advertising"])
 
 
 class AdvertisingActionPayload(BaseModel):
+    """说明 AdvertisingActionPayload 的职责、状态边界和对外协作关系。"""
     action: str = Field(min_length=1, max_length=80)
 
 
 @router.post("/check", response_model=AdvertisingReadOnlyDecision)
 async def check_boundary(payload: AdvertisingActionPayload) -> AdvertisingReadOnlyDecision:
+    """执行 check_boundary 的业务流程并返回该流程的结果。"""
     return check_advertising_action(payload.action)
 
 
@@ -36,6 +40,7 @@ async def check_and_save_boundary(
     gateway: Annotated[AdvertisingBoundaryGateway, Depends(get_advertising_boundary_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> AdvertisingReadOnlyDecision:
+    """执行 check_and_save_boundary 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     decision = await check_boundary(payload)
@@ -52,6 +57,7 @@ async def list_boundary_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[AdvertisingReadOnlyDecision]:
+    """执行 list_boundary_history 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 200:

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 import json
 from datetime import datetime
@@ -12,17 +14,20 @@ class PostgresReadbackVerificationGateway:
     """保存回读逐字段结果，支持运营人员复核外部写入是否真正生效。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def save(
         self, *, workspace_id: str, verification: ReadbackVerification
     ) -> StoredReadbackVerification:
+        """执行 save 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._save, workspace_id, verification)
 
     def _save(
         self, workspace_id: str, verification: ReadbackVerification
     ) -> StoredReadbackVerification:
+        """执行内部步骤 _save，供同一模块的公开流程复用。"""
         verification_id = str(uuid4())
         payload = {
             "matched": verification.matched,
@@ -48,9 +53,11 @@ class PostgresReadbackVerificationGateway:
     async def list_results(
         self, *, workspace_id: str, limit: int
     ) -> list[StoredReadbackVerification]:
+        """执行 list_results 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list_results, workspace_id, limit)
 
     def _list_results(self, workspace_id: str, limit: int) -> list[StoredReadbackVerification]:
+        """执行内部步骤 _list_results，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT id, workspace_id, verification, created_at
@@ -63,6 +70,7 @@ class PostgresReadbackVerificationGateway:
 
 
 def _stored_from_row(row: dict[str, object]) -> StoredReadbackVerification:
+    """执行内部步骤 _stored_from_row，供同一模块的公开流程复用。"""
     payload = row["verification"]
     if not isinstance(payload, dict) or not isinstance(payload.get("fields"), list):
         raise RuntimeError("回读结果 JSON 结构无效")

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -16,10 +18,13 @@ class StoredExecutionResult:
 
 
 class ExecutionResultGateway(Protocol):
+    """说明 ExecutionResultGateway 的职责、状态边界和对外协作关系。"""
     async def save(
         self, *, workspace_id: str, result: BatchExecutionResult
-    ) -> StoredExecutionResult: ...
+    ) -> StoredExecutionResult:
+        """执行 save 的业务流程并返回该流程的结果。"""
 
     async def list_results(
         self, *, workspace_id: str, limit: int
-    ) -> list[StoredExecutionResult]: ...
+    ) -> list[StoredExecutionResult]:
+        """执行 list_results 的业务流程并返回该流程的结果。"""

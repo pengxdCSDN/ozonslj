@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from typing import Literal, Protocol
 
@@ -40,37 +42,47 @@ class SyncJobPage(BaseModel):
 
 
 class SyncJobGateway(Protocol):
+    """说明 SyncJobGateway 的职责、状态边界和对外协作关系。"""
     async def create_sync_job(
         self,
         *,
         workspace_id: str,
         resource_type: SyncResourceType,
         idempotency_key: str,
-    ) -> SyncJob: ...
+    ) -> SyncJob:
+        """执行 create_sync_job 的业务流程并返回该流程的结果。"""
 
-    async def get_sync_job(self, job_id: str) -> SyncJob | None: ...
+    async def get_sync_job(self, job_id: str) -> SyncJob | None:
+        """执行 get_sync_job 的业务流程并返回该流程的结果。"""
 
     async def list_sync_jobs(
         self, *, workspace_id: str, cursor: str | None, limit: int
-    ) -> SyncJobPage: ...
+    ) -> SyncJobPage:
+        """执行 list_sync_jobs 的业务流程并返回该流程的结果。"""
 
-    async def request_cancel_sync_job(self, *, job_id: str) -> bool: ...
+    async def request_cancel_sync_job(self, *, job_id: str) -> bool:
+        """执行 request_cancel_sync_job 的业务流程并返回该流程的结果。"""
 
-    async def retry_sync_job(self, *, job_id: str) -> SyncJob | None: ...
+    async def retry_sync_job(self, *, job_id: str) -> SyncJob | None:
+        """执行 retry_sync_job 的业务流程并返回该流程的结果。"""
 
-    async def list_dispatchable_sync_jobs(self, *, limit: int) -> list[SyncJob]: ...
+    async def list_dispatchable_sync_jobs(self, *, limit: int) -> list[SyncJob]:
+        """执行 list_dispatchable_sync_jobs 的业务流程并返回该流程的结果。"""
 
     async def claim_sync_job(
         self, *, job_id: str, worker_id: str, lease_seconds: int
-    ) -> SyncJob | None: ...
+    ) -> SyncJob | None:
+        """执行 claim_sync_job 的业务流程并返回该流程的结果。"""
 
     async def heartbeat_sync_job(
         self, *, job_id: str, worker_id: str, lease_seconds: int
-    ) -> bool: ...
+    ) -> bool:
+        """执行 heartbeat_sync_job 的业务流程并返回该流程的结果。"""
 
     async def complete_sync_job(
         self, *, job_id: str, worker_id: str, processed_count: int, failure_count: int
-    ) -> bool: ...
+    ) -> bool:
+        """执行 complete_sync_job 的业务流程并返回该流程的结果。"""
 
     async def fail_sync_job(
         self,
@@ -80,13 +92,15 @@ class SyncJobGateway(Protocol):
         error_code: str,
         error_message: str,
         retry_delay_seconds: int,
-    ) -> bool: ...
+    ) -> bool:
+        """执行 fail_sync_job 的业务流程并返回该流程的结果。"""
 
 
 class SyncJobQueue(Protocol):
     """可重建的任务投递端口；实现不得保存唯一业务状态。"""
 
-    async def enqueue_once(self, job: SyncJob) -> bool: ...
+    async def enqueue_once(self, job: SyncJob) -> bool:
+        """执行 enqueue_once 的业务流程并返回该流程的结果。"""
 
 
 class SyncJobMessage(BaseModel):
@@ -99,12 +113,16 @@ class SyncJobMessage(BaseModel):
 
 
 class SyncJobConsumer(Protocol):
-    async def read_one(self, *, block_ms: int) -> SyncJobMessage | None: ...
+    """说明 SyncJobConsumer 的职责、状态边界和对外协作关系。"""
+    async def read_one(self, *, block_ms: int) -> SyncJobMessage | None:
+        """执行 read_one 的业务流程并返回该流程的结果。"""
 
-    async def acknowledge(self, message_id: str) -> None: ...
+    async def acknowledge(self, message_id: str) -> None:
+        """执行 acknowledge 的业务流程并返回该流程的结果。"""
 
 
 class SyncResult(BaseModel):
+    """说明 SyncResult 的职责、状态边界和对外协作关系。"""
     model_config = ConfigDict(frozen=True)
 
     processed_count: int = Field(ge=0)
@@ -112,4 +130,6 @@ class SyncResult(BaseModel):
 
 
 class SyncHandler(Protocol):
-    async def run(self, job: SyncJob) -> SyncResult: ...
+    """说明 SyncHandler 的职责、状态边界和对外协作关系。"""
+    async def run(self, job: SyncJob) -> SyncResult:
+        """执行 run 的业务流程并返回该流程的结果。"""

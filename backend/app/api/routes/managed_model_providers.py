@@ -42,6 +42,7 @@ ManagedPurpose = Literal[
 
 
 class ManagedProviderPayload(BaseModel):
+    """说明 ManagedProviderPayload 的职责、状态边界和对外协作关系。"""
     name: str = Field(min_length=1, max_length=80)
     adapter_type: ManagedAdapter = Field(min_length=1, max_length=80)
     model: str = Field(min_length=1, max_length=160)
@@ -53,6 +54,7 @@ class ManagedProviderPayload(BaseModel):
 
 
 class ManagedProviderResponse(BaseModel):
+    """说明 ManagedProviderResponse 的职责、状态边界和对外协作关系。"""
     provider_id: str
     name: str
     adapter_type: ManagedAdapter
@@ -66,12 +68,14 @@ class ManagedProviderResponse(BaseModel):
 
 
 class ManagedBindingPayload(BaseModel):
+    """说明 ManagedBindingPayload 的职责、状态边界和对外协作关系。"""
     primary_provider_id: str
     # 备用链按优先级排列，允许配置多个候选；运行时遇到限额、超时或不可用会逐个尝试。
     fallback_provider_ids: list[str] = Field(default_factory=list, max_length=20)
 
 
 class ManagedBindingResponse(BaseModel):
+    """说明 ManagedBindingResponse 的职责、状态边界和对外协作关系。"""
     purpose: ManagedPurpose
     primary_provider_id: str
     fallback_provider_ids: list[str]
@@ -79,6 +83,7 @@ class ManagedBindingResponse(BaseModel):
 
 
 class ConnectivityTestPayload(BaseModel):
+    """说明 ConnectivityTestPayload 的职责、状态边界和对外协作关系。"""
     purpose: Literal["embedding", "rerank", "translation"]
     adapter_type: ManagedAdapter
     model: str = Field(min_length=1, max_length=160)
@@ -90,6 +95,7 @@ class ConnectivityTestPayload(BaseModel):
 
 
 class ConnectivityTestResponse(BaseModel):
+    """说明 ConnectivityTestResponse 的职责、状态边界和对外协作关系。"""
     ok: bool
     status: Literal["reachable", "quota_exceeded", "timeout", "failed"]
     message: str
@@ -288,6 +294,7 @@ def _validate_connectivity_target(adapter_type: str, base_url: str, api_key: str
 
 
 def _response(item: dict[str, object]) -> ManagedProviderResponse:
+    """执行内部步骤 _response，供同一模块的公开流程复用。"""
     suffix = str(item.get("credential_suffix") or "")
     return ManagedProviderResponse(
         provider_id=str(item["id"]), name=str(item["name"]),
@@ -305,6 +312,7 @@ async def list_managed_model_providers(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
 ) -> list[ManagedProviderResponse]:
+    """执行 list_managed_model_providers 的业务流程并返回该流程的结果。"""
     return [_response(item) for item in await gateway.list_provider_metadata()]
 
 
@@ -315,6 +323,7 @@ async def create_managed_model_provider(
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
     credentials: Annotated[ModelCredentialStore, Depends(get_model_credential_store)],
 ) -> ManagedProviderResponse:
+    """执行 create_managed_model_provider 的业务流程并返回该流程的结果。"""
     if not payload.api_key:
         raise HTTPException(status_code=422, detail="首次配置供应商必须提交 API Key")
     provider_id = str(uuid4())
@@ -343,6 +352,7 @@ async def update_managed_model_provider(
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
     credentials: Annotated[ModelCredentialStore, Depends(get_model_credential_store)],
 ) -> ManagedProviderResponse:
+    """执行 update_managed_model_provider 的业务流程并返回该流程的结果。"""
     credential_ref = None
     suffix = None
     if payload.api_key:
@@ -397,6 +407,7 @@ async def bind_managed_model_purpose(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
 ) -> ManagedBindingResponse:
+    """执行 bind_managed_model_purpose 的业务流程并返回该流程的结果。"""
     try:
         await gateway.bind_purpose(
             purpose=purpose,
@@ -430,6 +441,7 @@ async def list_managed_model_bindings(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
 ) -> list[ManagedBindingResponse]:
+    """执行 list_managed_model_bindings 的业务流程并返回该流程的结果。"""
     return [ManagedBindingResponse(
         purpose=cast(ManagedPurpose, str(item["purpose"])),
         primary_provider_id=str(item["primary_provider_id"]),
@@ -446,6 +458,7 @@ async def disable_managed_model_provider(
     _account_manager: Annotated[object, Depends(require_account_manager)],
     gateway: Annotated[PostgresRagModelProviderGateway, Depends(get_rag_model_provider_gateway)],
 ) -> ManagedProviderResponse:
+    """执行 disable_managed_model_provider 的业务流程并返回该流程的结果。"""
     await gateway.disable_provider(provider_id)
     item = next(
         (entry for entry in await gateway.list_provider_metadata()

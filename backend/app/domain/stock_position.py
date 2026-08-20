@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from typing import Literal, Protocol
 
@@ -38,4 +40,5 @@ class StockPositionGateway(Protocol):
         workspace_id: str,
         cursor: str | None,
         limit: int,
-    ) -> StockPositionPage: ...
+    ) -> StockPositionPage:
+        """执行 list_stock_positions 的业务流程并返回该流程的结果。"""

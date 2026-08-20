@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 import json
 from dataclasses import asdict
@@ -11,15 +13,18 @@ class PostgresSelectionDecisionBookGateway:
     """保存固定章节的商品立项决策书，不触发采购、上架或广告写入。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def save_book(
         self, *, workspace_id: str, book: SelectionDecisionBook
     ) -> SelectionDecisionBook:
+        """执行 save_book 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._save, workspace_id, book)
 
     def _save(self, workspace_id: str, book: SelectionDecisionBook) -> SelectionDecisionBook:
+        """执行内部步骤 _save，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -37,9 +42,11 @@ class PostgresSelectionDecisionBookGateway:
     async def list_books(
         self, *, workspace_id: str, limit: int
     ) -> list[SelectionDecisionBook]:
+        """执行 list_books 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list_books, workspace_id, limit)
 
     def _list_books(self, workspace_id: str, limit: int) -> list[SelectionDecisionBook]:
+        """执行内部步骤 _list_books，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT content FROM selection_decision_books
@@ -51,6 +58,7 @@ class PostgresSelectionDecisionBookGateway:
 
 
 def _book_from_content(content: object) -> SelectionDecisionBook:
+    """执行内部步骤 _book_from_content，供同一模块的公开流程复用。"""
     if not isinstance(content, dict):
         raise RuntimeError("选品决策书内容结构无效")
     return SelectionDecisionBook(

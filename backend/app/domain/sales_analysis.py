@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class SalesAnalysis:
+    """说明 SalesAnalysis 的职责、状态边界和对外协作关系。"""
     current_sales_minor: int
     previous_sales_minor: int
     change_percent: float | None
@@ -17,13 +20,16 @@ class SalesAnalysis:
 
 
 class SalesAnalysisGateway(Protocol):
+    """说明 SalesAnalysisGateway 的职责、状态边界和对外协作关系。"""
     async def save_report(
         self, *, workspace_id: str, report: SalesAnalysis
-    ) -> SalesAnalysis: ...
+    ) -> SalesAnalysis:
+        """执行 save_report 的业务流程并返回该流程的结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
-    ) -> list[SalesAnalysis]: ...
+    ) -> list[SalesAnalysis]:
+        """执行 list_reports 的业务流程并返回该流程的结果。"""
 
 
 def analyze_sales(
@@ -31,6 +37,7 @@ def analyze_sales(
     current_orders: int, previous_orders: int,
     current_window: str, previous_window: str,
 ) -> SalesAnalysis:
+    """执行 analyze_sales 的业务流程并返回该流程的结果。"""
     values = (current_sales_minor, previous_sales_minor, current_orders, previous_orders)
     if (
         any(isinstance(value, bool) or not isinstance(value, int) for value in values)
@@ -59,4 +66,5 @@ def analyze_sales(
 
 
 def _change(current: int, previous: int) -> float | None:
+    """执行内部步骤 _change，供同一模块的公开流程复用。"""
     return (current - previous) / previous * 100 if previous else None

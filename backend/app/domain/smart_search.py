@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
@@ -6,6 +8,7 @@ SmartSearchSeverity = Literal["warning", "error"]
 
 @dataclass(frozen=True, slots=True)
 class SmartSearchFinding:
+    """说明 SmartSearchFinding 的职责、状态边界和对外协作关系。"""
     code: str
     severity: SmartSearchSeverity
     message: str
@@ -14,6 +17,7 @@ class SmartSearchFinding:
 
 @dataclass(frozen=True, slots=True)
 class SmartSearchReport:
+    """说明 SmartSearchReport 的职责、状态边界和对外协作关系。"""
     findings: tuple[SmartSearchFinding, ...]
     covered_terms: tuple[str, ...]
     missing_terms: tuple[str, ...]
@@ -22,14 +26,17 @@ class SmartSearchReport:
 
 
 class SmartSearchGateway(Protocol):
+    """说明 SmartSearchGateway 的职责、状态边界和对外协作关系。"""
     async def save_report(
         self, *, workspace_id: str, product_scope: str, source_text: str,
         report: SmartSearchReport
-    ) -> SmartSearchReport: ...
+    ) -> SmartSearchReport:
+        """执行 save_report 的业务流程并返回该流程的结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int = 50
-    ) -> list[SmartSearchReport]: ...
+    ) -> list[SmartSearchReport]:
+        """执行 list_reports 的业务流程并返回该流程的结果。"""
 
 
 def check_smart_search(
@@ -39,6 +46,7 @@ def check_smart_search(
     category: str,
     category_terms: list[str] | None = None,
 ) -> SmartSearchReport:
+    """执行 check_smart_search 的业务流程并返回该流程的结果。"""
     if not text.strip():
         return SmartSearchReport(
             (
@@ -90,6 +98,7 @@ def check_smart_search(
 
 
 def _unique(values: list[str]) -> list[str]:
+    """执行内部步骤 _unique，供同一模块的公开流程复用。"""
     result: list[str] = []
     seen: set[str] = set()
     for value in values:

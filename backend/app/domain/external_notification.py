@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import re
 from dataclasses import dataclass
 from typing import Protocol
@@ -5,6 +7,7 @@ from typing import Protocol
 
 @dataclass(frozen=True, slots=True)
 class ExternalNotificationConfig:
+    """说明 ExternalNotificationConfig 的职责、状态边界和对外协作关系。"""
     channel: str
     enabled: bool
     template: str
@@ -14,13 +17,16 @@ class ExternalNotificationConfig:
 
 
 class ExternalNotificationGateway(Protocol):
+    """说明 ExternalNotificationGateway 的职责、状态边界和对外协作关系。"""
     async def save_config(
         self, *, workspace_id: str, config: ExternalNotificationConfig
-    ) -> ExternalNotificationConfig: ...
+    ) -> ExternalNotificationConfig:
+        """执行 save_config 的业务流程并返回该流程的结果。"""
 
     async def list_configs(
         self, *, workspace_id: str, limit: int
-    ) -> list[ExternalNotificationConfig]: ...
+    ) -> list[ExternalNotificationConfig]:
+        """执行 list_configs 的业务流程并返回该流程的结果。"""
 
 
 ALLOWED_CHANNELS = frozenset({"feishu", "dingtalk", "wechat_work", "email"})
@@ -31,6 +37,7 @@ def validate_notification_config(
     *, channel: str, enabled: bool, template: str,
     retry_limit: int, sensitive_data_allowed: bool,
 ) -> ExternalNotificationConfig:
+    """执行 validate_notification_config 的业务流程并返回该流程的结果。"""
     normalized = channel.strip().lower()
     normalized_template = template.strip()
     if normalized not in ALLOWED_CHANNELS or not template.strip():

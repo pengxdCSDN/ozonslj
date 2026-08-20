@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -13,20 +15,24 @@ class FernetCredentialProtector(CredentialProtector):
     """使用 Compose Secret 文件保护 Ozon Api-Key，密钥和明文均不进入数据库。"""
 
     def __init__(self, key_file: Path, *, key_version: int) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._key_version = key_version
         self._fernet = Fernet(self._read_key(key_file))
 
     @property
     def key_version(self) -> int:
+        """执行 key_version 的业务流程并返回该流程的结果。"""
         return self._key_version
 
     def protect(self, plaintext: str) -> bytes:
+        """执行 protect 的业务流程并返回该流程的结果。"""
         normalized = plaintext.strip()
         if not normalized:
             raise ValueError("Ozon Api-Key 不能为空")
         return self._fernet.encrypt(normalized.encode("utf-8"))
 
     def unprotect(self, ciphertext: bytes, *, credential_version: int) -> str:
+        """执行 unprotect 的业务流程并返回该流程的结果。"""
         if credential_version != self._key_version:
             raise UnsupportedCredentialVersionError(
                 f"不支持凭据版本 {credential_version}，当前版本为 {self._key_version}"
@@ -38,6 +44,7 @@ class FernetCredentialProtector(CredentialProtector):
 
     @staticmethod
     def _read_key(key_file: Path) -> bytes:
+        """执行内部步骤 _read_key，供同一模块的公开流程复用。"""
         try:
             key = key_file.read_bytes().strip()
         except OSError as error:

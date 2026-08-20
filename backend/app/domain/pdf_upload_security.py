@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 
 @dataclass(frozen=True, slots=True)
 class PdfSafetyResult:
+    """说明 PdfSafetyResult 的职责、状态边界和对外协作关系。"""
     status: str
     byte_size: int
     page_count: int | None
@@ -21,6 +22,7 @@ class PdfSafetyResult:
 
 @dataclass(frozen=True, slots=True)
 class QuarantinedPdf:
+    """说明 QuarantinedPdf 的职责、状态边界和对外协作关系。"""
     upload_id: str
     storage_key: str
 
@@ -90,6 +92,7 @@ def validate_pdf_upload(
 
 
 def _blocked(byte_size: int, reason: str) -> PdfSafetyResult:
+    """执行内部步骤 _blocked，供同一模块的公开流程复用。"""
     return PdfSafetyResult(
         status="blocked", byte_size=byte_size, page_count=None, blocked_reason=reason,
         structural_safety_status="blocked", malware_scan_status="not_run",

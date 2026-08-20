@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from typing import Annotated
 
@@ -17,6 +19,7 @@ router = APIRouter(prefix="/v1/review/diff-previews", tags=["review"])
 
 
 class DiffPreviewPayload(BaseModel):
+    """说明 DiffPreviewPayload 的职责、状态边界和对外协作关系。"""
     old_values: dict[str, object] = Field(default_factory=dict)
     new_values: dict[str, object] = Field(default_factory=dict)
     source: str = Field(min_length=1, max_length=200)
@@ -28,6 +31,7 @@ class DiffPreviewPayload(BaseModel):
 
 @router.post("/build", response_model=list[DiffPreview])
 async def build_preview(payload: DiffPreviewPayload) -> list[DiffPreview]:
+    """执行 build_preview 的业务流程并返回该流程的结果。"""
     try:
         return build_diff_preview(**payload.model_dump())
     except StalePreviewError as exc:
@@ -44,6 +48,7 @@ async def build_and_save_preview(
     gateway: Annotated[DiffPreviewGateway, Depends(get_diff_preview_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[DiffPreview]:
+    """执行 build_and_save_preview 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     previews = await build_preview(payload)

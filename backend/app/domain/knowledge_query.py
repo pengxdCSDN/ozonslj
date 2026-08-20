@@ -35,6 +35,7 @@ class KnowledgeCitation:
 
 @dataclass(frozen=True, slots=True)
 class KnowledgeSegmentAnswer:
+    """说明 KnowledgeSegmentAnswer 的职责、状态边界和对外协作关系。"""
     text: str
     intent: str
     status: str
@@ -45,13 +46,17 @@ class KnowledgeSegmentAnswer:
 
 
 class RerankerPort(Protocol):
-    async def rerank(self, query: str, hits: list[RetrievalHit]) -> list[RetrievalHit]: ...
+    """说明 RerankerPort 的职责、状态边界和对外协作关系。"""
+    async def rerank(self, query: str, hits: list[RetrievalHit]) -> list[RetrievalHit]:
+        """执行 rerank 的业务流程并返回该流程的结果。"""
 
 
 class AnswerGeneratorPort(Protocol):
+    """说明 AnswerGeneratorPort 的职责、状态边界和对外协作关系。"""
     async def generate(
         self, question: str, evidence: tuple[KnowledgeCitation, ...]
-    ) -> str | None: ...
+    ) -> str | None:
+        """执行 generate 的业务流程并返回该流程的结果。"""
 
 
 class KnowledgeQueryEngine:
@@ -70,6 +75,7 @@ class KnowledgeQueryEngine:
         reranker: RerankerPort | None = None,
         answer_generator: AnswerGeneratorPort | None = None,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._embedding = embedding
         self._keyword_index = keyword_index
         self._vector_index = vector_index
@@ -77,6 +83,7 @@ class KnowledgeQueryEngine:
         self._answer_generator = answer_generator
 
     async def answer(self, question: str, *, limit: int = 5) -> tuple[KnowledgeSegmentAnswer, ...]:
+        """执行 answer 的业务流程并返回该流程的结果。"""
         results: list[KnowledgeSegmentAnswer] = []
         for segment in classify_intents(question):
             rewritten = rewrite_query(segment)
@@ -128,6 +135,7 @@ def _to_answer(
     rewritten: RewriteResult,
     decision: EvidenceDecision,
 ) -> KnowledgeSegmentAnswer:
+    """执行内部步骤 _to_answer，供同一模块的公开流程复用。"""
     citations = tuple(_citation(hit) for hit in decision.supported_hits)
     if decision.status == "answered" and citations:
         answer = citations[0].excerpt
@@ -151,6 +159,7 @@ def _to_answer(
 
 
 def _citation(hit: RetrievalHit) -> KnowledgeCitation:
+    """执行内部步骤 _citation，供同一模块的公开流程复用。"""
     return KnowledgeCitation(
         chunk_id=hit.chunk.chunk_id,
         source_locator=hit.chunk.metadata.source_locator,

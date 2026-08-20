@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,12 +14,14 @@ router = APIRouter(prefix="/v1/data-quality", tags=["data-quality"])
 
 
 class MoneyInventoryPayload(BaseModel):
+    """说明 MoneyInventoryPayload 的职责、状态边界和对外协作关系。"""
     record: dict[str, object]
     allowed_currencies: set[str] = Field(default_factory=lambda: {"RUB", "CNY", "USD", "EUR"})
 
 
 @router.post("/money-inventory-check", response_model=list[MoneyInventoryFinding])
 async def money_inventory_check(payload: MoneyInventoryPayload) -> list[MoneyInventoryFinding]:
+    """执行 money_inventory_check 的业务流程并返回该流程的结果。"""
     return check_money_inventory(payload.record, allowed_currencies=payload.allowed_currencies)
 
 

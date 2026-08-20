@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,6 +14,7 @@ router = APIRouter(prefix="/v1/data-quality", tags=["data-quality"])
 
 
 class IsolationPayload(BaseModel):
+    """说明 IsolationPayload 的职责、状态边界和对外协作关系。"""
     records: list[dict[str, object]]
     invalid_rows: set[int] = Field(default_factory=set)
     reason: str = Field(min_length=1, max_length=300)
@@ -19,6 +22,7 @@ class IsolationPayload(BaseModel):
 
 @router.post("/isolate", response_model=IsolationResult)
 async def isolate(payload: IsolationPayload) -> IsolationResult:
+    """执行 isolate 的业务流程并返回该流程的结果。"""
     return isolate_invalid_records(**payload.model_dump())
 
 

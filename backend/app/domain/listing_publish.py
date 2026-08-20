@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
@@ -6,6 +8,7 @@ PublishStatus = Literal["pending", "approved", "executed", "partial", "rejected"
 
 @dataclass(frozen=True, slots=True)
 class PublishCommand:
+    """说明 PublishCommand 的职责、状态边界和对外协作关系。"""
     idempotency_key: str
     version: int
     status: PublishStatus
@@ -16,13 +19,16 @@ class PublishCommand:
 
 
 class ListingPublishGateway(Protocol):
+    """说明 ListingPublishGateway 的职责、状态边界和对外协作关系。"""
     async def save_command(
         self, *, workspace_id: str, product_scope: str, command: PublishCommand
-    ) -> PublishCommand: ...
+    ) -> PublishCommand:
+        """执行 save_command 的业务流程并返回该流程的结果。"""
 
     async def list_commands(
         self, *, workspace_id: str, product_scope: str, limit: int
-    ) -> list[PublishCommand]: ...
+    ) -> list[PublishCommand]:
+        """执行 list_commands 的业务流程并返回该流程的结果。"""
 
 
 def execute_controlled_publish(
@@ -33,6 +39,7 @@ def execute_controlled_publish(
     requested_text: str,
     readback_text: str | None = None,
 ) -> PublishCommand:
+    """执行 execute_controlled_publish 的业务流程并返回该流程的结果。"""
     if not idempotency_key.strip():
         raise ValueError("发布命令必须包含幂等键")
     if version < 1:

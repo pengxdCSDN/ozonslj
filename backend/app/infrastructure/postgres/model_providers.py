@@ -10,6 +10,7 @@ class PostgresModelProviderGateway:
     """持久化供应商配置和用途主备绑定，调用方必须自行施加管理员权限。"""
 
     def __init__(self, pool: AsyncConnectionPool) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._pool = pool
 
     async def create_provider(
@@ -17,6 +18,7 @@ class PostgresModelProviderGateway:
         adapter_type: str, model: str, api_key: str, priority: int,
         base_url: str | None = None,
     ) -> None:
+        """执行 create_provider 的业务流程并返回该流程的结果。"""
         async with self._pool.connection() as connection, connection.transaction():
             await connection.execute(
                 """
@@ -31,6 +33,7 @@ class PostgresModelProviderGateway:
             )
 
     async def list_provider_metadata(self, *, organization_id: str) -> list[dict[str, object]]:
+        """执行 list_provider_metadata 的业务流程并返回该流程的结果。"""
         async with self._pool.connection() as connection, connection.cursor(
             row_factory=dict_row
         ) as cursor:
@@ -52,6 +55,7 @@ class PostgresModelProviderGateway:
         self, *, organization_id: str, purpose: str,
         primary_provider_id: str, fallback_provider_ids: list[str],
     ) -> None:
+        """执行 bind_purpose 的业务流程并返回该流程的结果。"""
         if primary_provider_id in fallback_provider_ids:
             raise ValueError("主模型不能同时出现在备用模型列表")
         async with self._pool.connection() as connection, connection.transaction():

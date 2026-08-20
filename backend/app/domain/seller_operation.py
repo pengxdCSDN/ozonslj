@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from typing import Literal, Protocol
 
@@ -23,6 +25,7 @@ class SellerOperationSummary(BaseModel):
 
 
 class SellerOperationPage(BaseModel):
+    """说明 SellerOperationPage 的职责、状态边界和对外协作关系。"""
     items: list[SellerOperationSummary]
     total: int = Field(ge=0)
     next_cursor: str | None = None
@@ -38,4 +41,5 @@ class SellerOperationGateway(Protocol):
         workspace_id: str,
         cursor: str | None,
         limit: int,
-    ) -> SellerOperationPage: ...
+    ) -> SellerOperationPage:
+        """执行 list_seller_operations 的业务流程并返回该流程的结果。"""

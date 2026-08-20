@@ -16,16 +16,20 @@ from backend.app.domain.knowledge_retrieval import RetrievalHit, VectorIndexPort
 
 
 class ChromaCollection(Protocol):
+    """说明 ChromaCollection 的职责、状态边界和对外协作关系。"""
     def upsert(
         self, *, ids: list[str], documents: list[str], embeddings: list[list[float]],
         metadatas: list[dict[str, str]]
-    ) -> None: ...
+    ) -> None:
+        """执行 upsert 的业务流程并返回该流程的结果。"""
 
-    def delete(self, *, ids: list[str]) -> None: ...
+    def delete(self, *, ids: list[str]) -> None:
+        """执行 delete 的业务流程并返回该流程的结果。"""
 
     def query(
         self, *, query_embeddings: list[list[float]], n_results: int, include: list[str]
-    ) -> dict[str, object]: ...
+    ) -> dict[str, object]:
+        """执行 query 的业务流程并返回该流程的结果。"""
 
 
 class HttpChromaCollection:
@@ -39,6 +43,7 @@ class HttpChromaCollection:
         timeout_seconds: float = 10.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._base_url = base_url.rstrip("/")
         self._collection_id = collection_id
         self._timeout_seconds = timeout_seconds
@@ -80,6 +85,7 @@ class HttpChromaCollection:
         embeddings: list[list[float]],
         metadatas: list[dict[str, str]],
     ) -> None:
+        """执行 upsert 的业务流程并返回该流程的结果。"""
         await self._request(
             "POST",
             "upsert",
@@ -87,11 +93,13 @@ class HttpChromaCollection:
         )
 
     async def delete(self, *, ids: list[str]) -> None:
+        """执行 delete 的业务流程并返回该流程的结果。"""
         await self._request("POST", "delete", {"ids": ids})
 
     async def query(
         self, *, query_embeddings: list[list[float]], n_results: int, include: list[str]
     ) -> dict[str, object]:
+        """执行 query 的业务流程并返回该流程的结果。"""
         return await self._request(
             "POST",
             "query",
@@ -129,6 +137,7 @@ class HttpChromaCollection:
     async def _request(
         self, method: str, operation: str, payload: dict[str, object]
     ) -> dict[str, object]:
+        """执行内部步骤 _request，供同一模块的公开流程复用。"""
         path = f"/api/v1/collections/{self._collection_id}/{operation}"
         try:
             async with httpx.AsyncClient(
@@ -159,10 +168,12 @@ class ChromaVectorIndex(VectorIndexPort):
     """将 Chroma 的距离结果转换为统一的 ``RetrievalHit``。"""
 
     def __init__(self, collection: ChromaCollection, chunks: dict[str, KnowledgeChunk]) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._collection = collection
         self._chunks = chunks
 
     async def upsert(self, chunks: list[KnowledgeChunk], embeddings: list[list[float]]) -> None:
+        """执行 upsert 的业务流程并返回该流程的结果。"""
         if len(chunks) != len(embeddings):
             raise ValueError("切片和向量数量不一致，禁止写入不完整索引")
         self._chunks.update({chunk.chunk_id: chunk for chunk in chunks})
@@ -174,11 +185,13 @@ class ChromaVectorIndex(VectorIndexPort):
         )
 
     async def delete(self, chunk_ids: list[str]) -> None:
+        """执行 delete 的业务流程并返回该流程的结果。"""
         self._collection.delete(ids=chunk_ids)
         for chunk_id in chunk_ids:
             self._chunks.pop(chunk_id, None)
 
     async def search(self, embedding: list[float], *, limit: int) -> list[RetrievalHit]:
+        """执行 search 的业务流程并返回该流程的结果。"""
         result = self._collection.query(
             query_embeddings=[embedding], n_results=limit,
             include=["distances", "documents", "metadatas"],
@@ -201,10 +214,12 @@ class HttpChromaVectorIndex(VectorIndexPort):
     """将异步 HTTP Collection 转换为统一的向量索引端口。"""
 
     def __init__(self, collection: HttpChromaCollection, chunks: dict[str, KnowledgeChunk]) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._collection = collection
         self._chunks = chunks
 
     async def upsert(self, chunks: list[KnowledgeChunk], embeddings: list[list[float]]) -> None:
+        """执行 upsert 的业务流程并返回该流程的结果。"""
         if len(chunks) != len(embeddings):
             raise ValueError("切片和向量数量不一致，禁止写入不完整索引")
         await self._collection.upsert(
@@ -216,11 +231,13 @@ class HttpChromaVectorIndex(VectorIndexPort):
         self._chunks.update({chunk.chunk_id: chunk for chunk in chunks})
 
     async def delete(self, chunk_ids: list[str]) -> None:
+        """执行 delete 的业务流程并返回该流程的结果。"""
         await self._collection.delete(ids=chunk_ids)
         for chunk_id in chunk_ids:
             self._chunks.pop(chunk_id, None)
 
     async def search(self, embedding: list[float], *, limit: int) -> list[RetrievalHit]:
+        """执行 search 的业务流程并返回该流程的结果。"""
         result = await self._collection.query(
             query_embeddings=[embedding], n_results=limit,
             include=["distances", "documents", "metadatas"],
@@ -240,12 +257,14 @@ class HttpChromaVectorIndex(VectorIndexPort):
 
 
 def _nested_strings(value: object) -> list[str]:
+    """执行内部步骤 _nested_strings，供同一模块的公开流程复用。"""
     rows = cast(list[object], value) if isinstance(value, list) else []
     first = rows[0] if rows and isinstance(rows[0], list) else rows
     return [item for item in first if isinstance(item, str)]
 
 
 def _nested_numbers(value: object) -> list[float]:
+    """执行内部步骤 _nested_numbers，供同一模块的公开流程复用。"""
     rows = cast(list[object], value) if isinstance(value, list) else []
     first = rows[0] if rows and isinstance(rows[0], list) else rows
     return [float(item) for item in first if isinstance(item, (int, float))]
@@ -275,6 +294,7 @@ def _metadata_for_chunk(chunk: KnowledgeChunk) -> dict[str, str]:
 
 
 def _nested_metadata(value: object) -> list[dict[str, str]]:
+    """执行内部步骤 _nested_metadata，供同一模块的公开流程复用。"""
     rows = cast(list[object], value) if isinstance(value, list) else []
     first = rows[0] if rows and isinstance(rows[0], list) else rows
     return [
@@ -287,6 +307,7 @@ def _nested_metadata(value: object) -> list[dict[str, str]]:
 def _chunk_from_chroma(
     chunk_id: str, content: str, metadata: dict[str, str]
 ) -> KnowledgeChunk | None:
+    """执行内部步骤 _chunk_from_chroma，供同一模块的公开流程复用。"""
     if (
         not content
         or not metadata.get("document_version_id")

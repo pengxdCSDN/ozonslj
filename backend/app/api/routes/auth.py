@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import inspect
 from collections.abc import Awaitable, Callable
 from typing import Annotated, cast
@@ -20,12 +22,14 @@ router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
 
 class LoginRequest(BaseModel):
+    """说明 LoginRequest 的职责、状态边界和对外协作关系。"""
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=12, max_length=256)
 
     @field_validator("email")
     @classmethod
     def validate_email(cls, value: str) -> str:
+        """执行 validate_email 的业务流程并返回该流程的结果。"""
         normalized = value.strip().lower()
         if normalized.count("@") != 1 or normalized.startswith("@") or normalized.endswith("@"):
             raise ValueError("邮箱格式不正确")
@@ -33,6 +37,7 @@ class LoginRequest(BaseModel):
 
 
 class CurrentUserResponse(BaseModel):
+    """说明 CurrentUserResponse 的职责、状态边界和对外协作关系。"""
     id: str
     email: str
     display_name: str
@@ -40,6 +45,7 @@ class CurrentUserResponse(BaseModel):
 
     @classmethod
     def from_domain(cls, user: AuthenticatedUser) -> "CurrentUserResponse":
+        """执行 from_domain 的业务流程并返回该流程的结果。"""
         return cls(
             id=user.id,
             email=user.email,
@@ -49,6 +55,7 @@ class CurrentUserResponse(BaseModel):
 
 
 class LoginResponse(CurrentUserResponse):
+    """说明 LoginResponse 的职责、状态边界和对外协作关系。"""
     session_token: str | None = None
 
 
@@ -62,6 +69,7 @@ async def login(
     secure_cookie: Annotated[bool, Depends(get_session_cookie_secure)],
     organization_id: Annotated[str, Depends(get_default_organization_id)],
 ) -> LoginResponse:
+    """执行 login 的业务流程并返回该流程的结果。"""
     client_key = request.client.host if request.client else "unknown"
     retry_after = await limiter.retry_after(payload.email, client_key)
     if retry_after is not None:
@@ -106,6 +114,7 @@ async def me(
     service: Annotated[IdentityService, Depends(get_identity_service)],
     token: Annotated[str | None, Depends(get_request_session_token)],
 ) -> CurrentUserResponse:
+    """执行 me 的业务流程并返回该流程的结果。"""
     user = await service.authenticate(token) if token else None
     if user is None:
         raise HTTPException(
@@ -122,6 +131,7 @@ async def logout(
     service: Annotated[IdentityService, Depends(get_identity_service)],
     token: Annotated[str | None, Depends(get_request_session_token)],
 ) -> None:
+    """执行 logout 的业务流程并返回该流程的结果。"""
     if token:
         await service.logout(token)
     response.delete_cookie("ozonslj_session", path="/", httponly=True, samesite="lax")

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,6 +21,7 @@ router = APIRouter(prefix="/v1/selection/decision-books", tags=["selection"])
 
 
 class DecisionBookPayload(BaseModel):
+    """说明 DecisionBookPayload 的职责、状态边界和对外协作关系。"""
     opportunity_summary: str
     customer_scene: str
     market_sample: str
@@ -43,6 +46,7 @@ async def generate_and_save_decision_book(
     gateway: Annotated[SelectionDecisionBookGateway, Depends(get_selection_decision_book_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> DecisionBookPayload:
+    """执行 generate_and_save_decision_book 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if payload.confirmation_status not in {"pending", "confirmed", "rejected"}:
@@ -124,6 +128,7 @@ async def list_decision_books(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[SelectionDecisionBook]:
+    """执行 list_decision_books 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

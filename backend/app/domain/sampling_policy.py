@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
 
 @dataclass(frozen=True, slots=True)
 class SamplingPolicyDecision:
+    """说明 SamplingPolicyDecision 的职责、状态边界和对外协作关系。"""
     allowed: bool
     code: str
     message: str

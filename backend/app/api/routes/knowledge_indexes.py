@@ -9,6 +9,7 @@ router = APIRouter(prefix="/v1/knowledge-indexes", tags=["knowledge-indexes"])
 
 
 class ReconcilePayload(BaseModel):
+    """说明 ReconcilePayload 的职责、状态边界和对外协作关系。"""
     published_chunk_ids: list[str] = Field(default_factory=list, max_length=10_000)
     indexed_chunk_ids: list[str] = Field(default_factory=list, max_length=10_000)
     metadata_chunk_ids: list[str] = Field(default_factory=list, max_length=10_000)
@@ -16,6 +17,7 @@ class ReconcilePayload(BaseModel):
 
 @router.post("/reconcile", response_model=dict[str, object])
 async def reconcile_knowledge_index(payload: ReconcilePayload) -> dict[str, object]:
+    """执行 reconcile_knowledge_index 的业务流程并返回该流程的结果。"""
     plan = build_reconciliation_plan(
         set(payload.published_chunk_ids), set(payload.indexed_chunk_ids),
         metadata_ids=set(payload.metadata_chunk_ids),

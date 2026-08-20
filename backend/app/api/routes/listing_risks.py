@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/v1/listing/risks", tags=["listing"])
 
 
 class ListingRiskPayload(BaseModel):
+    """说明 ListingRiskPayload 的职责、状态边界和对外协作关系。"""
     text: str
     authorized_brands: list[str] = []
     verified_certifications: list[str] = []
@@ -25,6 +28,7 @@ class ListingRiskPayload(BaseModel):
 
 @router.post("/check", response_model=ListingRiskReport)
 async def check_listing_risks(payload: ListingRiskPayload) -> ListingRiskReport:
+    """执行 check_listing_risks 的业务流程并返回该流程的结果。"""
     return detect_listing_risks(
         payload.text,
         authorized_brands=set(payload.authorized_brands),
@@ -39,6 +43,7 @@ async def check_and_save_listing_risks(
     gateway: Annotated[ListingRiskGateway, Depends(get_listing_risk_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> ListingRiskReport:
+    """执行 check_and_save_listing_risks 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     report = await check_listing_risks(payload)

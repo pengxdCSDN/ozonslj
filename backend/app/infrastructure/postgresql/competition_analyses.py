@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from uuid import uuid4
 
@@ -9,15 +11,18 @@ class PostgresCompetitionAnalysisGateway:
     """保存公开样本竞争度推导结果，并明确估算边界。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def save_analysis(
         self, *, workspace_id: str, analysis: CompetitionAnalysis
     ) -> CompetitionAnalysis:
+        """执行 save_analysis 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._save, workspace_id, analysis)
 
     def _save(self, workspace_id: str, analysis: CompetitionAnalysis) -> CompetitionAnalysis:
+        """执行内部步骤 _save，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -40,9 +45,11 @@ class PostgresCompetitionAnalysisGateway:
     async def list_analyses(
         self, *, workspace_id: str, limit: int
     ) -> list[CompetitionAnalysis]:
+        """执行 list_analyses 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list_analyses, workspace_id, limit)
 
     def _list_analyses(self, workspace_id: str, limit: int) -> list[CompetitionAnalysis]:
+        """执行内部步骤 _list_analyses，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT sample_count, competition_score, median_price_minor,

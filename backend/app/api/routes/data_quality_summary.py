@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import asdict
 from typing import Annotated
 
@@ -13,6 +15,7 @@ router = APIRouter(prefix="/v1/store-workspaces", tags=["data-quality"])
 
 
 class QualitySummaryResponse(BaseModel):
+    """说明 QualitySummaryResponse 的职责、状态边界和对外协作关系。"""
     total: int
     by_severity: dict[str, int]
     by_status: dict[str, int]

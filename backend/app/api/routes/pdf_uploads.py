@@ -24,12 +24,14 @@ router = APIRouter(prefix="/v1/knowledge-pdf-uploads", tags=["knowledge-pdf"])
 
 
 class PdfUploadPayload(BaseModel):
+    """说明 PdfUploadPayload 的职责、状态边界和对外协作关系。"""
     filename: str = Field(min_length=1, max_length=200)
     mime_type: str = Field(min_length=1, max_length=100)
     content_base64: str = Field(min_length=1, max_length=35_000_000)
 
 
 class PdfUploadResponse(BaseModel):
+    """说明 PdfUploadResponse 的职责、状态边界和对外协作关系。"""
     upload_id: str
     status: str
     byte_size: int
@@ -41,6 +43,7 @@ class PdfUploadResponse(BaseModel):
 
 
 class PdfExtractResponse(BaseModel):
+    """说明 PdfExtractResponse 的职责、状态边界和对外协作关系。"""
     upload_id: str
     status: str
     page_count: int
@@ -54,6 +57,7 @@ class PdfExtractResponse(BaseModel):
 
 @router.post("", response_model=PdfUploadResponse, status_code=202)
 async def upload_pdf(payload: PdfUploadPayload) -> PdfUploadResponse:
+    """执行 upload_pdf 的业务流程并返回该流程的结果。"""
     try:
         content = base64.b64decode(payload.content_base64, validate=True)
     except ValueError:
@@ -77,6 +81,7 @@ async def upload_pdf(payload: PdfUploadPayload) -> PdfUploadResponse:
 
 @router.post("/{upload_id}/extract-text", response_model=PdfExtractResponse)
 async def extract_pdf_text(upload_id: str) -> PdfExtractResponse:
+    """执行 extract_pdf_text 的业务流程并返回该流程的结果。"""
     try:
         path = quarantined_pdf_path(upload_id)
     except (ValueError, FileNotFoundError) as error:

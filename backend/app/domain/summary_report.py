@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import math
 from dataclasses import dataclass
 from typing import Protocol
@@ -5,6 +7,7 @@ from typing import Protocol
 
 @dataclass(frozen=True, slots=True)
 class SummaryReport:
+    """说明 SummaryReport 的职责、状态边界和对外协作关系。"""
     report_type: str
     period: str
     headline: str
@@ -15,13 +18,16 @@ class SummaryReport:
 
 
 class SummaryReportGateway(Protocol):
+    """说明 SummaryReportGateway 的职责、状态边界和对外协作关系。"""
     async def save_report(
         self, *, workspace_id: str, report: SummaryReport
-    ) -> SummaryReport: ...
+    ) -> SummaryReport:
+        """执行 save_report 的业务流程并返回该流程的结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
-    ) -> list[SummaryReport]: ...
+    ) -> list[SummaryReport]:
+        """执行 list_reports 的业务流程并返回该流程的结果。"""
 
 
 def build_summary_report(
@@ -29,6 +35,7 @@ def build_summary_report(
     stockout_risk_count: int, advertising_anomaly_count: int,
     opportunity_count: int,
 ) -> SummaryReport:
+    """执行 build_summary_report 的业务流程并返回该流程的结果。"""
     normalized = report_type.strip().lower()
     if normalized not in {"daily", "weekly", "monthly"} or not period.strip():
         raise ValueError("报告类型必须是 daily、weekly 或 monthly，且周期不能为空")

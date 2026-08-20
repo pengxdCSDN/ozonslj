@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class ExploreInput:
+    """说明 ExploreInput 的职责、状态边界和对外协作关系。"""
     keyword: str
     search_count: int
     conversion_rate: float | None
@@ -15,6 +18,7 @@ class ExploreInput:
 
 @dataclass(frozen=True, slots=True)
 class ExploreOpportunity:
+    """说明 ExploreOpportunity 的职责、状态边界和对外协作关系。"""
     keyword: str
     score: float
     search_count: int
@@ -28,9 +32,11 @@ class ExploreOpportunity:
 
 
 class ExploreOpportunityGateway(Protocol):
+    """说明 ExploreOpportunityGateway 的职责、状态边界和对外协作关系。"""
     async def save_opportunities(
         self, *, workspace_id: str, opportunities: list[ExploreOpportunity]
-    ) -> list[ExploreOpportunity]: ...
+    ) -> list[ExploreOpportunity]:
+        """执行 save_opportunities 的业务流程并返回该流程的结果。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,7 +70,8 @@ def filter_opportunities(
 
     async def list_opportunities(
         self, *, workspace_id: str, limit: int
-    ) -> list[ExploreOpportunity]: ...
+    ) -> list[ExploreOpportunity]:
+        """执行 list_opportunities 的业务流程并返回该流程的结果。"""
 
 
 def explore_opportunities(items: list[ExploreInput]) -> list[ExploreOpportunity]:

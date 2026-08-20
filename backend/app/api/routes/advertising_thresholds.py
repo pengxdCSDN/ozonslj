@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/v1/advertising/thresholds", tags=["advertising"])
 
 
 class AdvertisingThresholdsPayload(BaseModel):
+    """说明 AdvertisingThresholdsPayload 的职责、状态边界和对外协作关系。"""
     version: int = Field(ge=1)
     min_impressions: int = Field(ge=0)
     min_clicks: int = Field(ge=0)
@@ -27,6 +30,7 @@ class AdvertisingThresholdsPayload(BaseModel):
 
 @router.post("/validate", response_model=AdvertisingThresholds)
 async def validate_thresholds(payload: AdvertisingThresholdsPayload) -> AdvertisingThresholds:
+    """执行 validate_thresholds 的业务流程并返回该流程的结果。"""
     try:
         return create_advertising_thresholds(**payload.model_dump())
     except ValueError as error:
@@ -46,6 +50,7 @@ async def validate_and_save_thresholds(
     gateway: Annotated[AdvertisingThresholdGateway, Depends(get_advertising_threshold_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> AdvertisingThresholds:
+    """执行 validate_and_save_thresholds 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     thresholds = await validate_thresholds(payload)
@@ -62,6 +67,7 @@ async def list_threshold_versions(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[AdvertisingThresholds]:
+    """执行 list_threshold_versions 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

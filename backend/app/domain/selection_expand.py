@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class ExpandInput:
+    """说明 ExpandInput 的职责、状态边界和对外协作关系。"""
     seed_product: str
     core_keywords: tuple[str, ...]
     related_keywords: tuple[str, ...]
@@ -14,6 +17,7 @@ class ExpandInput:
 
 @dataclass(frozen=True, slots=True)
 class ExpandResult:
+    """说明 ExpandResult 的职责、状态边界和对外协作关系。"""
     seed_product: str
     core_terms: tuple[str, ...]
     attribute_terms: tuple[str, ...]
@@ -24,11 +28,14 @@ class ExpandResult:
 
 
 class ExpandResultGateway(Protocol):
-    async def save_expansion(self, *, workspace_id: str, result: ExpandResult) -> ExpandResult: ...
+    """说明 ExpandResultGateway 的职责、状态边界和对外协作关系。"""
+    async def save_expansion(self, *, workspace_id: str, result: ExpandResult) -> ExpandResult:
+        """执行 save_expansion 的业务流程并返回该流程的结果。"""
 
     async def list_expansions(
         self, *, workspace_id: str, limit: int
-    ) -> list[ExpandResult]: ...
+    ) -> list[ExpandResult]:
+        """执行 list_expansions 的业务流程并返回该流程的结果。"""
 
 
 def expand_product(item: ExpandInput) -> ExpandResult:
@@ -61,6 +68,7 @@ def expand_product(item: ExpandInput) -> ExpandResult:
 
 
 def _unique(values: tuple[str, ...]) -> tuple[str, ...]:
+    """执行内部步骤 _unique，供同一模块的公开流程复用。"""
     seen: set[str] = set()
     output: list[str] = []
     for value in values:

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 import json
 from dataclasses import asdict
@@ -11,17 +13,20 @@ class PostgresAdvertisingMetricsGateway:
     """保存带输入快照和统计窗口的广告指标，保证公式结果可回溯。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def save_snapshot(
         self, *, workspace_id: str, inputs: dict[str, object], metrics: AdvertisingMetrics
     ) -> AdvertisingMetrics:
+        """执行 save_snapshot 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._save, workspace_id, inputs, metrics)
 
     def _save(
         self, workspace_id: str, inputs: dict[str, object], metrics: AdvertisingMetrics
     ) -> AdvertisingMetrics:
+        """执行内部步骤 _save，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -42,9 +47,11 @@ class PostgresAdvertisingMetricsGateway:
     async def list_snapshots(
         self, *, workspace_id: str, limit: int
     ) -> list[AdvertisingMetrics]:
+        """执行 list_snapshots 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list, workspace_id, limit)
 
     def _list(self, workspace_id: str, limit: int) -> list[AdvertisingMetrics]:
+        """执行内部步骤 _list，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """

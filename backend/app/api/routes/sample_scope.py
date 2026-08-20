@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from typing import Annotated
 
@@ -13,6 +15,7 @@ router = APIRouter(prefix="/v1/public-samples", tags=["public-samples"])
 
 
 class SampleRecord(BaseModel):
+    """说明 SampleRecord 的职责、状态边界和对外协作关系。"""
     sampled_at: datetime | None = None
     title: str | None = None
     price_minor: int | None = None
@@ -22,11 +25,13 @@ class SampleRecord(BaseModel):
 
 
 class SampleScopePayload(BaseModel):
+    """说明 SampleScopePayload 的职责、状态边界和对外协作关系。"""
     records: list[SampleRecord]
 
 
 @router.post("/scope", response_model=SampleScope)
 async def sample_scope(payload: SampleScopePayload) -> SampleScope:
+    """执行 sample_scope 的业务流程并返回该流程的结果。"""
     return summarize_sample_scope([record.model_dump() for record in payload.records])
 
 

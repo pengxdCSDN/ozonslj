@@ -34,10 +34,12 @@ def _fixed_cases() -> list[EvaluationCase]:
 
 
 class CaseGenerationPayload(BaseModel):
+    """说明 CaseGenerationPayload 的职责、状态边界和对外协作关系。"""
     topics: list[str] = Field(min_length=1, max_length=20)
 
 
 class EvaluationCaseResponse(BaseModel):
+    """说明 EvaluationCaseResponse 的职责、状态边界和对外协作关系。"""
     case_id: str
     question: str
     expected_status: str
@@ -47,19 +49,23 @@ class EvaluationCaseResponse(BaseModel):
 
 
 class ConfirmPayload(BaseModel):
+    """说明 ConfirmPayload 的职责、状态边界和对外协作关系。"""
     reviewer: str = Field(min_length=1, max_length=100)
 
 
 class BatchConfirmPayload(ConfirmPayload):
+    """说明 BatchConfirmPayload 的职责、状态边界和对外协作关系。"""
     case_ids: list[str] = Field(min_length=1, max_length=240)
 
 
 class BatchConfirmResponse(BaseModel):
+    """说明 BatchConfirmResponse 的职责、状态边界和对外协作关系。"""
     confirmed_count: int
     confirmed_case_ids: list[str]
 
 
 class EvaluationCasesPageResponse(BaseModel):
+    """说明 EvaluationCasesPageResponse 的职责、状态边界和对外协作关系。"""
     items: list[EvaluationCaseResponse]
     total: int
     page: int
@@ -70,10 +76,12 @@ class EvaluationCasesPageResponse(BaseModel):
 
 
 class EvaluationRunPayload(BaseModel):
+    """说明 EvaluationRunPayload 的职责、状态边界和对外协作关系。"""
     suite: str = Field(pattern="^(quick|standard|full)$")
 
 
 class MetricObservationPayload(BaseModel):
+    """说明 MetricObservationPayload 的职责、状态边界和对外协作关系。"""
     expected_chunk_ids: list[str] = Field(default_factory=list)
     retrieved_chunk_ids: list[str] = Field(default_factory=list)
     cited_chunk_ids: list[str] = Field(default_factory=list)
@@ -89,6 +97,7 @@ class MetricObservationPayload(BaseModel):
 
 
 class EvaluationRunResponse(BaseModel):
+    """说明 EvaluationRunResponse 的职责、状态边界和对外协作关系。"""
     run_id: str
     suite: str
     status: str
@@ -103,6 +112,7 @@ class EvaluationRunResponse(BaseModel):
 
 
 def _run_response(run: EvaluationRun) -> EvaluationRunResponse:
+    """执行内部步骤 _run_response，供同一模块的公开流程复用。"""
     return EvaluationRunResponse(
         run_id=run.run_id, suite=run.suite, status=run.status, gate_status=run.gate_status,
         target_count=run.target_count, executed_count=run.executed_count,
@@ -112,6 +122,7 @@ def _run_response(run: EvaluationRun) -> EvaluationRunResponse:
 
 
 def _response(case: EvaluationCase) -> EvaluationCaseResponse:
+    """执行内部步骤 _response，供同一模块的公开流程复用。"""
     return EvaluationCaseResponse(
         case_id=case.case_id, question=case.question, expected_status=case.expected_status,
         expected_sources=list(case.expected_sources), safety_tags=list(case.safety_tags),
@@ -124,6 +135,7 @@ async def generate_evaluation_cases(
     payload: CaseGenerationPayload,
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> list[EvaluationCaseResponse]:
+    """执行 generate_evaluation_cases 的业务流程并返回该流程的结果。"""
     generated: list[EvaluationCaseResponse] = []
     for topic in payload.topics:
         case = EvaluationCase(
@@ -141,6 +153,7 @@ async def list_evaluation_cases(
     page_size: int = Query(default=20, ge=1, le=100),
     q: str = Query(default="", max_length=100),
 ) -> EvaluationCasesPageResponse:
+    """执行 list_evaluation_cases 的业务流程并返回该流程的结果。"""
     await gateway.seed_fixed_cases(_fixed_cases())
     current_fixed_ids = {case.case_id for case in _fixed_cases()}
     # v2 固定语料替换 v1 后，历史案例仍需保留在 PostgreSQL 以便审计，
@@ -189,6 +202,7 @@ async def confirm_evaluation_case(
     payload: ConfirmPayload,
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> EvaluationCaseResponse:
+    """执行 confirm_evaluation_case 的业务流程并返回该流程的结果。"""
     case = await gateway.confirm_case(case_id, reviewer=payload.reviewer)
     if case is None:
         raise HTTPException(status_code=404, detail="评测案例不存在")
@@ -200,6 +214,7 @@ async def start_evaluation(
     payload: EvaluationRunPayload,
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> dict[str, object]:
+    """执行 start_evaluation 的业务流程并返回该流程的结果。"""
     await gateway.seed_fixed_cases(_fixed_cases())
     limit = suite_case_limit(payload.suite)
     target_ids = fixed_suite_case_ids(payload.suite)
@@ -240,6 +255,7 @@ async def start_evaluation(
 async def calculate_evaluation_metrics(
     observations: list[MetricObservationPayload],
 ) -> dict[str, object]:
+    """执行 calculate_evaluation_metrics 的业务流程并返回该流程的结果。"""
     metrics = calculate_metrics([
         EvaluationObservation(
             expected_chunk_ids=frozenset(item.expected_chunk_ids),
@@ -285,6 +301,7 @@ async def get_evaluation_run(
     run_id: str,
     gateway: Annotated[RagEvaluationGateway, Depends(get_rag_evaluation_gateway)],
 ) -> EvaluationRunResponse:
+    """执行 get_evaluation_run 的业务流程并返回该流程的结果。"""
     run = await gateway.get_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="评测运行不存在或不可见")

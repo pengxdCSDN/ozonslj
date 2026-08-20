@@ -7,12 +7,14 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class IndexReconciliationPlan:
+    """说明 IndexReconciliationPlan 的职责、状态边界和对外协作关系。"""
     upsert_ids: tuple[str, ...]
     delete_ids: tuple[str, ...]
     missing_metadata_ids: tuple[str, ...]
 
     @property
     def safe_to_publish(self) -> bool:
+        """执行 safe_to_publish 的业务流程并返回该流程的结果。"""
         return not self.missing_metadata_ids
 
 

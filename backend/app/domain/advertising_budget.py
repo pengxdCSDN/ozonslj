@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class AdvertisingBudgetAnalysis:
+    """说明 AdvertisingBudgetAnalysis 的职责、状态边界和对外协作关系。"""
     budget_minor: int
     spend_minor: int
     days_elapsed: int
@@ -20,6 +21,7 @@ class AdvertisingBudgetAnalysis:
 def analyze_advertising_budget(
     *, budget_minor: int, spend_minor: int, days_elapsed: int, days_total: int,
 ) -> AdvertisingBudgetAnalysis:
+    """执行 analyze_advertising_budget 的业务流程并返回该流程的结果。"""
     values = (budget_minor, spend_minor, days_elapsed, days_total)
     if any(isinstance(value, bool) or not isinstance(value, int) for value in values):
         raise ValueError("广告预算分析输入无效")

@@ -1,8 +1,11 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
 class QualitySchemaFinding:
+    """说明 QualitySchemaFinding 的职责、状态边界和对外协作关系。"""
     row_index: int
     field: str
     rule_code: str
@@ -13,6 +16,7 @@ class QualitySchemaFinding:
 
 @dataclass(frozen=True, slots=True)
 class QualitySchemaResult:
+    """说明 QualitySchemaResult 的职责、状态边界和对外协作关系。"""
     valid: bool
     checked_rows: int
     findings: list[QualitySchemaFinding]
@@ -25,6 +29,7 @@ def check_required_and_enums(
     required_fields: list[str],
     enum_fields: dict[str, list[str]],
 ) -> QualitySchemaResult:
+    """执行 check_required_and_enums 的业务流程并返回该流程的结果。"""
     if any(not field.strip() for field in required_fields) or any(
         not field.strip() or not values for field, values in enum_fields.items()
     ):

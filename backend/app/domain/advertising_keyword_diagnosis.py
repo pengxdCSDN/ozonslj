@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class AdvertisingKeywordDiagnosis:
+    """说明 AdvertisingKeywordDiagnosis 的职责、状态边界和对外协作关系。"""
     keyword: str
     category: str
     impressions: int
@@ -19,13 +22,16 @@ class AdvertisingKeywordDiagnosis:
 
 
 class AdvertisingKeywordDiagnosisGateway(Protocol):
+    """说明 AdvertisingKeywordDiagnosisGateway 的职责、状态边界和对外协作关系。"""
     async def save_report(
         self, *, workspace_id: str, diagnoses: list[AdvertisingKeywordDiagnosis]
-    ) -> list[AdvertisingKeywordDiagnosis]: ...
+    ) -> list[AdvertisingKeywordDiagnosis]:
+        """执行 save_report 的业务流程并返回该流程的结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
-    ) -> list[list[AdvertisingKeywordDiagnosis]]: ...
+    ) -> list[list[AdvertisingKeywordDiagnosis]]:
+        """执行 list_reports 的业务流程并返回该流程的结果。"""
 
 
 def diagnose_keywords(
@@ -81,6 +87,7 @@ def diagnose_keywords(
 
 
 def _integer(row: dict[str, object], name: str) -> int:
+    """执行内部步骤 _integer，供同一模块的公开流程复用。"""
     value = row.get(name, 0)
     if not isinstance(value, int) or isinstance(value, bool):
         raise ValueError(f"{name} 必须是整数")

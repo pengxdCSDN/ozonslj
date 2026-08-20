@@ -112,6 +112,7 @@ def parse_pdf(path: Path) -> OcrDocument:
 
 
 def _positive_int_env(name: str, default: int) -> int:
+    """执行内部步骤 _positive_int_env，供同一模块的公开流程复用。"""
     try:
         value = int(os.environ.get(name, str(default)).strip())
     except ValueError:
@@ -120,6 +121,7 @@ def _positive_int_env(name: str, default: int) -> int:
 
 
 def _positive_float_env(name: str, default: float) -> float:
+    """执行内部步骤 _positive_float_env，供同一模块的公开流程复用。"""
     try:
         value = float(os.environ.get(name, str(default)).strip())
     except ValueError:

@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class InventoryAnalysis:
+    """说明 InventoryAnalysis 的职责、状态边界和对外协作关系。"""
     available_units: int
     inbound_units: int
     average_daily_sales: float
@@ -16,19 +19,23 @@ class InventoryAnalysis:
 
 
 class InventoryAnalysisGateway(Protocol):
+    """说明 InventoryAnalysisGateway 的职责、状态边界和对外协作关系。"""
     async def save_report(
         self, *, workspace_id: str, report: InventoryAnalysis
-    ) -> InventoryAnalysis: ...
+    ) -> InventoryAnalysis:
+        """执行 save_report 的业务流程并返回该流程的结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
-    ) -> list[InventoryAnalysis]: ...
+    ) -> list[InventoryAnalysis]:
+        """执行 list_reports 的业务流程并返回该流程的结果。"""
 
 
 def analyze_inventory(
     *, available_units: int, inbound_units: int, average_daily_sales: float,
     safety_days: int, overstock_days: int,
 ) -> InventoryAnalysis:
+    """执行 analyze_inventory 的业务流程并返回该流程的结果。"""
     integer_values = (available_units, inbound_units, safety_days, overstock_days)
     if (
         any(isinstance(value, bool) or not isinstance(value, int) for value in integer_values)

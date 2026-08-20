@@ -31,22 +31,27 @@ class AgentState:
 
 
 class AgentNode(Protocol):
-    async def __call__(self, state: AgentState) -> AgentState: ...
+    """说明 AgentNode 的职责、状态边界和对外协作关系。"""
+    async def __call__(self, state: AgentState) -> AgentState:
+        """实现特殊方法 __call__，遵循该类型的 Python 运行时约定。"""
 
 
 class AgentGraphPort(Protocol):
     """可由 LangGraph StateGraph 适配实现的编排端口。"""
 
-    async def invoke(self, state: AgentState) -> AgentState: ...
+    async def invoke(self, state: AgentState) -> AgentState:
+        """执行 invoke 的业务流程并返回该流程的结果。"""
 
 
 class SequentialAgentGraph:
     """确定性编排替身；生产环境可由 LangGraph 适配器替换。"""
 
     def __init__(self, nodes: tuple[AgentNode, ...] = ()) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._nodes = nodes
 
     async def invoke(self, state: AgentState) -> AgentState:
+        """执行 invoke 的业务流程并返回该流程的结果。"""
         current = state
         for node in self._nodes:
             current = await node(current)

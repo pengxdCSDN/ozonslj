@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from datetime import datetime
 
 
 @dataclass(frozen=True, slots=True)
 class RelationshipFinding:
+    """说明 RelationshipFinding 的职责、状态边界和对外协作关系。"""
     row_index: int
     rule_code: str
     message: str
@@ -14,6 +17,7 @@ def check_relationship_and_time(
     rows: list[dict[str, object]], *, parent_ids: set[str], id_field: str = "id",
     parent_field: str = "parent_id", time_field: str = "observed_at"
 ) -> list[RelationshipFinding]:
+    """执行 check_relationship_and_time 的业务流程并返回该流程的结果。"""
     findings: list[RelationshipFinding] = []
     seen: set[str] = set()
     previous: datetime | None = None

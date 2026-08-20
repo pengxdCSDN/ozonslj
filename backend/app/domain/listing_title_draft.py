@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class ListingTitleDraft:
+    """说明 ListingTitleDraft 的职责、状态边界和对外协作关系。"""
     title: str
     category: str
     covered_terms: tuple[str, ...]
@@ -14,13 +17,16 @@ class ListingTitleDraft:
 
 
 class ListingTitleDraftGateway(Protocol):
+    """说明 ListingTitleDraftGateway 的职责、状态边界和对外协作关系。"""
     async def save_draft(
         self, *, workspace_id: str, product_scope: str, draft: ListingTitleDraft
-    ) -> ListingTitleDraft: ...
+    ) -> ListingTitleDraft:
+        """执行 save_draft 的业务流程并返回该流程的结果。"""
 
     async def list_drafts(
         self, *, workspace_id: str, limit: int = 50
-    ) -> list[ListingTitleDraft]: ...
+    ) -> list[ListingTitleDraft]:
+        """执行 list_drafts 的业务流程并返回该流程的结果。"""
 
 
 def generate_russian_title(
@@ -31,6 +37,7 @@ def generate_russian_title(
     scene_terms: list[str],
     max_characters: int = 120,
 ) -> ListingTitleDraft:
+    """执行 generate_russian_title 的业务流程并返回该流程的结果。"""
     if max_characters < 1:
         raise ValueError("标题最大长度必须为正数")
     terms = _unique(core_terms + attribute_terms + scene_terms)
@@ -49,6 +56,7 @@ def generate_russian_title(
 
 
 def _unique(values: list[str]) -> list[str]:
+    """执行内部步骤 _unique，供同一模块的公开流程复用。"""
     result: list[str] = []
     seen: set[str] = set()
     for value in values:

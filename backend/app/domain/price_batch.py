@@ -1,8 +1,11 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
 class PriceChange:
+    """说明 PriceChange 的职责、状态边界和对外协作关系。"""
     sku: str
     old_price_minor: int
     new_price_minor: int
@@ -11,6 +14,7 @@ class PriceChange:
 
 @dataclass(frozen=True, slots=True)
 class PriceBatchValidation:
+    """说明 PriceBatchValidation 的职责、状态边界和对外协作关系。"""
     valid: bool
     total_items: int
     max_items: int
@@ -22,6 +26,7 @@ class PriceBatchValidation:
 def validate_price_batch(
     items: list[PriceChange], *, max_items: int = 20, max_change_percent: int = 10
 ) -> PriceBatchValidation:
+    """执行 validate_price_batch 的业务流程并返回该流程的结果。"""
     if isinstance(max_items, bool) or not isinstance(max_items, int) or max_items < 1:
         raise ValueError("批量上限必须为正数")
     if (

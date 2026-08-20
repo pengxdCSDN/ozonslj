@@ -18,12 +18,14 @@ from backend.app.domain.knowledge_chunking import (
 
 
 class KnowledgeParser(Protocol):
+    """说明 KnowledgeParser 的职责、状态边界和对外协作关系。"""
     name: str
     version: str
 
     def parse(
         self, raw: RawKnowledgeDocument, *, document_version_id: str
-    ) -> ParsedKnowledgeDocument: ...
+    ) -> ParsedKnowledgeDocument:
+        """执行 parse 的业务流程并返回该流程的结果。"""
 
 
 class KnowledgeIngestionError(ValueError):
@@ -39,6 +41,7 @@ class MarkdownKnowledgeParser:
     def parse(
         self, raw: RawKnowledgeDocument, *, document_version_id: str
     ) -> ParsedKnowledgeDocument:
+        """执行 parse 的业务流程并返回该流程的结果。"""
         _require_source(raw, "markdown")
         return ParsedKnowledgeDocument(
             document_id=raw.document_id,
@@ -59,6 +62,7 @@ class PostgresSchemaTextParser:
     def parse(
         self, raw: RawKnowledgeDocument, *, document_version_id: str
     ) -> ParsedKnowledgeDocument:
+        """执行 parse 的业务流程并返回该流程的结果。"""
         _require_source(raw, "postgres_schema")
         nodes = tuple(
             ParsedNode(kind="table", text=block, locator=f"schema://{raw.filename}#{index}")
@@ -81,6 +85,7 @@ class PdfTextLayerParser:
     def parse(
         self, raw: RawKnowledgeDocument, *, document_version_id: str
     ) -> ParsedKnowledgeDocument:
+        """执行 parse 的业务流程并返回该流程的结果。"""
         _require_source(raw, "pdf")
         pages = raw.content.split("\f")
         nodes = tuple(
@@ -142,6 +147,7 @@ def parser_for(source_type: SourceType) -> KnowledgeParser:
 
 
 def _require_source(raw: RawKnowledgeDocument, expected: SourceType) -> None:
+    """执行内部步骤 _require_source，供同一模块的公开流程复用。"""
     if raw.source_type != expected:
         raise KnowledgeIngestionError(f"解析器要求 source_type={expected}")
     if not raw.filename.strip() or not raw.content.strip():
@@ -151,6 +157,7 @@ def _require_source(raw: RawKnowledgeDocument, expected: SourceType) -> None:
 
 
 def _parse_markdown_nodes(content: str) -> tuple[ParsedNode, ...]:
+    """执行内部步骤 _parse_markdown_nodes，供同一模块的公开流程复用。"""
     nodes: list[ParsedNode] = []
     headings: list[str] = []
     in_code = False
@@ -158,6 +165,7 @@ def _parse_markdown_nodes(content: str) -> tuple[ParsedNode, ...]:
     kind: ParsedNodeKind = "paragraph"
 
     def flush() -> None:
+        """执行 flush 的业务流程并返回该流程的结果。"""
         text = "\n".join(buffer).strip()
         if text:
             nodes.append(
@@ -207,6 +215,7 @@ def _parse_markdown_nodes(content: str) -> tuple[ParsedNode, ...]:
 
 
 def _normalize_text(text: str) -> str:
+    """执行内部步骤 _normalize_text，供同一模块的公开流程复用。"""
     text = text.replace("\u00a0", " ")
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
@@ -214,6 +223,7 @@ def _normalize_text(text: str) -> str:
 
 
 def _looks_like_prompt_injection(text: str) -> bool:
+    """执行内部步骤 _looks_like_prompt_injection，供同一模块的公开流程复用。"""
     patterns = (
         r"忽略(?:之前|以上|所有).{0,20}(?:指令|规则|提示)",
         r"ignore\s+(?:all|previous)\s+instructions",

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 import json
 from uuid import uuid4
@@ -10,6 +12,7 @@ class PostgresManualApprovalGateway:
     """保存人工审批状态；本适配器只改变审批记录，不执行任何外部写入。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
@@ -18,6 +21,7 @@ class PostgresManualApprovalGateway:
         *, workspace_id: str, command_type: str, payload: dict[str, object],
         idempotency_key: str,
     ) -> ManualApproval:
+        """执行 create 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(
             self._create, workspace_id, command_type, payload, idempotency_key
         )
@@ -25,6 +29,7 @@ class PostgresManualApprovalGateway:
     def _create(
         self, workspace_id: str, command_type: str, payload: dict[str, object], idempotency_key: str
     ) -> ManualApproval:
+        """执行内部步骤 _create，供同一模块的公开流程复用。"""
         approval_id = str(uuid4())
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute("""INSERT INTO manual_approvals
@@ -46,12 +51,15 @@ class PostgresManualApprovalGateway:
         )
 
     async def approve(self, *, approval_id: str, reviewer: str) -> ManualApproval | None:
+        """执行 approve 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._approve, approval_id, reviewer)
 
     async def list_pending(self, *, workspace_id: str, limit: int) -> list[ManualApproval]:
+        """执行 list_pending 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list_pending, workspace_id, limit)
 
     def _list_pending(self, workspace_id: str, limit: int) -> list[ManualApproval]:
+        """执行内部步骤 _list_pending，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT approval_id, workspace_id, command_type, payload, status,
@@ -70,6 +78,7 @@ class PostgresManualApprovalGateway:
         ]
 
     def _approve(self, approval_id: str, reviewer: str) -> ManualApproval | None:
+        """执行内部步骤 _approve，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute("""UPDATE manual_approvals SET status='approved',
                 reviewer=%s, decided_at=NOW()

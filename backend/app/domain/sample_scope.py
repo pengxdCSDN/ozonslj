@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -5,6 +7,7 @@ from datetime import datetime
 
 @dataclass(frozen=True, slots=True)
 class SampleScope:
+    """说明 SampleScope 的职责、状态边界和对外协作关系。"""
     sample_count: int
     sampled_from: datetime | None
     sampled_to: datetime | None

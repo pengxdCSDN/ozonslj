@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -24,6 +26,7 @@ async def list_product_offers(
     cursor: Annotated[str | None, Query(pattern=r"^\d+$")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> ProductOfferPage:
+    """执行 list_product_offers 的业务流程并返回该流程的结果。"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(

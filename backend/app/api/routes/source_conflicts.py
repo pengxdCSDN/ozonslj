@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,12 +14,14 @@ router = APIRouter(prefix="/v1/data-quality", tags=["data-quality"])
 
 
 class SourceConflictPayload(BaseModel):
+    """说明 SourceConflictPayload 的职责、状态边界和对外协作关系。"""
     records: dict[str, dict[str, object]]
     fields: list[str] = Field(default_factory=list)
 
 
 @router.post("/source-conflicts", response_model=list[SourceConflict])
 async def source_conflicts(payload: SourceConflictPayload) -> list[SourceConflict]:
+    """执行 source_conflicts 的业务流程并返回该流程的结果。"""
     return find_source_conflicts(**payload.model_dump())
 
 

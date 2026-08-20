@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from uuid import uuid4
 
@@ -9,15 +11,18 @@ class PostgresListingLayerGateway:
     """保存关键词分层结果、规则原因和人工确认状态。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def save_layers(
         self, *, workspace_id: str, layers: list[LayeredKeyword]
     ) -> list[LayeredKeyword]:
+        """执行 save_layers 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._save, workspace_id, layers)
 
     def _save(self, workspace_id: str, layers: list[LayeredKeyword]) -> list[LayeredKeyword]:
+        """执行内部步骤 _save，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             for item in layers:
                 connection.execute(
@@ -35,10 +40,12 @@ class PostgresListingLayerGateway:
         return layers
 
     async def list_layers(self, *, workspace_id: str, limit: int = 50) -> list[LayeredKeyword]:
+        """执行 list_layers 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list, workspace_id, limit)
 
     def _list(self, workspace_id: str, limit: int) -> list[LayeredKeyword]:
         # 历史查询必须同时约束组织和工作区，防止不同工作区的词层结果串读。
+        """执行内部步骤 _list，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """

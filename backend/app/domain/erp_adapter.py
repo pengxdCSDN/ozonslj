@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import csv
 from dataclasses import dataclass
 from datetime import date
@@ -22,10 +24,12 @@ class ErpSupplyRecord:
 class ErpAdapter(Protocol):
     """未来 ERP 实现必须通过此端口，不允许领域层依赖具体厂商 SDK。"""
 
-    async def list_supply_records(self, *, workspace_id: str) -> list[ErpSupplyRecord]: ...
+    async def list_supply_records(self, *, workspace_id: str) -> list[ErpSupplyRecord]:
+        """执行 list_supply_records 的业务流程并返回该流程的结果。"""
 
 
 def normalize_erp_supply_record(raw: dict[str, object]) -> ErpSupplyRecord:
+    """执行 normalize_erp_supply_record 的业务流程并返回该流程的结果。"""
     external_id = _text(raw, "external_id")
     offer_id = _text(raw, "offer_id")
     record_type = _text(raw, "record_type")
@@ -92,6 +96,7 @@ def parse_erp_csv(content: str) -> list[ErpSupplyRecord]:
 
 
 def _text(raw: dict[str, object], field: str) -> str:
+    """执行内部步骤 _text，供同一模块的公开流程复用。"""
     value = raw.get(field)
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"ERP 字段 {field} 不能为空")

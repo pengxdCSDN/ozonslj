@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Literal, Protocol, cast
 
@@ -6,6 +8,7 @@ CampaignStatus = Literal["active", "paused", "archived"]
 
 @dataclass(frozen=True, slots=True)
 class AdvertisingKeyword:
+    """说明 AdvertisingKeyword 的职责、状态边界和对外协作关系。"""
     keyword: str
     bid_minor: int | None
     negative: bool
@@ -13,6 +16,7 @@ class AdvertisingKeyword:
 
 @dataclass(frozen=True, slots=True)
 class AdvertisingCampaign:
+    """说明 AdvertisingCampaign 的职责、状态边界和对外协作关系。"""
     campaign_id: str
     name: str
     campaign_type: str
@@ -22,13 +26,16 @@ class AdvertisingCampaign:
 
 
 class AdvertisingCampaignGateway(Protocol):
+    """说明 AdvertisingCampaignGateway 的职责、状态边界和对外协作关系。"""
     async def save_campaigns(
         self, *, workspace_id: str, campaigns: list[AdvertisingCampaign]
-    ) -> list[AdvertisingCampaign]: ...
+    ) -> list[AdvertisingCampaign]:
+        """执行 save_campaigns 的业务流程并返回该流程的结果。"""
 
     async def list_campaigns(
         self, *, workspace_id: str, limit: int
-    ) -> list[AdvertisingCampaign]: ...
+    ) -> list[AdvertisingCampaign]:
+        """执行 list_campaigns 的业务流程并返回该流程的结果。"""
 
 
 def map_performance_campaign(raw: dict[str, object]) -> AdvertisingCampaign:
@@ -59,6 +66,7 @@ def map_performance_campaign(raw: dict[str, object]) -> AdvertisingCampaign:
 
 
 def _dedupe_keywords(items: list[AdvertisingKeyword]) -> list[AdvertisingKeyword]:
+    """执行内部步骤 _dedupe_keywords，供同一模块的公开流程复用。"""
     seen: set[tuple[str, bool]] = set()
     result: list[AdvertisingKeyword] = []
     for item in items:

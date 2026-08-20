@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Literal, Protocol
@@ -43,15 +45,18 @@ class QualityFindingGateway(Protocol):
 
     async def list_findings(
         self, *, workspace_id: str, status: QualityFindingStatus | None, limit: int
-    ) -> list[QualityFindingRecord]: ...
+    ) -> list[QualityFindingRecord]:
+        """执行 list_findings 的业务流程并返回该流程的结果。"""
 
     async def create_findings(
         self, *, workspace_id: str, findings: list[QualityFinding]
-    ) -> list[QualityFindingRecord]: ...
+    ) -> list[QualityFindingRecord]:
+        """执行 create_findings 的业务流程并返回该流程的结果。"""
 
     async def update_status(
         self, *, finding_id: str, status: QualityFindingStatus
-    ) -> QualityFindingRecord | None: ...
+    ) -> QualityFindingRecord | None:
+        """执行 update_status 的业务流程并返回该流程的结果。"""
 
 
 def check_required_and_enum(

@@ -28,6 +28,7 @@ class LocalizedProductContent:
     translation_source_hash: str | None = None
 
     def __post_init__(self) -> None:
+        """实现特殊方法 __post_init__，遵循该类型的 Python 运行时约定。"""
         if not self.title_ru.strip():
             raise ValueError("俄文商品标题不能为空；上游原文必须保留")
         if self.title_zh is not None and not self.title_zh.strip():

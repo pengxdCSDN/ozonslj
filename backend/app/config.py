@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -11,6 +13,7 @@ ServiceRole = Literal["api", "worker", "scheduler"]
 
 
 class Settings(BaseSettings):
+    """说明 Settings 的职责、状态边界和对外协作关系。"""
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -74,7 +77,11 @@ class Settings(BaseSettings):
         if self.service_role != "scheduler":
             for env_name, key_name, file_name in (
                 ("RAG_EMBEDDING_API_KEY", "rag_embedding_api_key", "rag_embedding_api_key_file"),
-                ("RAG_TRANSLATION_API_KEY", "rag_translation_api_key", "rag_translation_api_key_file"),
+                (
+                    "RAG_TRANSLATION_API_KEY",
+                    "rag_translation_api_key",
+                    "rag_translation_api_key_file",
+                ),
             ):
                 if getattr(self, key_name) is None and getattr(self, file_name) is not None:
                     path = getattr(self, file_name)
@@ -116,4 +123,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    """执行 get_settings 的业务流程并返回该流程的结果。"""
     return Settings()

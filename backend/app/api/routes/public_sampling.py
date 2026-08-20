@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,6 +14,7 @@ router = APIRouter(prefix="/v1/public-sampling", tags=["public-sampling"])
 
 
 class SamplingRequestPayload(BaseModel):
+    """说明 SamplingRequestPayload 的职责、状态边界和对外协作关系。"""
     url: str
     robots_allowed: bool = True
     rate_limited: bool = False
@@ -19,6 +22,7 @@ class SamplingRequestPayload(BaseModel):
 
 
 class SamplingBatchPayload(BaseModel):
+    """说明 SamplingBatchPayload 的职责、状态边界和对外协作关系。"""
     requests: list[SamplingRequestPayload]
     global_limit: int = Field(default=2, ge=1, le=2)
     max_attempts: int = Field(default=3, ge=1, le=5)
@@ -32,6 +36,7 @@ async def _stub_fetch_page(url: str) -> int:
 
 @router.post("/preview", response_model=list[SamplingResult])
 async def sample_preview(payload: SamplingBatchPayload) -> list[SamplingResult]:
+    """执行 sample_preview 的业务流程并返回该流程的结果。"""
     sampler = PublicSampler(
         _stub_fetch_page, global_limit=payload.global_limit, max_attempts=payload.max_attempts
     )

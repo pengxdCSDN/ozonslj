@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import hashlib
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +16,7 @@ class PostgresMigrationError(RuntimeError):
 
 @dataclass(frozen=True)
 class _Migration:
+    """说明 _Migration 的职责、状态边界和对外协作关系。"""
     version: int
     name: str
     sql: str
@@ -77,6 +80,7 @@ def migrate_postgres(
 
 
 def _load_migrations(migrations_path: Path) -> tuple[_Migration, ...]:
+    """执行内部步骤 _load_migrations，供同一模块的公开流程复用。"""
     migrations: list[_Migration] = []
     for path in sorted(migrations_path.glob("[0-9][0-9][0-9][0-9]_*.sql")):
         version_text, _, name_with_suffix = path.name.partition("_")
@@ -98,6 +102,7 @@ def _verify_checksums(
     applied: dict[int, str],
     migrations: tuple[_Migration, ...],
 ) -> None:
+    """执行内部步骤 _verify_checksums，供同一模块的公开流程复用。"""
     expected = {migration.version: migration.checksum for migration in migrations}
     unknown_versions = sorted(set(applied) - set(expected))
     if unknown_versions:

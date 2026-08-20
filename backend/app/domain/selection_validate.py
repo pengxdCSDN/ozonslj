@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class ValidateInput:
+    """说明 ValidateInput 的职责、状态边界和对外协作关系。"""
     sku: str
     selling_price_minor: int
     purchase_cost_minor: int
@@ -20,6 +23,7 @@ class ValidateInput:
 
 @dataclass(frozen=True, slots=True)
 class FulfillmentProfit:
+    """说明 FulfillmentProfit 的职责、状态边界和对外协作关系。"""
     fulfillment_type: str
     contribution_profit_minor: int
     margin_percent: float
@@ -29,6 +33,7 @@ class FulfillmentProfit:
 
 @dataclass(frozen=True, slots=True)
 class ValidateResult:
+    """说明 ValidateResult 的职责、状态边界和对外协作关系。"""
     sku: str
     fbo: FulfillmentProfit
     fbs: FulfillmentProfit
@@ -38,13 +43,16 @@ class ValidateResult:
 
 
 class ValidateResultGateway(Protocol):
+    """说明 ValidateResultGateway 的职责、状态边界和对外协作关系。"""
     async def save_validation(
         self, *, workspace_id: str, assumptions: dict[str, object], result: ValidateResult
-    ) -> ValidateResult: ...
+    ) -> ValidateResult:
+        """执行 save_validation 的业务流程并返回该流程的结果。"""
 
     async def list_validations(
         self, *, workspace_id: str, limit: int
-    ) -> list[ValidateResult]: ...
+    ) -> list[ValidateResult]:
+        """执行 list_validations 的业务流程并返回该流程的结果。"""
 
 
 def validate_product(item: ValidateInput) -> ValidateResult:
@@ -81,6 +89,7 @@ def validate_product(item: ValidateInput) -> ValidateResult:
 
 
 def _profit(kind: str, item: ValidateInput, logistics: int) -> FulfillmentProfit:
+    """执行内部步骤 _profit，供同一模块的公开流程复用。"""
     cost = (
         item.purchase_cost_minor
         + logistics

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
@@ -5,6 +7,7 @@ from typing import Protocol
 
 @dataclass(frozen=True, slots=True)
 class DataFreshnessDecision:
+    """说明 DataFreshnessDecision 的职责、状态边界和对外协作关系。"""
     data_domain: str
     observed_at: datetime
     max_age_seconds: int
@@ -20,13 +23,16 @@ class DataFreshnessDecision:
 
 
 class DataFreshnessGateway(Protocol):
+    """说明 DataFreshnessGateway 的职责、状态边界和对外协作关系。"""
     async def save_decision(
         self, *, workspace_id: str, decision: DataFreshnessDecision
-    ) -> DataFreshnessDecision: ...
+    ) -> DataFreshnessDecision:
+        """执行 save_decision 的业务流程并返回该流程的结果。"""
 
     async def list_decisions(
         self, *, workspace_id: str, limit: int = 50
-    ) -> list[DataFreshnessDecision]: ...
+    ) -> list[DataFreshnessDecision]:
+        """执行 list_decisions 的业务流程并返回该流程的结果。"""
 
 
 def check_data_freshness(
@@ -38,6 +44,7 @@ def check_data_freshness(
     record_count: int | None = None,
     error_summary: str | None = None,
 ) -> DataFreshnessDecision:
+    """执行 check_data_freshness 的业务流程并返回该流程的结果。"""
     if (
         not data_domain.strip()
         or isinstance(max_age_seconds, bool)

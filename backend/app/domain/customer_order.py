@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from decimal import Decimal
 from typing import Literal, Protocol
@@ -37,4 +39,5 @@ class CustomerOrderGateway(Protocol):
         workspace_id: str,
         cursor: str | None,
         limit: int,
-    ) -> CustomerOrderPage: ...
+    ) -> CustomerOrderPage:
+        """执行 list_customer_orders 的业务流程并返回该流程的结果。"""

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from collections.abc import Sequence
 from decimal import Decimal
 from typing import Protocol
@@ -7,13 +9,15 @@ from backend.app.domain.store_workspace import WorkspaceNotFoundError
 
 
 class ProductOfferGateway(Protocol):
+    """说明 ProductOfferGateway 的职责、状态边界和对外协作关系。"""
     async def list_product_offers(
         self,
         *,
         workspace_id: str,
         cursor: str | None,
         limit: int,
-    ) -> ProductOfferPage: ...
+    ) -> ProductOfferPage:
+        """执行 list_product_offers 的业务流程并返回该流程的结果。"""
 
 
 STUB_PRODUCT_OFFERS: Sequence[ProductOffer] = (
@@ -45,6 +49,7 @@ STUB_PRODUCT_OFFERS: Sequence[ProductOffer] = (
 
 
 class StubOzonGateway:
+    """说明 StubOzonGateway 的职责、状态边界和对外协作关系。"""
     _offers = STUB_PRODUCT_OFFERS
 
     async def list_product_offers(
@@ -54,6 +59,7 @@ class StubOzonGateway:
         cursor: str | None,
         limit: int,
     ) -> ProductOfferPage:
+        """执行 list_product_offers 的业务流程并返回该流程的结果。"""
         if workspace_id != "local":
             raise WorkspaceNotFoundError(workspace_id)
         start = int(cursor) if cursor else 0

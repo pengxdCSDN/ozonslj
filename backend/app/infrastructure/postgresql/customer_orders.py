@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from datetime import datetime
 from decimal import Decimal
@@ -14,6 +16,7 @@ class PostgresCustomerOrderGateway:
     """读取 PostgreSQL 中按内部组织和店铺工作区隔离的脱敏订单摘要。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
@@ -24,6 +27,7 @@ class PostgresCustomerOrderGateway:
         cursor: str | None,
         limit: int,
     ) -> CustomerOrderPage:
+        """执行 list_customer_orders 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(
             self._list_customer_orders,
             workspace_id,
@@ -38,6 +42,7 @@ class PostgresCustomerOrderGateway:
         limit: int,
     ) -> CustomerOrderPage:
         # raw_summary 可能包含上游扩展字段，运营列表不得选择或返回该列。
+        """执行内部步骤 _list_customer_orders，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             count_row = connection.execute(
                 """

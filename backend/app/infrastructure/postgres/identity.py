@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from typing import Any, cast
 
@@ -8,10 +10,13 @@ from backend.app.domain.identity import AuthenticatedUser, OperatorRole
 
 
 class PostgresIdentityGateway:
+    """说明 PostgresIdentityGateway 的职责、状态边界和对外协作关系。"""
     def __init__(self, pool: AsyncConnectionPool) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._pool = pool
 
     async def find_login_identity(self, email: str) -> tuple[AuthenticatedUser, str] | None:
+        """执行 find_login_identity 的业务流程并返回该流程的结果。"""
         async with (
             self._pool.connection() as connection,
             connection.cursor(row_factory=dict_row) as cursor,
@@ -32,6 +37,7 @@ class PostgresIdentityGateway:
     async def create_session(
         self, operator_id: str, token_hash: str, expires_at: datetime
     ) -> None:
+        """执行 create_session 的业务流程并返回该流程的结果。"""
         async with self._pool.connection() as connection:
             await connection.execute(
                 """DELETE FROM user_sessions
@@ -45,6 +51,7 @@ class PostgresIdentityGateway:
             )
 
     async def find_user_by_session_hash(self, token_hash: str) -> AuthenticatedUser | None:
+        """执行 find_user_by_session_hash 的业务流程并返回该流程的结果。"""
         async with (
             self._pool.connection() as connection,
             connection.cursor(row_factory=dict_row) as cursor,
@@ -69,6 +76,7 @@ class PostgresIdentityGateway:
             return await self._load_user(cursor, str(row["id"]), row)
 
     async def revoke_session(self, token_hash: str) -> None:
+        """执行 revoke_session 的业务流程并返回该流程的结果。"""
         async with self._pool.connection() as connection:
             await connection.execute(
                 """UPDATE user_sessions
@@ -81,6 +89,7 @@ class PostgresIdentityGateway:
     async def _load_user(
         cursor: Any, operator_id: str, row: dict[str, object]
     ) -> AuthenticatedUser:
+        """执行内部步骤 _load_user，供同一模块的公开流程复用。"""
         await cursor.execute(
             """SELECT workspace_id
                FROM workspace_memberships

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,6 +18,7 @@ router = APIRouter(prefix="/v1/seller-accounts", tags=["seller-accounts"])
 
 
 class CreateSellerAccountRequest(BaseModel):
+    """说明 CreateSellerAccountRequest 的职责、状态边界和对外协作关系。"""
     display_name: str = Field(min_length=1, max_length=120)
     workspace_name: str = Field(min_length=1, max_length=120)
     client_id: str = Field(min_length=1, max_length=200)
@@ -28,6 +31,7 @@ async def create_seller_account(
     service: Annotated[SellerAccountService, Depends(get_seller_account_service)],
     user: Annotated[AuthenticatedUser, Depends(get_current_user)],
 ) -> CreatedSellerAccount:
+    """执行 create_seller_account 的业务流程并返回该流程的结果。"""
     if user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="仅管理员可添加卖家账号")
     try:

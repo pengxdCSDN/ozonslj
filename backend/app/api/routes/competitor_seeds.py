@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,10 +21,12 @@ router = APIRouter(prefix="/v1/store-workspaces", tags=["competitor-seeds"])
 
 
 class CreateSeedRequest(BaseModel):
+    """说明 CreateSeedRequest 的职责、状态边界和对外协作关系。"""
     url: str
 
 
 class UpdateSeedRequest(BaseModel):
+    """说明 UpdateSeedRequest 的职责、状态边界和对外协作关系。"""
     status: str
 
 
@@ -32,6 +36,7 @@ async def list_competitor_seeds(
     gateway: Annotated[CompetitorSeedGateway, Depends(get_competitor_seed_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[CompetitorSeed]:
+    """执行 list_competitor_seeds 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_seeds(workspace_id=workspace_id)
@@ -44,6 +49,7 @@ async def create_competitor_seed(
     gateway: Annotated[CompetitorSeedGateway, Depends(get_competitor_seed_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> CompetitorSeed:
+    """执行 create_competitor_seed 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -70,6 +76,7 @@ async def update_competitor_seed(
     gateway: Annotated[CompetitorSeedGateway, Depends(get_competitor_seed_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> CompetitorSeed:
+    """执行 update_competitor_seed 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if payload.status not in {"active", "paused", "blocked"}:

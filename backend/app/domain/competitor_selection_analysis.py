@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class CompetitorSelectionAnalysis:
+    """说明 CompetitorSelectionAnalysis 的职责、状态边界和对外协作关系。"""
     sample_count: int
     opportunity_count: int
     estimated: bool
@@ -14,13 +17,16 @@ class CompetitorSelectionAnalysis:
 
 
 class CompetitorSelectionAnalysisGateway(Protocol):
+    """说明 CompetitorSelectionAnalysisGateway 的职责、状态边界和对外协作关系。"""
     async def save_report(
         self, *, workspace_id: str, report: CompetitorSelectionAnalysis
-    ) -> CompetitorSelectionAnalysis: ...
+    ) -> CompetitorSelectionAnalysis:
+        """执行 save_report 的业务流程并返回该流程的结果。"""
 
     async def list_reports(
         self, *, workspace_id: str, limit: int
-    ) -> list[CompetitorSelectionAnalysis]: ...
+    ) -> list[CompetitorSelectionAnalysis]:
+        """执行 list_reports 的业务流程并返回该流程的结果。"""
 
 
 def analyze_competitor_selection(
@@ -28,6 +34,7 @@ def analyze_competitor_selection(
     median_price_minor: int | None, top_competitor_rating: float | None,
     source_window: str,
 ) -> CompetitorSelectionAnalysis:
+    """执行 analyze_competitor_selection 的业务流程并返回该流程的结果。"""
     if (
         isinstance(sample_count, bool) or not isinstance(sample_count, int)
         or isinstance(opportunity_count, bool) or not isinstance(opportunity_count, int)

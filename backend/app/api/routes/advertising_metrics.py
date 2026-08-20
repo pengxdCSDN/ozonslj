@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/v1/advertising/metrics", tags=["advertising"])
 
 
 class AdvertisingMetricsPayload(BaseModel):
+    """说明 AdvertisingMetricsPayload 的职责、状态边界和对外协作关系。"""
     impressions: int = Field(ge=0)
     clicks: int = Field(ge=0)
     orders: int = Field(ge=0)
@@ -30,6 +33,7 @@ class AdvertisingMetricsPayload(BaseModel):
 
 @router.post("/calculate", response_model=AdvertisingMetrics)
 async def calculate_metrics(payload: AdvertisingMetricsPayload) -> AdvertisingMetrics:
+    """执行 calculate_metrics 的业务流程并返回该流程的结果。"""
     try:
         return calculate_advertising_metrics(**payload.model_dump())
     except ValueError as error:
@@ -49,6 +53,7 @@ async def calculate_and_save_metrics(
     gateway: Annotated[AdvertisingMetricsGateway, Depends(get_advertising_metrics_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> AdvertisingMetrics:
+    """执行 calculate_and_save_metrics 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:
@@ -69,6 +74,7 @@ async def list_metric_snapshots(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[AdvertisingMetrics]:
+    """执行 list_metric_snapshots 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.list_snapshots(workspace_id=workspace_id, limit=limit)

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from typing import Annotated
 
@@ -19,11 +21,13 @@ router = APIRouter(prefix="/v1/review/readback", tags=["review"])
 
 
 class ReadbackPayload(BaseModel):
+    """说明 ReadbackPayload 的职责、状态边界和对外协作关系。"""
     expected: dict[str, object] = Field(default_factory=dict)
     actual: dict[str, object] = Field(default_factory=dict)
 
 
 class StoredReadbackResponse(BaseModel):
+    """说明 StoredReadbackResponse 的职责、状态边界和对外协作关系。"""
     verification_id: str
     workspace_id: str
     verification: ReadbackVerification
@@ -32,6 +36,7 @@ class StoredReadbackResponse(BaseModel):
 
 @router.post("/verify", response_model=ReadbackVerification)
 async def verify(payload: ReadbackPayload) -> ReadbackVerification:
+    """执行 verify 的业务流程并返回该流程的结果。"""
     return verify_readback(**payload.model_dump())
 
 
@@ -42,6 +47,7 @@ async def save_verification(
     gateway: Annotated[ReadbackVerificationGateway, Depends(get_readback_verification_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> StoredReadbackVerification:
+    """执行 save_verification 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     return await gateway.save(
@@ -56,6 +62,7 @@ async def list_verifications(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[StoredReadbackVerification]:
+    """执行 list_verifications 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

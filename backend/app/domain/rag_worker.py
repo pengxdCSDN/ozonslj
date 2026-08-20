@@ -11,6 +11,7 @@ WorkerTaskStatus = Literal["queued", "running", "succeeded", "failed", "cancelle
 
 @dataclass(frozen=True, slots=True)
 class RagWorkerTask:
+    """说明 RagWorkerTask 的职责、状态边界和对外协作关系。"""
     task_id: str
     task_type: str
     organization_id: str
@@ -27,6 +28,7 @@ class RagWorkerQueue:
     """单进程内的确定性队列替身；生产环境可由 Redis/DB 队列适配。"""
 
     def __init__(self, *, max_concurrency: int = 1, lease_seconds: int = 300) -> None:
+        """初始化对象依赖和运行时状态。"""
         if max_concurrency < 1 or lease_seconds < 1:
             raise ValueError("Worker 并发和租约时间必须为正数")
         self._max_concurrency = max_concurrency
@@ -34,12 +36,14 @@ class RagWorkerQueue:
         self._tasks: dict[str, RagWorkerTask] = {}
 
     def enqueue(self, task: RagWorkerTask) -> RagWorkerTask:
+        """执行 enqueue 的业务流程并返回该流程的结果。"""
         if task.task_id in self._tasks:
             return self._tasks[task.task_id]
         self._tasks[task.task_id] = task
         return task
 
     def claim(self, *, organization_id: str, now: datetime | None = None) -> RagWorkerTask | None:
+        """执行 claim 的业务流程并返回该流程的结果。"""
         current = now or datetime.now(UTC)
         active = sum(task.status == "running" for task in self._tasks.values())
         if active >= self._max_concurrency:
@@ -60,6 +64,7 @@ class RagWorkerQueue:
     def finish(
         self, task_id: str, *, status: WorkerTaskStatus, error_code: str | None = None
     ) -> RagWorkerTask:
+        """执行 finish 的业务流程并返回该流程的结果。"""
         task = self._tasks[task_id]
         if task.status != "running":
             raise ValueError("只有 running 任务可以结束")
@@ -68,6 +73,7 @@ class RagWorkerQueue:
         return finished
 
     def get(self, task_id: str) -> RagWorkerTask:
+        """执行 get 的业务流程并返回该流程的结果。"""
         return self._tasks[task_id]
 
     def list(self, *, organization_id: str | None = None) -> tuple[RagWorkerTask, ...]:

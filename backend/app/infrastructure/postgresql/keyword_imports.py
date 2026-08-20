@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from datetime import datetime
 from typing import Any
@@ -11,12 +13,14 @@ class PostgresKeywordImportGateway:
     """搜索词导入批次适配器；唯一指纹冲突时返回原批次。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def create_batch(
         self, *, workspace_id: str, fingerprint: str, rows: list[KeywordImportRow]
     ) -> KeywordImportBatch:
+        """执行 create_batch 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(
             self._create_batch, workspace_id, fingerprint, rows
         )
@@ -24,6 +28,7 @@ class PostgresKeywordImportGateway:
     def _create_batch(
         self, workspace_id: str, fingerprint: str, rows: list[KeywordImportRow]
     ) -> KeywordImportBatch:
+        """执行内部步骤 _create_batch，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             existing = connection.execute(
                 """
@@ -66,10 +71,12 @@ class PostgresKeywordImportGateway:
         return _batch_from_row(row, reused=existing is not None)
 
     async def list_batches(self, *, workspace_id: str, limit: int = 50) -> list[KeywordImportBatch]:
+        """执行 list_batches 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list_batches, workspace_id, limit)
 
     def _list_batches(self, workspace_id: str, limit: int) -> list[KeywordImportBatch]:
         # 指纹历史只按组织和工作区读取，便于确认重复提交复用的是哪一批事实。
+        """执行内部步骤 _list_batches，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """
@@ -85,6 +92,7 @@ class PostgresKeywordImportGateway:
 
 
 def _batch_from_row(row: dict[str, Any], *, reused: bool = False) -> KeywordImportBatch:
+    """执行内部步骤 _batch_from_row，供同一模块的公开流程复用。"""
     created_at = row["created_at"]
     if not isinstance(created_at, datetime):
         raise ValueError("导入批次 created_at 必须是有效时间")

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Literal, Protocol, cast
 
@@ -6,20 +8,25 @@ DataSource = Literal["official_private", "operator_imported", "public_sample", "
 
 @dataclass(frozen=True, slots=True)
 class DataProvenance:
+    """说明 DataProvenance 的职责、状态边界和对外协作关系。"""
     source: DataSource
     observed_at: str
     explanation: str
 
 
 class DataProvenanceGateway(Protocol):
-    async def save(self, *, workspace_id: str, provenance: DataProvenance) -> DataProvenance: ...
+    """说明 DataProvenanceGateway 的职责、状态边界和对外协作关系。"""
+    async def save(self, *, workspace_id: str, provenance: DataProvenance) -> DataProvenance:
+        """执行 save 的业务流程并返回该流程的结果。"""
 
     async def list_history(
         self, *, workspace_id: str, limit: int = 50
-    ) -> list[DataProvenance]: ...
+    ) -> list[DataProvenance]:
+        """执行 list_history 的业务流程并返回该流程的结果。"""
 
 
 def classify_source(*, source: str, observed_at: str, explanation: str) -> DataProvenance:
+    """执行 classify_source 的业务流程并返回该流程的结果。"""
     allowed = {"official_private", "operator_imported", "public_sample", "derived_estimate"}
     if source not in allowed or not observed_at.strip() or not explanation.strip():
         raise ValueError("数据来源必须是受支持的来源标签，并包含时间和说明")

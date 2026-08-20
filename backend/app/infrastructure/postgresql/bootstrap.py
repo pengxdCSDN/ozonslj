@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from uuid import uuid4
 
 from psycopg import Connection
@@ -69,6 +71,7 @@ def provision_organization_owner(
 
 
 def _require_bootstrap_role(connection: Connection[tuple[object, ...]]) -> None:
+    """执行内部步骤 _require_bootstrap_role，供同一模块的公开流程复用。"""
     row = connection.execute(
         """
         SELECT rolsuper, rolbypassrls

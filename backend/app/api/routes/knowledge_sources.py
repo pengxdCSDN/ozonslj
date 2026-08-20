@@ -18,6 +18,7 @@ router = APIRouter(prefix="/v1/knowledge-sources", tags=["knowledge-governance"]
 
 
 class KnowledgeSourceCreate(BaseModel):
+    """说明 KnowledgeSourceCreate 的职责、状态边界和对外协作关系。"""
     title: str = Field(min_length=1, max_length=200)
     source_type: str = Field(pattern="^(markdown|postgres_schema|pdf)$")
     business_domain: str = Field(min_length=1, max_length=80)
@@ -27,6 +28,7 @@ class KnowledgeSourceCreate(BaseModel):
 
 
 class KnowledgeSourceResponse(BaseModel):
+    """说明 KnowledgeSourceResponse 的职责、状态边界和对外协作关系。"""
     id: str
     title: str
     source_type: str
@@ -38,6 +40,7 @@ class KnowledgeSourceResponse(BaseModel):
 
 
 class KnowledgeVersionCreate(BaseModel):
+    """说明 KnowledgeVersionCreate 的职责、状态边界和对外协作关系。"""
     content_hash: str = Field(min_length=1, max_length=128)
     parser_name: str = Field(min_length=1, max_length=100)
     parser_version: str = Field(min_length=1, max_length=40)
@@ -45,6 +48,7 @@ class KnowledgeVersionCreate(BaseModel):
 
 
 class KnowledgeVersionResponse(BaseModel):
+    """说明 KnowledgeVersionResponse 的职责、状态边界和对外协作关系。"""
     id: str
     source_id: str
     version_number: int
@@ -53,6 +57,7 @@ class KnowledgeVersionResponse(BaseModel):
 
 
 def _response(source: KnowledgeSource) -> KnowledgeSourceResponse:
+    """执行内部步骤 _response，供同一模块的公开流程复用。"""
     return KnowledgeSourceResponse(
         id=source.id,
         title=source.title,
@@ -66,6 +71,7 @@ def _response(source: KnowledgeSource) -> KnowledgeSourceResponse:
 
 
 def _version_response(version: KnowledgeVersion) -> KnowledgeVersionResponse:
+    """执行内部步骤 _version_response，供同一模块的公开流程复用。"""
     return KnowledgeVersionResponse(
         id=version.id,
         source_id=version.source_id,
@@ -77,6 +83,7 @@ def _version_response(version: KnowledgeVersion) -> KnowledgeVersionResponse:
 
 @router.post("", response_model=KnowledgeSourceResponse, status_code=201)
 async def create_knowledge_source(payload: KnowledgeSourceCreate) -> KnowledgeSourceResponse:
+    """执行 create_knowledge_source 的业务流程并返回该流程的结果。"""
     runtime = get_knowledge_runtime()
     source = KnowledgeSource(
         id=str(uuid4()),
@@ -98,12 +105,14 @@ async def create_knowledge_source(payload: KnowledgeSourceCreate) -> KnowledgeSo
 
 @router.get("", response_model=list[KnowledgeSourceResponse])
 async def list_knowledge_sources() -> list[KnowledgeSourceResponse]:
+    """执行 list_knowledge_sources 的业务流程并返回该流程的结果。"""
     runtime = get_knowledge_runtime()
     return [_response(source) for source in await runtime.list_sources()]
 
 
 @router.post("/{source_id}/withdraw", response_model=KnowledgeSourceResponse)
 async def withdraw_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
+    """执行 withdraw_knowledge_source 的业务流程并返回该流程的结果。"""
     runtime = get_knowledge_runtime()
     source = await runtime.source(source_id)
     if source is None:
@@ -116,6 +125,7 @@ async def withdraw_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
 
 @router.post("/{source_id}/pause", response_model=KnowledgeSourceResponse)
 async def pause_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
+    """执行 pause_knowledge_source 的业务流程并返回该流程的结果。"""
     runtime = get_knowledge_runtime()
     source = await runtime.source(source_id)
     if source is None:
@@ -127,6 +137,7 @@ async def pause_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
 
 @router.post("/{source_id}/resume", response_model=KnowledgeSourceResponse)
 async def resume_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
+    """执行 resume_knowledge_source 的业务流程并返回该流程的结果。"""
     runtime = get_knowledge_runtime()
     source = await runtime.source(source_id)
     if source is None:
@@ -138,6 +149,7 @@ async def resume_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
 
 @router.delete("/{source_id}", response_model=KnowledgeSourceResponse)
 async def delete_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
+    """执行 delete_knowledge_source 的业务流程并返回该流程的结果。"""
     runtime = get_knowledge_runtime()
     source = await runtime.source(source_id)
     if source is None:
@@ -151,6 +163,7 @@ async def delete_knowledge_source(source_id: str) -> KnowledgeSourceResponse:
 async def create_knowledge_version(
     source_id: str, payload: KnowledgeVersionCreate
 ) -> KnowledgeVersionResponse:
+    """执行 create_knowledge_version 的业务流程并返回该流程的结果。"""
     runtime = get_knowledge_runtime()
     source = await runtime.source(source_id)
     if source is None or source.status in {"withdrawn", "deleted"}:
@@ -174,6 +187,7 @@ async def create_knowledge_version(
 
 @router.get("/{source_id}/versions", response_model=list[KnowledgeVersionResponse])
 async def list_knowledge_versions(source_id: str) -> list[KnowledgeVersionResponse]:
+    """执行 list_knowledge_versions 的业务流程并返回该流程的结果。"""
     runtime = get_knowledge_runtime()
     if await runtime.source(source_id) is None:
         raise HTTPException(status_code=404, detail="知识源不存在")
@@ -182,6 +196,7 @@ async def list_knowledge_versions(source_id: str) -> list[KnowledgeVersionRespon
 
 @router.post("/versions/{version_id}/publish", response_model=KnowledgeVersionResponse)
 async def publish_knowledge_version(version_id: str) -> KnowledgeVersionResponse:
+    """执行 publish_knowledge_version 的业务流程并返回该流程的结果。"""
     runtime = get_knowledge_runtime()
     version = await runtime.version(version_id)
     if version is None:
@@ -205,6 +220,7 @@ async def publish_knowledge_version(version_id: str) -> KnowledgeVersionResponse
 
 @router.post("/versions/{version_id}/withdraw", response_model=KnowledgeVersionResponse)
 async def withdraw_knowledge_version(version_id: str) -> KnowledgeVersionResponse:
+    """执行 withdraw_knowledge_version 的业务流程并返回该流程的结果。"""
     runtime = get_knowledge_runtime()
     version = await runtime.version(version_id)
     if version is None:

@@ -1,8 +1,11 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
 class IsolatedRecord:
+    """说明 IsolatedRecord 的职责、状态边界和对外协作关系。"""
     row_index: int
     reason: str
     record: dict[str, object]
@@ -10,6 +13,7 @@ class IsolatedRecord:
 
 @dataclass(frozen=True, slots=True)
 class IsolationResult:
+    """说明 IsolationResult 的职责、状态边界和对外协作关系。"""
     accepted: list[dict[str, object]]
     isolated: list[IsolatedRecord]
 
@@ -17,6 +21,7 @@ class IsolationResult:
 def isolate_invalid_records(
     records: list[dict[str, object]], invalid_rows: set[int], *, reason: str
 ) -> IsolationResult:
+    """执行 isolate_invalid_records 的业务流程并返回该流程的结果。"""
     if not reason.strip():
         raise ValueError("隔离原因不能为空")
     accepted = [

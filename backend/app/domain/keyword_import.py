@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import csv
 import hashlib
 import re
@@ -21,6 +23,7 @@ class KeywordImportRow:
 
 @dataclass(frozen=True, slots=True)
 class KeywordImportBatch:
+    """说明 KeywordImportBatch 的职责、状态边界和对外协作关系。"""
     id: str
     workspace_id: str
     fingerprint: str
@@ -30,13 +33,16 @@ class KeywordImportBatch:
 
 
 class KeywordImportGateway(Protocol):
+    """说明 KeywordImportGateway 的职责、状态边界和对外协作关系。"""
     async def create_batch(
         self, *, workspace_id: str, fingerprint: str, rows: list[KeywordImportRow]
-    ) -> KeywordImportBatch: ...
+    ) -> KeywordImportBatch:
+        """执行 create_batch 的业务流程并返回该流程的结果。"""
 
     async def list_batches(
         self, *, workspace_id: str, limit: int = 50
-    ) -> list[KeywordImportBatch]: ...
+    ) -> list[KeywordImportBatch]:
+        """执行 list_batches 的业务流程并返回该流程的结果。"""
 
 
 def keyword_import_fingerprint(content: str) -> str:
@@ -113,6 +119,7 @@ def parse_keyword_xlsx(
 
 
 def _xlsx_shared_strings(archive: zipfile.ZipFile) -> list[str]:
+    """执行内部步骤 _xlsx_shared_strings，供同一模块的公开流程复用。"""
     try:
         raw = archive.read("xl/sharedStrings.xml").decode("utf-8")
     except KeyError:
@@ -135,6 +142,7 @@ def _map_columns(
 
 
 def _parse_non_negative_int(value: str | None, row_number: int) -> int | None:
+    """执行内部步骤 _parse_non_negative_int，供同一模块的公开流程复用。"""
     normalized = (value or "").strip()
     if not normalized:
         return None

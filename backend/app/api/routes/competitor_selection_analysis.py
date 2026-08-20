@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/v1/analysis/competitor-selection", tags=["analysis"]
 
 
 class CompetitorSelectionPayload(BaseModel):
+    """说明 CompetitorSelectionPayload 的职责、状态边界和对外协作关系。"""
     sample_count: int = Field(ge=0)
     opportunity_count: int = Field(ge=0)
     median_price_minor: int | None = Field(default=None, ge=0)
@@ -27,6 +30,7 @@ class CompetitorSelectionPayload(BaseModel):
 
 @router.post("/analyze", response_model=CompetitorSelectionAnalysis)
 async def analyze(payload: CompetitorSelectionPayload) -> CompetitorSelectionAnalysis:
+    """执行 analyze 的业务流程并返回该流程的结果。"""
     try:
         return analyze_competitor_selection(**payload.model_dump())
     except ValueError as error:
@@ -49,6 +53,7 @@ async def analyze_and_save(
     ],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> CompetitorSelectionAnalysis:
+    """执行 analyze_and_save 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     report = await analyze(payload)
@@ -68,6 +73,7 @@ async def list_analysis_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[CompetitorSelectionAnalysis]:
+    """执行 list_analysis_history 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

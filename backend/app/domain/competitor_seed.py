@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import urlparse
@@ -5,6 +7,7 @@ from urllib.parse import urlparse
 
 @dataclass(frozen=True, slots=True)
 class CompetitorSeed:
+    """说明 CompetitorSeed 的职责、状态边界和对外协作关系。"""
     id: str
     workspace_id: str
     url: str
@@ -13,11 +16,15 @@ class CompetitorSeed:
 
 
 class CompetitorSeedGateway(Protocol):
-    async def create_seed(self, *, workspace_id: str, url: str) -> CompetitorSeed: ...
+    """说明 CompetitorSeedGateway 的职责、状态边界和对外协作关系。"""
+    async def create_seed(self, *, workspace_id: str, url: str) -> CompetitorSeed:
+        """执行 create_seed 的业务流程并返回该流程的结果。"""
 
-    async def list_seeds(self, *, workspace_id: str) -> list[CompetitorSeed]: ...
+    async def list_seeds(self, *, workspace_id: str) -> list[CompetitorSeed]:
+        """执行 list_seeds 的业务流程并返回该流程的结果。"""
 
-    async def update_status(self, *, seed_id: str, status: str) -> CompetitorSeed | None: ...
+    async def update_status(self, *, seed_id: str, status: str) -> CompetitorSeed | None:
+        """执行 update_status 的业务流程并返回该流程的结果。"""
 
 
 class CompetitorSeedError(ValueError):

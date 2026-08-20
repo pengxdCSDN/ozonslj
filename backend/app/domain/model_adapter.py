@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import urlparse
@@ -5,6 +7,7 @@ from urllib.parse import urlparse
 
 @dataclass(frozen=True, slots=True)
 class ModelAdapterConfig:
+    """说明 ModelAdapterConfig 的职责、状态边界和对外协作关系。"""
     adapter: str
     provider: str
     model: str
@@ -14,17 +17,21 @@ class ModelAdapterConfig:
 
 
 class ModelAdapterGateway(Protocol):
+    """说明 ModelAdapterGateway 的职责、状态边界和对外协作关系。"""
     async def save_config(
         self, *, workspace_id: str, config: ModelAdapterConfig
-    ) -> ModelAdapterConfig: ...
+    ) -> ModelAdapterConfig:
+        """执行 save_config 的业务流程并返回该流程的结果。"""
 
     async def list_configs(
         self, *, workspace_id: str, limit: int
-    ) -> list[ModelAdapterConfig]: ...
+    ) -> list[ModelAdapterConfig]:
+        """执行 list_configs 的业务流程并返回该流程的结果。"""
 
     async def get_active_config(
         self, *, workspace_id: str
-    ) -> ModelAdapterConfig | None: ...
+    ) -> ModelAdapterConfig | None:
+        """执行 get_active_config 的业务流程并返回该流程的结果。"""
 
 
 def inspect_model_adapter(

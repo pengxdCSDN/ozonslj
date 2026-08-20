@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from typing import Annotated
 
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/v1/listing/keywords", tags=["listing"])
 
 
 class ListingKeywordPayload(BaseModel):
+    """说明 ListingKeywordPayload 的职责、状态边界和对外协作关系。"""
     keyword: str
     source: str
     observed_at: datetime
@@ -28,6 +31,7 @@ class ListingKeywordPayload(BaseModel):
 
 @router.post("/normalize", response_model=ListingKeyword)
 async def normalize_keyword(payload: ListingKeywordPayload) -> ListingKeyword:
+    """执行 normalize_keyword 的业务流程并返回该流程的结果。"""
     try:
         return normalize_listing_keyword(ListingKeyword(**payload.model_dump()))
     except ListingKeywordError as error:
@@ -45,6 +49,7 @@ async def normalize_and_save_keyword(
     gateway: Annotated[ListingKeywordGateway, Depends(get_listing_keyword_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> ListingKeyword:
+    """执行 normalize_and_save_keyword 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     try:

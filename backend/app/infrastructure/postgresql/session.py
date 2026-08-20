@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -18,6 +20,7 @@ class TenantContext:
     user_id: str
 
     def __post_init__(self) -> None:
+        """实现特殊方法 __post_init__，遵循该类型的 Python 运行时约定。"""
         if not self.organization_id.strip():
             raise ValueError("organization_id 不能为空")
         if not self.user_id.strip():
@@ -35,6 +38,7 @@ class PostgresSessionFactory:
         max_size: int = 5,
         pool: ConnectionPool[Connection[dict[str, Any]]] | None = None,
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         if not database_url.strip():
             raise ValueError("database_url 不能为空")
         if min_size < 0 or max_size < 1 or min_size > max_size:

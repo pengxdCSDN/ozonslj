@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -16,6 +18,7 @@ router = APIRouter(prefix="/v1/store-workspaces", tags=["data-quality"])
 
 
 class UpdateFindingRequest(BaseModel):
+    """说明 UpdateFindingRequest 的职责、状态边界和对外协作关系。"""
     status: QualityFindingStatus
 
 
@@ -30,6 +33,7 @@ async def create_quality_findings(
     gateway: Annotated[QualityFindingGateway, Depends(get_quality_finding_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[QualityFindingRecord]:
+    """执行 create_quality_findings 的业务流程并返回该流程的结果。"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
@@ -44,6 +48,7 @@ async def list_quality_findings(
     finding_status: Annotated[QualityFindingStatus | None, Query(alias="status")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> list[QualityFindingRecord]:
+    """执行 list_quality_findings 的业务流程并返回该流程的结果。"""
     workspace = await workspace_gateway.get_workspace(workspace_id)
     if workspace is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
@@ -62,6 +67,7 @@ async def update_quality_finding(
     payload: UpdateFindingRequest,
     gateway: Annotated[QualityFindingGateway, Depends(get_quality_finding_gateway)],
 ) -> QualityFindingRecord:
+    """执行 update_quality_finding 的业务流程并返回该流程的结果。"""
     record = await gateway.update_status(finding_id=finding_id, status=payload.status)
     if record is None or record.workspace_id != workspace_id:
         raise HTTPException(

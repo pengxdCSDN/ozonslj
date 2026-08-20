@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/v1/listing/title-drafts", tags=["listing"])
 
 
 class TitleDraftPayload(BaseModel):
+    """说明 TitleDraftPayload 的职责、状态边界和对外协作关系。"""
     category: str
     core_terms: list[str] = []
     attribute_terms: list[str] = []
@@ -27,6 +30,7 @@ class TitleDraftPayload(BaseModel):
 
 @router.post("/generate", response_model=ListingTitleDraft)
 async def generate_title_draft(payload: TitleDraftPayload) -> ListingTitleDraft:
+    """执行 generate_title_draft 的业务流程并返回该流程的结果。"""
     return generate_russian_title(**payload.model_dump())
 
 
@@ -37,6 +41,7 @@ async def generate_and_save_title_draft(
     gateway: Annotated[ListingTitleDraftGateway, Depends(get_listing_title_draft_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> ListingTitleDraft:
+    """执行 generate_and_save_title_draft 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     draft = generate_russian_title(**payload.model_dump())

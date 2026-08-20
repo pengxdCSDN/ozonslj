@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from datetime import datetime
 from typing import Annotated
 
@@ -17,16 +19,19 @@ router = APIRouter(prefix="/v1/review/execution-results", tags=["review"])
 
 
 class ItemExecutionPayload(BaseModel):
+    """说明 ItemExecutionPayload 的职责、状态边界和对外协作关系。"""
     item_id: str = Field(min_length=1, max_length=100)
     success: bool
     message: str = Field(min_length=1, max_length=500)
 
 
 class ExecutionPayload(BaseModel):
+    """说明 ExecutionPayload 的职责、状态边界和对外协作关系。"""
     items: list[ItemExecutionPayload]
 
 
 class StoredExecutionResultResponse(BaseModel):
+    """说明 StoredExecutionResultResponse 的职责、状态边界和对外协作关系。"""
     result_id: str
     workspace_id: str
     result: BatchExecutionResult
@@ -35,6 +40,7 @@ class StoredExecutionResultResponse(BaseModel):
 
 @router.post("/summarize", response_model=BatchExecutionResult)
 async def summarize(payload: ExecutionPayload) -> BatchExecutionResult:
+    """执行 summarize 的业务流程并返回该流程的结果。"""
     return summarize_execution([ItemExecutionResult(**item.model_dump()) for item in payload.items])
 
 
@@ -48,6 +54,7 @@ async def save_result(
     gateway: Annotated[ExecutionResultGateway, Depends(get_execution_result_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> StoredExecutionResult:
+    """执行 save_result 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     result = summarize_execution(
@@ -66,6 +73,7 @@ async def list_results(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 20,
 ) -> list[StoredExecutionResult]:
+    """执行 list_results 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 100:

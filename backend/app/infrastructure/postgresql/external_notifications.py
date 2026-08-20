@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 from uuid import uuid4
 
@@ -9,17 +11,20 @@ class PostgresExternalNotificationGateway:
     """保存通知渠道配置；默认预览，不调用真实 IM 或邮件发送器。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def save_config(
         self, *, workspace_id: str, config: ExternalNotificationConfig
     ) -> ExternalNotificationConfig:
+        """执行 save_config 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._save, workspace_id, config)
 
     def _save(
         self, workspace_id: str, config: ExternalNotificationConfig
     ) -> ExternalNotificationConfig:
+        """执行内部步骤 _save，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -39,9 +44,11 @@ class PostgresExternalNotificationGateway:
     async def list_configs(
         self, *, workspace_id: str, limit: int
     ) -> list[ExternalNotificationConfig]:
+        """执行 list_configs 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list_configs, workspace_id, limit)
 
     def _list_configs(self, workspace_id: str, limit: int) -> list[ExternalNotificationConfig]:
+        """执行内部步骤 _list_configs，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT channel, enabled, template, retry_limit,

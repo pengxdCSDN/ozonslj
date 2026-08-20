@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -21,6 +23,7 @@ router = APIRouter(prefix="/v1/selection/explore", tags=["selection"])
 
 
 class ExploreItemPayload(BaseModel):
+    """说明 ExploreItemPayload 的职责、状态边界和对外协作关系。"""
     keyword: str
     search_count: int = Field(ge=0)
     conversion_rate: float | None = Field(default=None, ge=0)
@@ -31,6 +34,7 @@ class ExploreItemPayload(BaseModel):
 
 
 class ExplorePayload(BaseModel):
+    """说明 ExplorePayload 的职责、状态边界和对外协作关系。"""
     items: list[ExploreItemPayload]
     min_score: float = Field(default=0, ge=0, le=100)
     min_search_count: int = Field(default=0, ge=0)
@@ -39,6 +43,7 @@ class ExplorePayload(BaseModel):
 
 
 def _run(payload: ExplorePayload) -> list[ExploreOpportunity]:
+    """执行内部步骤 _run，供同一模块的公开流程复用。"""
     scored = explore_opportunities([ExploreInput(**item.model_dump()) for item in payload.items])
     return filter_opportunities(
         scored,
@@ -53,6 +58,7 @@ def _run(payload: ExplorePayload) -> list[ExploreOpportunity]:
 
 @router.post("/run", response_model=list[ExploreOpportunity])
 async def run_explore(payload: ExplorePayload) -> list[ExploreOpportunity]:
+    """执行 run_explore 的业务流程并返回该流程的结果。"""
     return _run(payload)
 
 
@@ -66,6 +72,7 @@ async def run_and_save_explore(
     gateway: Annotated[ExploreOpportunityGateway, Depends(get_explore_opportunity_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> list[ExploreOpportunity]:
+    """执行 run_and_save_explore 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     opportunities = _run(payload)
@@ -79,6 +86,7 @@ async def list_explore_history(
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
     limit: int = 50,
 ) -> list[ExploreOpportunity]:
+    """执行 list_explore_history 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     if limit < 1 or limit > 200:

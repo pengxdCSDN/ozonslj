@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import cast
 
 from psycopg.rows import dict_row
@@ -10,11 +12,13 @@ class PostgresStoreWorkspaceGateway:
     """从 PostgreSQL 返回不含任何卖家凭据的工作区目录。"""
 
     def __init__(self, pool: AsyncConnectionPool) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._pool = pool
 
     async def list_store_workspaces(
         self, workspace_ids: tuple[str, ...]
     ) -> list[StoreWorkspace]:
+        """执行 list_store_workspaces 的业务流程并返回该流程的结果。"""
         async with (
             self._pool.connection() as connection,
             connection.cursor(row_factory=dict_row) as cursor,

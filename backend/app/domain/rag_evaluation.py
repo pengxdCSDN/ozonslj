@@ -11,6 +11,7 @@ EvaluationStatus = Literal["draft", "confirmed", "rejected"]
 
 @dataclass(frozen=True, slots=True)
 class EvaluationCase:
+    """说明 EvaluationCase 的职责、状态边界和对外协作关系。"""
     case_id: str
     question: str
     expected_status: str
@@ -38,41 +39,56 @@ class EvaluationRun:
 class RagEvaluationGateway(Protocol):
     """评测案例持久化端口；API 不直接依赖 PostgreSQL 驱动。"""
 
-    async def seed_fixed_cases(self, cases: Sequence[EvaluationCase]) -> None: ...
+    async def seed_fixed_cases(self, cases: Sequence[EvaluationCase]) -> None:
+        """执行 seed_fixed_cases 的业务流程并返回该流程的结果。"""
 
-    async def create_case(self, case: EvaluationCase) -> EvaluationCase: ...
+    async def create_case(self, case: EvaluationCase) -> EvaluationCase:
+        """执行 create_case 的业务流程并返回该流程的结果。"""
 
-    async def list_cases(self) -> list[EvaluationCase]: ...
+    async def list_cases(self) -> list[EvaluationCase]:
+        """执行 list_cases 的业务流程并返回该流程的结果。"""
 
-    async def confirm_case(self, case_id: str, reviewer: str) -> EvaluationCase | None: ...
+    async def confirm_case(self, case_id: str, reviewer: str) -> EvaluationCase | None:
+        """执行 confirm_case 的业务流程并返回该流程的结果。"""
 
     async def confirm_cases(
         self, case_ids: Sequence[str], reviewer: str
-    ) -> list[EvaluationCase]: ...
+    ) -> list[EvaluationCase]:
+        """执行 confirm_cases 的业务流程并返回该流程的结果。"""
 
-    async def create_run(self, suite: str, gate_status: Literal["ready", "blocked"]) -> str: ...
-    async def find_active_run(self, suite: str) -> EvaluationRun | None: ...
-    async def list_runs(self, limit: int = 20) -> list[EvaluationRun]: ...
-    async def get_run(self, run_id: str) -> EvaluationRun | None: ...
-    async def dispatchable_run_ids(self, limit: int) -> list[str]: ...
+    async def create_run(self, suite: str, gate_status: Literal["ready", "blocked"]) -> str:
+        """执行 create_run 的业务流程并返回该流程的结果。"""
+    async def find_active_run(self, suite: str) -> EvaluationRun | None:
+        """执行 find_active_run 的业务流程并返回该流程的结果。"""
+    async def list_runs(self, limit: int = 20) -> list[EvaluationRun]:
+        """执行 list_runs 的业务流程并返回该流程的结果。"""
+    async def get_run(self, run_id: str) -> EvaluationRun | None:
+        """执行 get_run 的业务流程并返回该流程的结果。"""
+    async def dispatchable_run_ids(self, limit: int) -> list[str]:
+        """执行 dispatchable_run_ids 的业务流程并返回该流程的结果。"""
     async def claim_run(
         self, run_id: str, worker_id: str, lease_seconds: int
-    ) -> EvaluationRun | None: ...
-    async def heartbeat_run(self, run_id: str, worker_id: str, lease_seconds: int) -> bool: ...
+    ) -> EvaluationRun | None:
+        """执行 claim_run 的业务流程并返回该流程的结果。"""
+    async def heartbeat_run(self, run_id: str, worker_id: str, lease_seconds: int) -> bool:
+        """执行 heartbeat_run 的业务流程并返回该流程的结果。"""
     async def save_run_metrics(
         self, run_id: str, metrics: dict[str, float | str], executed_count: int,
         passed_count: int, failed_count: int, error_count: int, worker_id: str | None = None,
         error_code: str | None = None,
-    ) -> EvaluationRun | None: ...
+    ) -> EvaluationRun | None:
+        """执行 save_run_metrics 的业务流程并返回该流程的结果。"""
 
 
 def confirm_case(case: EvaluationCase, *, reviewer: str) -> EvaluationCase:
+    """执行 confirm_case 的业务流程并返回该流程的结果。"""
     if not reviewer.strip():
         raise ValueError("评测案例必须记录人工确认人")
     return replace(case, status="confirmed")
 
 
 def suite_case_limit(suite: str) -> int:
+    """执行 suite_case_limit 的业务流程并返回该流程的结果。"""
     limits = {"quick": 30, "standard": 120, "full": 240}
     if suite not in limits:
         raise ValueError("suite 只能是 quick、standard 或 full")

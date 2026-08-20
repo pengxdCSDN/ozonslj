@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Literal
 
@@ -6,6 +8,7 @@ DataSource = Literal["official_private", "operator_imported", "public_sample", "
 
 @dataclass(frozen=True, slots=True)
 class DataSourceLabel:
+    """说明 DataSourceLabel 的职责、状态边界和对外协作关系。"""
     source: DataSource
     label: str
     estimated: bool
@@ -21,6 +24,7 @@ SOURCE_LABELS: dict[DataSource, tuple[str, bool, str]] = {
 
 
 def get_data_source_label(source: str) -> DataSourceLabel:
+    """执行 get_data_source_label 的业务流程并返回该流程的结果。"""
     normalized = source.strip().lower()
     if normalized not in SOURCE_LABELS:
         raise ValueError("数据来源标签无效")

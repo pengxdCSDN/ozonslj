@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,6 +14,7 @@ router = APIRouter(prefix="/v1/data-quality", tags=["data-quality"])
 
 
 class QualitySchemaPayload(BaseModel):
+    """说明 QualitySchemaPayload 的职责、状态边界和对外协作关系。"""
     rows: list[dict[str, object]]
     required_fields: list[str] = Field(default_factory=list)
     enum_fields: dict[str, list[str]] = Field(default_factory=dict)
@@ -19,6 +22,7 @@ class QualitySchemaPayload(BaseModel):
 
 @router.post("/schema-check", response_model=QualitySchemaResult)
 async def schema_check(payload: QualitySchemaPayload) -> QualitySchemaResult:
+    """执行 schema_check 的业务流程并返回该流程的结果。"""
     try:
         return check_required_and_enums(
             payload.rows, required_fields=payload.required_fields, enum_fields=payload.enum_fields

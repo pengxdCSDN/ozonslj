@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/v1/listing/smart-search", tags=["listing"])
 
 
 class SmartSearchPayload(BaseModel):
+    """说明 SmartSearchPayload 的职责、状态边界和对外协作关系。"""
     text: str
     required_terms: list[str]
     category: str
@@ -26,6 +29,7 @@ class SmartSearchPayload(BaseModel):
 
 @router.post("/check", response_model=SmartSearchReport)
 async def smart_search_check(payload: SmartSearchPayload) -> SmartSearchReport:
+    """执行 smart_search_check 的业务流程并返回该流程的结果。"""
     return check_smart_search(
         payload.text,
         required_terms=payload.required_terms,
@@ -41,6 +45,7 @@ async def check_and_save_smart_search(
     gateway: Annotated[SmartSearchGateway, Depends(get_smart_search_gateway)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> SmartSearchReport:
+    """执行 check_and_save_smart_search 的业务流程并返回该流程的结果。"""
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     report = await smart_search_check(payload)

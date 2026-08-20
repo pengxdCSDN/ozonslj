@@ -12,6 +12,7 @@ _flag = RolloutFlag("knowledge-rag", "pilot", "2099-01-01T00:00:00Z")
 
 
 class RolloutTransitionPayload(BaseModel):
+    """说明 RolloutTransitionPayload 的职责、状态边界和对外协作关系。"""
     mode: str = Field(pattern="^(disabled|shadow|pilot|internal)$")
     reason: str = Field(min_length=1, max_length=500)
     pilot_until: str | None = None
@@ -19,6 +20,7 @@ class RolloutTransitionPayload(BaseModel):
 
 @router.get("/v1/capabilities/knowledge-rag")
 async def knowledge_rag_capabilities() -> dict[str, object]:
+    """执行 knowledge_rag_capabilities 的业务流程并返回该流程的结果。"""
     return {
         "knowledge_management": True,
         "knowledge_query": True,
@@ -32,6 +34,7 @@ async def knowledge_rag_capabilities() -> dict[str, object]:
 
 @router.post("/v1/rag-rollout/transitions")
 async def transition_rag_rollout(payload: RolloutTransitionPayload) -> dict[str, object]:
+    """执行 transition_rag_rollout 的业务流程并返回该流程的结果。"""
     global _flag
     if payload.mode == "internal" and not payload.reason.strip():
         raise HTTPException(status_code=400, detail="internal 模式必须提供切换理由")

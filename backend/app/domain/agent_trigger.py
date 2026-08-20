@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class AgentTrigger:
+    """说明 AgentTrigger 的职责、状态边界和对外协作关系。"""
     trigger_type: str
     target: str
     schedule: str | None
@@ -13,19 +16,23 @@ class AgentTrigger:
 
 
 class AgentTriggerGateway(Protocol):
+    """说明 AgentTriggerGateway 的职责、状态边界和对外协作关系。"""
     async def save_trigger(
         self, *, workspace_id: str, trigger: AgentTrigger
-    ) -> AgentTrigger: ...
+    ) -> AgentTrigger:
+        """执行 save_trigger 的业务流程并返回该流程的结果。"""
 
     async def list_triggers(
         self, *, workspace_id: str, limit: int
-    ) -> list[AgentTrigger]: ...
+    ) -> list[AgentTrigger]:
+        """执行 list_triggers 的业务流程并返回该流程的结果。"""
 
 
 def create_agent_trigger(
     *, trigger_type: str, target: str, schedule: str | None,
     event_name: str | None, enabled: bool,
 ) -> AgentTrigger:
+    """执行 create_agent_trigger 的业务流程并返回该流程的结果。"""
     normalized = trigger_type.strip().lower()
     if normalized not in {"scheduled", "event", "manual"} or not target.strip():
         raise ValueError("触发类型必须是 scheduled、event 或 manual，目标不能为空")

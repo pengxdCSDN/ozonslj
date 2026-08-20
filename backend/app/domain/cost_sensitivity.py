@@ -1,9 +1,12 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
 class CostSensitivityInput:
+    """说明 CostSensitivityInput 的职责、状态边界和对外协作关系。"""
     selling_price_minor: int
     purchase_cost_minor: int
     logistics_cost_minor: int
@@ -14,6 +17,7 @@ class CostSensitivityInput:
 
 @dataclass(frozen=True, slots=True)
 class CostSensitivityScenario:
+    """说明 CostSensitivityScenario 的职责、状态边界和对外协作关系。"""
     label: str
     change_percent: int
     profit_minor: int
@@ -21,22 +25,26 @@ class CostSensitivityScenario:
 
 
 class CostSensitivityGateway(Protocol):
+    """说明 CostSensitivityGateway 的职责、状态边界和对外协作关系。"""
     async def save_analysis(
         self,
         *,
         workspace_id: str,
         assumptions: dict[str, object],
         scenarios: tuple[CostSensitivityScenario, ...],
-    ) -> tuple[CostSensitivityScenario, ...]: ...
+    ) -> tuple[CostSensitivityScenario, ...]:
+        """执行 save_analysis 的业务流程并返回该流程的结果。"""
 
 
 def analyze_cost_sensitivity(item: CostSensitivityInput) -> tuple[CostSensitivityScenario, ...]:
+    """执行 analyze_cost_sensitivity 的业务流程并返回该流程的结果。"""
     _validate(item)
     scenarios = (("成本下降", -20), ("基准", 0), ("成本上升", 20))
     return tuple(_scenario(item, label, change) for label, change in scenarios)
 
 
 def _validate(item: CostSensitivityInput) -> None:
+    """执行内部步骤 _validate，供同一模块的公开流程复用。"""
     if item.selling_price_minor <= 0:
         raise ValueError("敏感性分析售价必须大于零")
     if any(
@@ -53,6 +61,7 @@ def _validate(item: CostSensitivityInput) -> None:
 
 
 def _scenario(item: CostSensitivityInput, label: str, change: int) -> CostSensitivityScenario:
+    """执行内部步骤 _scenario，供同一模块的公开流程复用。"""
     factor = 1 + change / 100
     cost = (
         item.purchase_cost_minor * factor

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from uuid import uuid4
 
 from psycopg import errors
@@ -21,6 +23,7 @@ class PostgresSyncJobGateway(SyncJobGateway, SyncJobRunnerGateway):
     """使用 PostgreSQL 部分唯一索引串行化工作区同步任务。"""
 
     def __init__(self, pool: AsyncConnectionPool) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._pool = pool
 
     async def create_sync_job(
@@ -31,6 +34,7 @@ class PostgresSyncJobGateway(SyncJobGateway, SyncJobRunnerGateway):
         sync_mode: SyncMode,
         requested_by: str,
     ) -> SyncJob:
+        """执行 create_sync_job 的业务流程并返回该流程的结果。"""
         job_id = f"sync_{uuid4().hex}"
         try:
             async with (
@@ -69,6 +73,7 @@ class PostgresSyncJobGateway(SyncJobGateway, SyncJobRunnerGateway):
         job_id: str,
         workspace_ids: tuple[str, ...],
     ) -> SyncJob | None:
+        """执行 get_sync_job 的业务流程并返回该流程的结果。"""
         if not workspace_ids:
             return None
         async with (
@@ -129,6 +134,7 @@ class PostgresSyncJobGateway(SyncJobGateway, SyncJobRunnerGateway):
         return None if row is None else ClaimedSyncJob.model_validate(row)
 
     async def heartbeat(self, job: ClaimedSyncJob, *, lease_seconds: int) -> None:
+        """执行 heartbeat 的业务流程并返回该流程的结果。"""
         await self._update_running_job(
             job,
             """
@@ -141,6 +147,7 @@ class PostgresSyncJobGateway(SyncJobGateway, SyncJobRunnerGateway):
         )
 
     async def mark_succeeded(self, job: ClaimedSyncJob) -> None:
+        """执行 mark_succeeded 的业务流程并返回该流程的结果。"""
         await self._update_running_job(
             job,
             """
@@ -153,6 +160,7 @@ class PostgresSyncJobGateway(SyncJobGateway, SyncJobRunnerGateway):
         )
 
     async def mark_failed(self, job: ClaimedSyncJob, *, code: str, message: str) -> None:
+        """执行 mark_failed 的业务流程并返回该流程的结果。"""
         await self._update_running_job(
             job,
             """
@@ -170,6 +178,7 @@ class PostgresSyncJobGateway(SyncJobGateway, SyncJobRunnerGateway):
         statement: str,
         parameters: tuple[object, ...],
     ) -> None:
+        """执行内部步骤 _update_running_job，供同一模块的公开流程复用。"""
         async with self._pool.connection() as connection:
             cursor = await connection.execute(statement, parameters)
             if cursor.rowcount != 1:

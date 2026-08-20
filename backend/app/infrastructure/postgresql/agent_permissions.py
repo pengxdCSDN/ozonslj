@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 import asyncio
 import json
 from dataclasses import asdict
@@ -11,17 +13,20 @@ class PostgresAgentPermissionGateway:
     """保存 Agent 权限判定；权限硬编码为只读，不接受提示词覆盖。"""
 
     def __init__(self, sessions: PostgresSessionFactory, context: TenantContext) -> None:
+        """初始化对象依赖和运行时状态。"""
         self._sessions = sessions
         self._context = context
 
     async def save_decision(
         self, *, workspace_id: str, decision: AgentPermissionDecision
     ) -> AgentPermissionDecision:
+        """执行 save_decision 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._save, workspace_id, decision)
 
     def _save(
         self, workspace_id: str, decision: AgentPermissionDecision
     ) -> AgentPermissionDecision:
+        """执行内部步骤 _save，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             connection.execute(
                 """
@@ -39,9 +44,11 @@ class PostgresAgentPermissionGateway:
     async def list_decisions(
         self, *, workspace_id: str, limit: int
     ) -> list[AgentPermissionDecision]:
+        """执行 list_decisions 的业务流程并返回该流程的结果。"""
         return await asyncio.to_thread(self._list_decisions, workspace_id, limit)
 
     def _list_decisions(self, workspace_id: str, limit: int) -> list[AgentPermissionDecision]:
+        """执行内部步骤 _list_decisions，供同一模块的公开流程复用。"""
         with self._sessions.transaction(self._context) as connection:
             rows = connection.execute(
                 """SELECT decision FROM agent_permission_checks

@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -22,6 +24,7 @@ class PerformanceTokenError(RuntimeError):
     def __init__(
         self, message: str, *, code: str = "performance_token_request_failed"
     ) -> None:
+        """初始化对象依赖和运行时状态。"""
         super().__init__(message)
         self.code = code
 
@@ -141,6 +144,7 @@ class PerformanceApiError(RuntimeError):
     """Performance API 只读请求失败；异常信息不得包含令牌或密钥。"""
 
     def __init__(self, message: str, *, code: str = "performance_api_failed") -> None:
+        """初始化对象依赖和运行时状态。"""
         super().__init__(message)
         self.code = code
 

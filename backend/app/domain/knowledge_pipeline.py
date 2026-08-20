@@ -22,6 +22,7 @@ from backend.app.domain.knowledge_ingestion import clean_knowledge_document, par
 
 @dataclass(frozen=True, slots=True)
 class KnowledgePipelineResult:
+    """说明 KnowledgePipelineResult 的职责、状态边界和对外协作关系。"""
     document_id: str
     document_version_id: str
     parser_name: str

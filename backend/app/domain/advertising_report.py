@@ -1,3 +1,5 @@
+"""说明本模块的职责、边界和主要协作对象。"""
+
 from dataclasses import dataclass
 from datetime import date
 from typing import Protocol
@@ -5,6 +7,7 @@ from typing import Protocol
 
 @dataclass(frozen=True, slots=True)
 class AdvertisingReportRow:
+    """说明 AdvertisingReportRow 的职责、状态边界和对外协作关系。"""
     campaign_id: str
     report_date: date
     impressions: int
@@ -17,13 +20,16 @@ class AdvertisingReportRow:
 
 
 class AdvertisingReportGateway(Protocol):
+    """说明 AdvertisingReportGateway 的职责、状态边界和对外协作关系。"""
     async def save_rows(
         self, *, workspace_id: str, rows: list[AdvertisingReportRow]
-    ) -> list[AdvertisingReportRow]: ...
+    ) -> list[AdvertisingReportRow]:
+        """执行 save_rows 的业务流程并返回该流程的结果。"""
 
     async def list_rows(
         self, *, workspace_id: str, limit: int
-    ) -> list[AdvertisingReportRow]: ...
+    ) -> list[AdvertisingReportRow]:
+        """执行 list_rows 的业务流程并返回该流程的结果。"""
 
 
 def normalize_advertising_report(raw: dict[str, object]) -> AdvertisingReportRow:
