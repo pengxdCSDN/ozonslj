@@ -780,6 +780,29 @@ export function previewLogisticsTemplates(content: string): Promise<LogisticsTem
   });
 }
 
+export interface ProfitReconciliationPreview {
+  row_count: number;
+  errors: string[];
+  rows: Array<{
+    order_id: string;
+    sku_id: string;
+    estimated_profit_minor: number;
+    actual_profit_minor: number;
+    estimated_logistics_minor: number;
+    actual_logistics_minor: number;
+    variance_minor: number;
+    variance_percent: number | null;
+    source: string;
+  }>;
+}
+
+export function previewProfitReconciliation(content: string): Promise<ProfitReconciliationPreview> {
+  return requestJson("/v1/selection/profit-model/reconciliation/preview", {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+}
+
 export interface ProductOffer {
   offer_id: string;
   ozon_product_id: string | null;

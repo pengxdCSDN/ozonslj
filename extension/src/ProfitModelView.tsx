@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   calculateSkuProfits,
   previewLogisticsTemplates,
+  previewProfitReconciliation,
   listOzonProductCatalog,
   type OzonProductSkuFact,
   type LogisticsTemplatePreview,
   type SkuProfitResult,
+  type ProfitReconciliationPreview,
 } from "./api";
 
 interface SkuDraft {
@@ -46,7 +48,9 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
   const [results, setResults] = useState<SkuProfitResult[]>([]);
   const [csv, setCsv] = useState("");
   const [templatePreview, setTemplatePreview] = useState<LogisticsTemplatePreview | null>(null);
-  const [busy, setBusy] = useState<"calculate" | "preview" | "">("");
+  const [actualFeeCsv, setActualFeeCsv] = useState("");
+  const [reconciliation, setReconciliation] = useState<ProfitReconciliationPreview | null>(null);
+  const [busy, setBusy] = useState<"calculate" | "preview" | "reconcile" | "">("");
   const [message, setMessage] = useState("先确认规则，再运行本次预计利润测算。");
 
   useEffect(() => {
@@ -136,6 +140,31 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
     }
   };
 
+  const previewActualFees = async () => {
+    setBusy("reconcile");
+    try {
+      setReconciliation(await previewProfitReconciliation(actualFeeCsv));
+      setMessage("实际费用已完成对账预览；确认后再进入批次保存。 ");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "实际费用对账失败");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const exportReconciliation = () => {
+    if (!reconciliation?.rows.length) return;
+    const headers = ["order_id", "sku_id", "estimated_profit_minor", "actual_profit_minor", "estimated_logistics_minor", "actual_logistics_minor", "variance_minor", "variance_percent", "source"];
+    const rows = reconciliation.rows.map((row) => headers.map((header) => row[header as keyof typeof row] ?? ""));
+    const csvContent = [headers, ...rows].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `ozon-profit-reconciliation-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   const exportResults = () => {
     if (!results.length) return;
     const headers = ["sku_id", "selling_price_minor", "chargeable_weight_g", "commission_minor", "logistics_minor", "contribution_profit_minor", "contribution_margin_percent", "break_even_price_minor", "status"];
@@ -203,6 +232,7 @@ export function ProfitModelView({ workspaceId: _workspaceId }: { workspaceId: st
       <aside className="profit-side-column">
         <section className="panel profit-panel assumptions-panel"><div className="profit-panel-heading"><div><p className="eyebrow">02 / 规则与费用</p><h2>这次按什么算</h2></div><span className="panel-index">RULES</span></div><div className="rule-lock"><span className="rule-lock-icon">◈</span><div><strong>手动规则版本</strong><small>结果会记录本次佣金与物流规则</small></div><span className="rule-check">✓</span></div><div className="form-grid assumption-grid"><label>类目佣金（%）<input type="number" min="0" max="100" step="0.01" value={commissionPercent} onChange={(event) => setCommissionPercent(Number(event.target.value))} /></label><label>广告费率（%）<input type="number" min="0" max="100" step="0.01" value={adPercent} onChange={(event) => setAdPercent(Number(event.target.value))} /></label><label>退货损耗（%）<input type="number" min="0" max="100" step="0.01" value={returnPercent} onChange={(event) => setReturnPercent(Number(event.target.value))} /></label><label>支付费率（%）<input type="number" min="0" max="100" step="0.01" value={paymentPercent} onChange={(event) => setPaymentPercent(Number(event.target.value))} /></label><label>包装费（RUB）<input type="number" min="0" step="0.01" value={packagingRub} onChange={(event) => setPackagingRub(Number(event.target.value))} /></label><label>体积重系数<input type="number" min="1" value={volumetricDivisor} onChange={(event) => setVolumetricDivisor(Number(event.target.value))} /></label></div><div className="band-list"><div className="band-list-head"><span>FBS 物流分档</span><small>计费重量 · RUB</small></div>{logisticsFeesRub.map((fee, index) => <label key={index}><span>≤ {[1, 3, 10, 30][index]} kg</span><input type="number" min="0" step="0.01" value={fee} onChange={(event) => setLogisticsFeesRub((current) => current.map((item, itemIndex) => itemIndex === index ? Number(event.target.value) : item))} /></label>)}</div></section>
         <section className="panel profit-panel csv-panel"><div className="profit-panel-heading"><div><p className="eyebrow">RULE IMPORT</p><h2>导入物流模板</h2></div><span className="panel-index">CSV</span></div><p className="side-copy">把 Ozon 后台或你维护的费率表先预览校验，再作为新版本使用。</p><textarea value={csv} onChange={(event) => setCsv(event.target.value)} placeholder="粘贴物流模板 CSV…" rows={5} aria-label="物流模板 CSV" /><button className="secondary-button" disabled={!csv.trim() || busy !== ""} onClick={() => void previewCsv()} type="button">{busy === "preview" ? "校验中…" : "预览模板"}</button>{templatePreview ? <div className={`csv-preview ${templatePreview.errors.length ? "has-errors" : ""}`}><strong>{templatePreview.errors.length ? `${templatePreview.errors.length} 个问题` : `${templatePreview.templates.length} 个模板已识别`}</strong><small>{templatePreview.row_count} 行 · {templatePreview.errors.length ? templatePreview.errors[0] : "可以继续保存为版本"}</small></div> : null}</section>
+        <section className="panel profit-panel csv-panel reconciliation-panel"><div className="profit-panel-heading"><div><p className="eyebrow">ACTUAL COSTS</p><h2>校准实际费用</h2></div><div className="result-heading-actions"><button className="text-button" disabled={!reconciliation?.rows.length} onClick={exportReconciliation} type="button">导出对账 ↓</button><span className="panel-index">RECON</span></div></div><p className="side-copy">导入订单或财务导出的实际费用，比较预计利润与结算结果。</p><textarea value={actualFeeCsv} onChange={(event) => setActualFeeCsv(event.target.value)} placeholder="粘贴实际费用 CSV…" rows={5} aria-label="实际费用 CSV" /><button className="secondary-button" disabled={!actualFeeCsv.trim() || busy !== ""} onClick={() => void previewActualFees()} type="button">{busy === "reconcile" ? "对账中…" : "预览实际费用"}</button>{reconciliation ? <div className={`csv-preview ${reconciliation.errors.length ? "has-errors" : ""}`}><strong>{reconciliation.rows.length} 条对账记录</strong><small>{reconciliation.errors.length ? `${reconciliation.errors.length} 个问题：${reconciliation.errors[0]}` : "预计与实际费用均已标准化"}</small></div> : null}</section>
         <p className="form-message profit-message">{message}</p>
       </aside>
     </div>

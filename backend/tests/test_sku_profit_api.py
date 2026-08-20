@@ -77,3 +77,18 @@ def test_calculate_skus_api_returns_actionable_rule_error() -> None:
 
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "profit_calculation_invalid"
+
+
+def test_reconciliation_preview_api_returns_variance() -> None:
+    content = (
+        "order_id,sku_id,estimated_profit_minor,actual_profit_minor,"
+        "estimated_logistics_minor,actual_logistics_minor,source\n"
+        "order-1,sku-1,1000,850,300,450,finance\n"
+    )
+    response = TestClient(create_app()).post(
+        "/v1/selection/profit-model/reconciliation/preview",
+        json={"content": content},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["rows"][0]["variance_minor"] == -150

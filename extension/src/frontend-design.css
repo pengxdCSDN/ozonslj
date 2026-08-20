@@ -745,6 +745,10 @@ body { font-size: 12px; }
 
 /* 利润轨道：把 SKU 计算页做成一张有明确阅读方向的运营工作台。 */
 .profit-workbench { gap: 16px; }
+.profit-workbench > .profit-heading,
+.profit-workbench > .profit-rail,
+.profit-workbench > .profit-layout,
+.profit-workbench > .profit-message { grid-column: 1 / -1; min-width: 0; }
 .profit-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
 .estimate-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 11px; border: 1px solid rgba(70, 223, 176, .22); border-radius: 99px; color: var(--fd-green); background: rgba(70, 223, 176, .07); font: 700 9px var(--fd-mono); white-space: nowrap; }
 .estimate-pill i { width: 6px; height: 6px; border-radius: 50%; background: var(--fd-green); box-shadow: 0 0 12px var(--fd-green); }
@@ -760,7 +764,7 @@ body { font-size: 12px; }
 .profit-rail-stat.is-risk strong { color: var(--fd-rose); }
 .profit-rail-status { display: flex; align-items: center; gap: 7px; border-right: 0; color: var(--fd-text-soft); font-size: 9px; white-space: nowrap; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--fd-orange); box-shadow: 0 0 10px var(--fd-orange); }
-.profit-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(290px, .75fr); align-items: start; gap: 16px; }
+.profit-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(340px, .85fr); align-items: start; gap: 18px; }
 .profit-main-column, .profit-side-column { display: grid; gap: 16px; min-width: 0; }
 .profit-panel { overflow: hidden; }
 .profit-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 20px 15px; border-bottom: 1px solid rgba(143,112,255,.11); }
@@ -810,6 +814,7 @@ body { font-size: 12px; }
 .csv-panel > .secondary-button { margin: 0 18px 14px; }
 .csv-preview { display: grid; gap: 3px; margin: 0 18px 18px; padding: 10px; border-left: 3px solid var(--fd-green); color: var(--fd-green); background: rgba(70,223,176,.06); }
 .csv-preview.has-errors { border-left-color: var(--fd-rose); color: var(--fd-rose); background: rgba(255,110,147,.06); }
+.reconciliation-panel { border-color: rgba(82,217,232,.18); }
 .csv-preview strong { font-size: 10px; }
 .csv-preview small { color: var(--fd-muted); font-size: 8px; line-height: 1.5; }
 .profit-message { margin: 0; }

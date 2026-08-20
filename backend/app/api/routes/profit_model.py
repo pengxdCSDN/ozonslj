@@ -18,6 +18,10 @@ from backend.app.domain.profit_model import (
     ProfitScenario,
     calculate_profit_model,
 )
+from backend.app.domain.profit_reconciliation import (
+    ProfitReconciliationError,
+    preview_profit_reconciliation_csv,
+)
 from backend.app.domain.sku_profit import (
     CommissionRule,
     FbsLogisticsTemplate,
@@ -111,6 +115,41 @@ class LogisticsTemplateCsvPayload(BaseModel):
     """接收物流模板 CSV 文本，仅用于预览和校验，不直接写入配置。"""
 
     content: str = Field(min_length=1, max_length=2_000_000)
+
+
+class ProfitReconciliationCsvPayload(BaseModel):
+    """接收订单实际费用 CSV，仅用于预览和差异计算。"""
+
+    content: str = Field(min_length=1, max_length=2_000_000)
+
+
+@router.post("/reconciliation/preview")
+async def preview_profit_reconciliation(
+    payload: ProfitReconciliationCsvPayload,
+) -> dict[str, object]:
+    """预览实际费用 CSV 并返回预计/实际利润差异。
+
+    Args:
+        payload: 包含订单、SKU、预计费用和实际费用的 UTF-8 CSV 文本。
+
+    Returns:
+        行数、错误摘要和标准化差异明细；该接口不会写入业务事实。
+
+    Raises:
+        HTTPException: CSV 表头缺失或内容不可解析时返回 422。
+    """
+    try:
+        preview = preview_profit_reconciliation_csv(payload.content)
+    except ProfitReconciliationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "profit_reconciliation_csv_invalid", "message": str(exc)},
+        ) from exc
+    return {
+        "row_count": preview.row_count,
+        "errors": list(preview.errors),
+        "rows": [asdict(row) for row in preview.rows],
+    }
 
 
 @router.post("/logistics-templates/preview")

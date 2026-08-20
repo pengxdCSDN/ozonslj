@@ -333,3 +333,7 @@ Agent 接口不接受任意 SQL、任意工具名、文件系统路径、模型�
 `POST /v1/selection/profit-model/logistics-templates/preview`
 
 提交物流模板 CSV 文本，返回行数、错误摘要和按模板版本聚合后的标准化预览。该接口只校验，不写入配置；模板必须包含履约方式、仓库、线路、区域、生效日期、体积重系数和重量分档。
+
+`POST /v1/selection/profit-model/reconciliation/preview`
+
+提交订单实际费用 CSV，返回每行预计利润、实际利润、物流费用差异和差异比例。该接口只做预览和对账计算，不把外部财务数据直接写成平台事实。必需字段为 `order_id`、`sku_id`、`estimated_profit_minor`、`actual_profit_minor`、`estimated_logistics_minor`、`actual_logistics_minor` 和 `source`；利润允许为负，所有金额使用最小货币单位整数。
