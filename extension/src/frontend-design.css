@@ -796,7 +796,7 @@ body { font-size: 12px; }
 .sku-form-grid input, .assumption-grid input { min-height: 36px; padding: 8px 9px; font-size: 10px; }
 .profit-panel-actions { display: flex; justify-content: flex-end; gap: 9px; padding: 15px 20px 20px; }
 .profit-panel-actions { align-items: center; }
-.profit-panel-actions > button { height: 60px; min-height: 60px; box-sizing: border-box; display: inline-flex; align-self: flex-end; align-items: center; justify-content: center; margin: 0; padding-block: 0; line-height: 1; white-space: nowrap; }
+.profit-panel-actions > button { width: 160px; height: 60px; min-height: 60px; box-sizing: border-box; display: inline-flex; align-self: flex-end; align-items: center; justify-content: center; margin: 0; padding: 0 12px; line-height: 1; white-space: nowrap; }
 .profit-panel-actions .primary-button { padding-inline: 15px; }
 .assumptions-panel .profit-panel-heading { padding-bottom: 15px; }
 .rule-lock { display: flex; align-items: center; gap: 9px; margin: 15px 18px 0; padding: 10px; border: 1px solid rgba(82,217,232,.16); border-radius: 9px; background: rgba(20,52,59,.34); }
