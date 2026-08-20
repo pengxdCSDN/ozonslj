@@ -72,6 +72,7 @@ class PostgresPerformanceCredentialGateway:
     ) -> PerformanceCredentialStatus:
         status = inspect_performance_credentials(
             client_id="configured" if client_id_present else None,
+            client_secret="stored",
             access_token=access_token, refresh_token=refresh_token, expires_at=expires_at,
         )
         expiry = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
@@ -93,7 +94,10 @@ class PostgresPerformanceCredentialGateway:
                 (str(uuid4()), self._context.organization_id, workspace_id,
                  access_cipher, refresh_cipher, expiry),
             )
-        return status
+        saved_status = self._get_status(workspace_id)
+        if saved_status is None:
+            raise RuntimeError("Performance 令牌保存后无法读取状态")
+        return saved_status
 
     async def get_status(self, *, workspace_id: str) -> PerformanceCredentialStatus | None:
         return await asyncio.to_thread(self._get_status, workspace_id)
@@ -150,7 +154,7 @@ class PostgresPerformanceCredentialGateway:
             row = connection.execute(
                 """
                 SELECT expires_at, encrypted_client_id, encrypted_access_token,
-                       encrypted_refresh_token
+                       encrypted_refresh_token, encrypted_client_secret
                 FROM performance_oauth_credentials
                 WHERE organization_id = %s AND workspace_id = %s
                 """,
@@ -160,6 +164,7 @@ class PostgresPerformanceCredentialGateway:
             return None
         return inspect_performance_credentials(
             client_id="stored" if row["encrypted_client_id"] else None,
+            client_secret="stored" if row["encrypted_client_secret"] else None,
             access_token="stored" if row["encrypted_access_token"] else None,
             refresh_token="stored" if row["encrypted_refresh_token"] else None,
             expires_at=row["expires_at"].isoformat(),

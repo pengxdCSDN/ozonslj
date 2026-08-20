@@ -30,12 +30,16 @@ export function PerformanceOAuthView({ workspaceId }: Props) {
     try {
       setStatus(await savePerformanceClientCredentials(workspaceId, { client_id: clientId, client_secret: clientSecret }));
       setClientSecret("");
-      setMessage("Client ID 和 Client Secret 已加密保存。 ");
+      setMessage("凭据已加密保存；Secret 输入框清空是正常现象，现在可以获取 Token。 ");
     } catch (error) { setMessage(error instanceof Error ? error.message : "保存失败，请检查字段后重试。 "); }
     finally { setBusy(false); }
   };
 
   const fetchToken = async () => {
+    if (status && !status.client_secret_present) {
+      setMessage("请先保存 Client ID 和 Client Secret，再获取 Token。 ");
+      return;
+    }
     setBusy(true);
     try { setStatus(await requestPerformanceToken(workspaceId)); setMessage("Performance API Token 获取成功，连接已验证。 "); }
     catch (error) { setMessage(error instanceof Error ? error.message : "Token 获取失败，请检查 Client ID 和 Secret。 "); }
@@ -61,10 +65,10 @@ export function PerformanceOAuthView({ workspaceId }: Props) {
         <div className="form-title"><span>01</span><div><h2>Ozon Performance 服务账号</h2><p>从 Ozon Seller 的“分析 → 外部流量 → 服务账号”获取这两个值。</p></div></div>
         <label>Client ID<input value={clientId} onChange={(event) => setClientId(event.target.value)} autoComplete="off" placeholder="粘贴 Performance Client ID" /></label>
         <label>Client Secret<input type="password" value={clientSecret} onChange={(event) => setClientSecret(event.target.value)} autoComplete="new-password" placeholder="粘贴 Performance Client Secret" /></label>
-        <div className="credential-actions"><button className="primary-button" disabled={busy} onClick={() => void save()}>加密保存密钥</button><button className="secondary-button" disabled={busy} onClick={() => void fetchToken()}>获取 Token 并测试连接</button><button className="secondary-button" disabled={busy || !status?.access_token_present} onClick={() => void fetchCampaigns()}>读取广告活动（只读）</button></div>
+        <p className="field-hint">保存成功后不会回显 Secret；页面会显示“Client Secret：已保存”作为确认。</p><div className="credential-actions"><button className="primary-button" disabled={busy} onClick={() => void save()}>加密保存密钥</button><button className="secondary-button" disabled={busy} onClick={() => void fetchToken()}>获取 Token 并测试连接</button><button className="secondary-button" disabled={busy || !status?.access_token_present} onClick={() => void fetchCampaigns()}>读取广告活动（只读）</button></div>
       </div>
       {message ? <p className="form-message" role="status">{message}</p> : null}
     </section>
-    <section className="panel credential-panel"><div className="section-heading"><div><p className="eyebrow">Performance API</p><h2>连接状态</h2></div></div>{status ? <div className="quality-result"><strong>{status.credential_scope} · {status.ready ? "已就绪" : "未就绪"}</strong><span>Client ID：{status.client_id_present ? "已配置" : "未配置"} · Access Token：{status.access_token_present ? "已获取" : "未获取"}</span><small>Token 过期时间：{status.expires_at ?? "未获取"} · Seller 隔离：{status.isolated_from_seller ? "是" : "否"}</small></div> : <div className="empty-search"><strong>尚未读取 Performance 连接状态</strong><span>保存密钥后点击“获取 Token 并测试连接”。</span></div>}</section>
+    <section className="panel credential-panel"><div className="section-heading"><div><p className="eyebrow">Performance API</p><h2>连接状态</h2></div></div>{status ? <div className="quality-result"><strong>{status.credential_scope} · {status.ready ? "已就绪" : "未就绪"}</strong><span>Client ID：{status.client_id_present ? "已配置" : "未配置"} · Client Secret：{status.client_secret_present ? "已保存" : "未保存"} · Access Token：{status.access_token_present ? "已获取" : "未获取"}</span><small>Token 过期时间：{status.expires_at ?? "未获取"} · Seller 隔离：{status.isolated_from_seller ? "是" : "否"}</small></div> : <div className="empty-search"><strong>尚未读取 Performance 连接状态</strong><span>保存密钥后点击“获取 Token 并测试连接”。</span></div>}</section>
   </div>;
 }

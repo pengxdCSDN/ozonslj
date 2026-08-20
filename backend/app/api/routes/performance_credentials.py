@@ -11,6 +11,7 @@ router = APIRouter(prefix="/v1/performance/credentials", tags=["advertising"])
 
 class PerformanceCredentialPayload(BaseModel):
     client_id: str | None = None
+    client_secret: str | None = None
     access_token: str | None = None
     refresh_token: str | None = None
     expires_at: str | None = None

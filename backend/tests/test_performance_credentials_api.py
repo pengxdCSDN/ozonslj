@@ -10,4 +10,5 @@ def test_performance_credentials_api_does_not_echo_token() -> None:
     )
     assert response.status_code == 200
     assert response.json()["refresh_token_present"] is True
-    assert "secret" not in response.text
+    assert response.json().get("client_secret") is None
+    assert "\"refresh_token\":\"secret\"" not in response.text

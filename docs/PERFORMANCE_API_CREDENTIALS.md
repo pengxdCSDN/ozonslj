@@ -6,8 +6,16 @@ Performance API 使用独立的服务账号 Client Credentials，不复用 Selle
 
 1. 在 Ozon 后台创建 Performance 服务账号，取得 Client ID 和 Client Secret。
 2. 进入“系统工具 → Performance 凭据（配置与状态）”。
-3. 保存 Client ID 和 Client Secret；后端使用凭据保护器加密保存，浏览器不持久化密钥。
+3. 保存 Client ID 和 Client Secret；后端使用凭据保护器加密保存，浏览器不持久化密钥。保存后页面会显示“Client ID：已保存、Client Secret：已保存”，输入框清空是正常的，不代表保存失败。
 4. 点击“获取 Token 并测试连接”；后端调用 `https://performance.ozon.ru/api/client/token`，保存短期 access token 并返回脱敏状态。
+
+页面状态判断：
+
+- “凭据已保存”表示 Client ID 与 Client Secret 已落库并可用于认证；Secret 永不回显。
+- “Access Token：已获取”且连接状态为可用，才表示本次 Performance OAuth 真实认证成功。
+- Client ID 已保存但 Secret 未保存时，页面会阻止获取 Token，并提示先完成保存。
+
+Token 请求的重定向只允许继续访问 `performance.ozon.ru` 的 HTTPS 地址，最多跟随 3 次；HTTP、其他域名、缺少 Location 或循环重定向会被安全拦截，避免凭据被转发到非受信目标。
 
 ## HTTP 接口
 

@@ -544,3 +544,10 @@ Performance 页面可以显示“Client ID 已配置”，但点击“获取 Tok
 正确操作顺序是：先点击“加密保存密钥”，确认保存成功后再点击“获取 Token 并测试连接”。页面显示
 “Client ID 已配置”只代表加密凭据存在；只有 Access Token 获取成功且连接状态变为可用，才代表真实
 Performance OAuth 验证通过。自动化测试使用 MockTransport，不访问真实 Ozon 账号。
+
+### 307 重定向处理
+
+Token 上游偶发返回 307 时，客户端不会直接把包含凭据的请求交给任意地址。系统只允许 HTTPS 且主机为
+`performance.ozon.ru`（默认 443 端口）的重定向，最多跟随 3 次；外部域名、HTTP 地址、缺少 Location
+或重定向循环均会以 `performance_upstream_redirect` 失败。遇到该错误时应检查 Ozon 接口地址、云端代理和
+TLS 配置，不要关闭校验或把 Client Secret 写入日志。

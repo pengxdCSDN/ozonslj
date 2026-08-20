@@ -56,16 +56,43 @@ async def request_performance_token(
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> tuple[str, datetime]:
     """使用 Ozon Performance 服务账号获取短期访问令牌。"""
+    token_url = httpx.URL("https://performance.ozon.ru/api/client/token")
+    payload = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "grant_type": "client_credentials",
+    }
     try:
-        async with httpx.AsyncClient(timeout=timeout_seconds, transport=transport) as client:
-            response = await client.post(
-                "https://performance.ozon.ru/api/client/token",
-                json={
-                    "client_id": client_id,
-                    "client_secret": client_secret,
-                    "grant_type": "client_credentials",
-                },
-            )
+        async with httpx.AsyncClient(
+            timeout=timeout_seconds, transport=transport, follow_redirects=False
+        ) as client:
+            response = await client.post(token_url, json=payload)
+            for _ in range(3):
+                if response.status_code not in {301, 302, 303, 307, 308}:
+                    break
+                location = response.headers.get("location")
+                if not location:
+                    raise PerformanceTokenError(
+                        "Performance Token 重定向缺少目标地址。",
+                        code="performance_upstream_redirect",
+                    )
+                redirect_url = token_url.join(location)
+                if (
+                    redirect_url.scheme != "https"
+                    or redirect_url.host != "performance.ozon.ru"
+                    or redirect_url.port not in {None, 443}
+                ):
+                    raise PerformanceTokenError(
+                        "Performance Token 重定向目标不受信任，已阻止提交凭据。",
+                        code="performance_upstream_redirect",
+                    )
+                token_url = redirect_url
+                response = await client.post(token_url, json=payload)
+            else:
+                raise PerformanceTokenError(
+                    "Performance Token 重定向次数过多。",
+                    code="performance_upstream_redirect",
+                )
     except httpx.TimeoutException as error:
         raise PerformanceTokenError(
             "Performance Token 请求超时：请检查网络后稍后重试。", code="performance_timeout"

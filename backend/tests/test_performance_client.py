@@ -34,6 +34,45 @@ async def test_request_performance_token_uses_client_credentials() -> None:
 
 
 @pytest.mark.asyncio
+async def test_request_performance_token_follows_trusted_307_redirect() -> None:
+    calls: list[httpx.Request] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(307, headers={"location": "/api/client/token"})
+        return httpx.Response(200, json={"access_token": "access", "expires_in": 3600})
+
+    token, _ = await request_performance_token(
+        client_id="client-id", client_secret="client-secret",
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert token == "access"
+    assert len(calls) == 2
+    assert calls[1].url.host == "performance.ozon.ru"
+
+
+@pytest.mark.asyncio
+async def test_request_performance_token_blocks_untrusted_redirect() -> None:
+    calls: list[httpx.Request] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(307, headers={"location": "https://evil.example/token"})
+
+    with pytest.raises(PerformanceTokenError) as caught:
+        await request_performance_token(
+            client_id="client-id", client_secret="client-secret",
+            transport=httpx.MockTransport(handler),
+        )
+
+    assert caught.value.code == "performance_upstream_redirect"
+    assert len(calls) == 1
+    assert "client-secret" not in str(caught.value)
+
+
+@pytest.mark.asyncio
 async def test_fetch_performance_campaigns_is_read_only() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "GET"
