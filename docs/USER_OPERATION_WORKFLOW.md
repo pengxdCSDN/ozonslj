@@ -106,7 +106,7 @@
    - 也可以粘贴财务 CSV，点击“预览 CSV 对账”。
    - 将实际费用与预计费用对比，用于校准后续利润判断。
 
-物流模板 CSV 的表头保持英文以保证系统可导入。必填字段为：`template_id`、`fulfillment_type`、`warehouse_id`、`route_id`、`region_id`、`version`、`effective_from`、`volumetric_divisor_cm3_per_kg`、`max_weight_g`、`base_fee_minor`、`currency`、`source`。可选字段为：`effective_to`、`additional_fee_minor`、`additional_step_g`、`fee_rate_bps`；可选费用字段留空按 0 处理，`effective_to` 留空表示长期有效。
+物流模板 CSV 的表头保持英文以保证系统可导入。页面“查看中文字段说明”可直接展开字段含义；下载样例时也会同时下载中文 TXT 说明。必填字段为：`template_id`、`fulfillment_type`、`warehouse_id`、`route_id`、`region_id`、`version`、`effective_from`、`volumetric_divisor_cm3_per_kg`、`max_weight_g`、`base_fee_minor`、`currency`、`source`。可选字段为：`effective_to`、`additional_fee_minor`、`additional_step_g`、`fee_rate_bps`；可选费用字段留空按 0 处理，`effective_to` 留空表示长期有效。
 
 字段中文含义如下：`template_id`（物流模板编号）、`fulfillment_type`（履约方式）、`warehouse_id`（仓库编号）、`route_id`（物流线路）、`region_id`（区域）、`version`（版本）、`effective_from/effective_to`（生效/失效日期）、`volumetric_divisor_cm3_per_kg`（体积重系数）、`max_weight_g`（计费重量上限，克）、`base_fee_minor`（基础费用，最小货币单位）、`additional_fee_minor`（超重附加费）、`additional_step_g`（超重计费步长）、`fee_rate_bps`（比例费率基点）、`currency`（币种）和 `source`（来源）。同一 `template_id` 的多行必须使用一致的仓库、线路、区域和版本信息。
 

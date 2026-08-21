@@ -19,6 +19,20 @@ def test_budget_migration_and_gateway_use_purpose_scoped_atomic_usage() -> None:
     assert "monthly_cost = rag_model_budget_usage.monthly_cost + EXCLUDED.monthly_cost" in gateway
 
 
+def test_budget_usage_is_daily_keyed_and_monthly_usage_is_aggregated() -> None:
+    route = Path("backend/app/api/routes/model_budgets.py").read_text(encoding="utf-8")
+    gateway = Path("backend/app/infrastructure/postgres/model_budgets.py").read_text(
+        encoding="utf-8"
+    )
+    runtime = Path("backend/app/infrastructure/postgres/knowledge_runtime.py").read_text(
+        encoding="utf-8"
+    )
+    assert "return date.today()" in route
+    assert "SUM(monthly_tokens)" in gateway
+    assert "FILTER (WHERE period_start = %s)" in gateway
+    assert "SUM(monthly_tokens)" in runtime
+
+
 def test_budget_policy_normalizes_postgres_numeric_monthly_cost() -> None:
     """PostgreSQL NUMERIC 的 Decimal 值必须在网关边界转换为领域层 float。"""
     policy = _policy_from_row({

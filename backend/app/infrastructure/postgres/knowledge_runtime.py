@@ -512,6 +512,7 @@ Args:
 Returns:
     返回调用完成后的领域结果。"""
     period_start = _period_start()
+    month_start = period_start.replace(day=1)
     async with pool.connection() as connection, connection.cursor(row_factory=dict_row) as cursor:
         await _set_scope(connection, organization_id)
         await cursor.execute(
@@ -519,11 +520,24 @@ Returns:
                       p.monthly_budget, u.daily_tokens, u.monthly_tokens,
                       u.daily_requests, u.monthly_cost
                  FROM rag_model_budget_policies p
-                 LEFT JOIN rag_model_budget_usage u ON
-                   u.organization_id=p.organization_id AND u.provider_id=p.provider_id
-                   AND u.purpose=p.purpose AND u.period_start=%s
+                 LEFT JOIN (
+                   SELECT organization_id, provider_id, purpose,
+                          COALESCE(
+                              SUM(daily_tokens) FILTER (WHERE period_start=%s), 0
+                          ) AS daily_tokens,
+                          COALESCE(SUM(monthly_tokens), 0) AS monthly_tokens,
+                          COALESCE(
+                              SUM(daily_requests) FILTER (WHERE period_start=%s), 0
+                          ) AS daily_requests,
+                          COALESCE(SUM(monthly_cost), 0) AS monthly_cost
+                   FROM rag_model_budget_usage
+                   WHERE period_start >= %s AND period_start < (%s + INTERVAL '1 month')::date
+                   GROUP BY organization_id, provider_id, purpose
+                 ) u ON u.organization_id=p.organization_id AND u.provider_id=p.provider_id
+                   AND u.purpose=p.purpose
                 WHERE p.organization_id=%s AND p.provider_id=%s AND p.purpose=%s""",
-            (period_start, organization_id, provider_id, purpose),
+            (period_start, period_start, month_start, month_start,
+             organization_id, provider_id, purpose),
         )
         row = await cursor.fetchone()
     if row is None:
@@ -578,8 +592,7 @@ def _period_start() -> date:
     """执行内部步骤 _period_start，供同一模块的公开流程复用。
 Returns:
     返回调用完成后的领域结果。"""
-    today = date.today()
-    return today.replace(day=1)
+    return date.today()
 
 
 class PostgresChromaKnowledgeRuntime:

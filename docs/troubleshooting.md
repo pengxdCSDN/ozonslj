@@ -556,3 +556,16 @@ Token 上游返回重定向时，客户端不会直接把包含凭据的请求�
 `api-performance.ozon.ru`（默认 443 端口）的重定向，最多跟随 3 次；外部域名、HTTP 地址、缺少 Location
 或重定向循环均会以 `performance_upstream_redirect` 失败。遇到该错误时应检查 Ozon 接口地址、云端代理和
 TLS 配置，不要关闭校验或把 Client Secret 写入日志。
+
+## 2026-08-21：模型预算“今日 Token”没有按天刷新
+
+### 原因
+
+旧实现把 `rag_model_budget_usage.period_start` 固定为本月 1 日，同月每天的用量都累加到同一行，
+因此页面的“今日 Token”实际显示成了本月累计值。
+
+### 修复与验收
+
+用量行现在按 `Asia/Shanghai` 自然日写入；读取时当天字段只汇总当天行，本月字段汇总当月所有日期行。
+部署数据库迁移 `0103_daily_model_budget_usage.sql` 后，刷新模型额度页面即可验证跨日归零；历史月度累计不删除，
+但旧版本写入的月初行无法还原到具体日期。

@@ -850,6 +850,15 @@ body { font-size: 12px; }
 .template-file-actions label { margin: 0; cursor: pointer; }
 .template-file-actions input[type="file"] { display: none; }
 .template-file-actions .text-button { color: var(--fd-cyan); font-size: 9px; }
+.field-guide { margin: 0 18px 12px; border: 1px solid var(--fd-line); background: rgba(255,255,255,.025); }
+.field-guide summary { padding: 9px 10px; color: var(--fd-cyan); cursor: pointer; font: 10px var(--fd-mono); }
+.field-guide p { margin: 0; padding: 0 10px 8px; color: var(--fd-muted); font-size: 9px; line-height: 1.5; }
+.field-guide-table { border-top: 1px solid var(--fd-line); }
+.field-guide-row { display: grid; grid-template-columns: 1.35fr 1.5fr auto; gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 9px; }
+.field-guide-row:last-child { border-bottom: 0; }
+.field-guide-row code { color: var(--fd-text); overflow-wrap: anywhere; }
+.field-guide-row span { color: var(--fd-muted); }
+.field-guide-row small { color: var(--fd-violet); white-space: nowrap; }
 .csv-preview { display: grid; gap: 3px; margin: 0 18px 18px; padding: 10px; border-left: 3px solid var(--fd-green); color: var(--fd-green); background: rgba(70,223,176,.06); }
 .csv-preview.has-errors { border-left-color: var(--fd-rose); color: var(--fd-rose); background: rgba(255,110,147,.06); }
 .reconciliation-panel { border-color: rgba(82,217,232,.18); }

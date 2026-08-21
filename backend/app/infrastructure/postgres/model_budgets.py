@@ -216,12 +216,21 @@ Returns:
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 """
-                SELECT daily_tokens, monthly_tokens, daily_requests, monthly_cost
+                SELECT
+                    COALESCE(SUM(daily_tokens) FILTER (WHERE period_start = %s), 0) AS daily_tokens,
+                    COALESCE(SUM(monthly_tokens), 0) AS monthly_tokens,
+                    COALESCE(
+                        SUM(daily_requests) FILTER (WHERE period_start = %s), 0
+                    ) AS daily_requests,
+                    COALESCE(SUM(monthly_cost), 0) AS monthly_cost
                 FROM rag_model_budget_usage
                 WHERE organization_id = %s AND provider_id = %s
-                  AND purpose = %s AND period_start = %s
+                  AND purpose = %s
+                  AND period_start >= %s
+                  AND period_start < (%s + INTERVAL '1 month')::date
                 """,
-                (self._context.organization_id, provider_id, purpose, period_start),
+                (period_start, period_start, self._context.organization_id, provider_id,
+                 purpose, period_start.replace(day=1)),
             ).fetchone()
         if row is None:
             return ModelBudgetUsage(0, 0, 0, 0.0)

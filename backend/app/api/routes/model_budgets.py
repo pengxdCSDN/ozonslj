@@ -124,11 +124,13 @@ Returns:
 
 
 def _period_start() -> date:
-    """按自然月读取用量；daily 字段由结算端在日切换时归零。
+    """返回 Asia/Shanghai 自然日的日期键。
+
+    数据库按天保存用量行；月度用量由读取端汇总本月日期行，避免把昨日用量
+    继续显示为今日用量。生产进程时区由部署配置固定为 Asia/Shanghai。
 Returns:
     返回调用完成后的领域结果。"""
-    today = date.today()
-    return today.replace(day=1)
+    return date.today()
 
 
 @router.put("/{provider_id}", response_model=BudgetResponse)
