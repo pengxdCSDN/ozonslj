@@ -230,7 +230,7 @@ Returns:
                   AND period_start < (%s + INTERVAL '1 month')::date
                 """,
                 (period_start, period_start, self._context.organization_id, provider_id,
-                 purpose, period_start.replace(day=1)),
+                 purpose, period_start.replace(day=1), period_start.replace(day=1)),
             ).fetchone()
         if row is None:
             return ModelBudgetUsage(0, 0, 0, 0.0)
