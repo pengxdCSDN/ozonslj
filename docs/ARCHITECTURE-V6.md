@@ -3,7 +3,7 @@ title: ozonslj 架构设计 V6
 version: 6.0
 revision: 1
 status: 已定档
-updated: 2026-08-04
+updated: 2026-08-22
 supersedes:
   - 06-ozonslj架构设计文档-V5-已定档
 depends_on:
@@ -34,10 +34,10 @@ V6 在 V5 模块化单体、PostgreSQL、Redis、工作区隔离和只读首期�
 
 | 状态 | 当前能力 | V6 处理方式 |
 |---|---|---|
-| 已开发 | FastAPI 应用骨架、Chrome/Web 共用 React 入口、店铺工作区、本地 Seller 凭据加密保存与独立验证、工作区商品报价读取 | 记录为现状，不重复发起方案确认 |
-| 已有结构基础 | PostgreSQL 多组织表、成员与工作区授权表、RLS 函数/策略和迁移契约测试 | 沿用已定档双层隔离原则；实现 PostgreSQL 运行时适配器时补齐事务上下文与集成测试 |
-| 部分开发 | 生产环境 PostgreSQL/Redis 配置校验、Seller API 网关边界、Stub/Mock 测试路径 | 在现有端口上增量完成，不另起平行实现 |
-| 尚未开发 | 用户认证与会话、PostgreSQL 业务运行时、Redis 任务执行、完整 Seller 同步、搜索词导入、公开采样、选品研究、Listing、Performance、审核写入和 Agent | 仅对其中尚未定档且影响实现方向的决策逐项确认 |
+| 已开发 | FastAPI 应用、Chrome/Web 共用 React 入口、登录会话、店铺工作区、凭据加密与验证、PostgreSQL 业务适配器、RLS 上下文、Redis 任务编排、质量检查、搜索词导入、公开采样、选品、Listing、Performance Stub/只读、审核链路、只读 Agent 和 RAG 核心闭环 | 记录为当前实现；真实 Seller/Performance、生产部署和外部通知仍需独立验收 |
+| 已有结构基础 | PostgreSQL 多组织表、成员与工作区授权表、RLS 函数/策略、迁移契约和部署 Compose/恢复脚本 | 沿用双层隔离原则；隔离数据库、Redis 和恢复演练在目标环境验收 |
+| 部分开发 | 真实 Seller/Performance 外部适配器、受控真实写入、外部通知渠道、云端发布和生产 RAG 质量窗口 | 只在凭据、官方契约和目标环境具备后推进，不用 Stub 结果替代 |
+| 尚未开发 | ERP 具体适配器及经确认范围外的新业务能力 | 仅在需求确认后新增，不扩展当前自动化基线 |
 
 “已有 SQL/schema”不等于功能已经可运行；只有应用用例、基础设施适配器和相应测试形成可观察闭环后，才可把能力标记为已开发。
 
