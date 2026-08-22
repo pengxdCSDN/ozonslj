@@ -44,7 +44,7 @@ git diff --check
 2. 目标提交已经推送到 `origin/codex/deployment-base-images`。
 3. 工作树没有未提交的受控代码/文档改动；未跟踪的诊断和构建目录不得清理、不得加入提交。
 4. 前端有改动时，已在 `extension` 单独执行 `vite build --mode web`，并确认完整 `index.html + assets/` 产物。
-5. 后端有改动时，已完成对应 pytest、TypeScript 检查和必要的 Vite 构建。
+5. 后端有改动时，已完成对应 pytest、Ruff、mypy、PostgreSQL Schema 验证；若同时改动前端契约，再执行 TypeScript 检查和必要的 Vite 构建。GitHub Actions 的 `deploy-api.yml` 会在 ACR 构建前强制执行前四项门禁。
 
 ## 三、ACR 构建规则核对
 
