@@ -88,6 +88,15 @@ jobs:
           test -s web/index.html
           for asset in $(grep -oE '/assets/[^" ]+' web/index.html); do
             test -s "web${asset}"
+            content_type="$(curl --fail --silent --show-error --head --location \
+              "https://127.0.0.1${asset}" --insecure \
+              | awk -F': ' 'tolower($1) == "content-type" {print tolower($2); exit}' \
+              | tr -d '\r')"
+            case "$asset" in
+              *.js) printf '%s' "$content_type" | grep -q '^application/javascript' ;;
+              *.css) printf '%s' "$content_type" | grep -q '^text/css' ;;
+              *) printf 'unsupported web asset type: %s\n' "$asset" >&2; exit 1 ;;
+            esac
           done
           curl --fail --silent --show-error https://127.0.0.1/ >/dev/null --insecure
           curl --fail --silent --show-error https://127.0.0.1/api/health/ready >/dev/null --insecure
