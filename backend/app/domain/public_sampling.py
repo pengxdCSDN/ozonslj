@@ -34,6 +34,7 @@ class FetchResponse:
     status_code: int | None
     allowed: bool = True
     message: str = "请求完成"
+    body: str | None = None
 
 
 FetchPage = Callable[[str], Awaitable[int | tuple[int, float | None] | FetchResponse]]

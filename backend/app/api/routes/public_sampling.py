@@ -1,15 +1,22 @@
 """说明本模块的职责、边界和主要协作对象。"""
 
+from dataclasses import asdict
 from typing import Annotated
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.app.api.dependencies import get_quality_finding_gateway, get_store_workspace_gateway
+from backend.app.api.dependencies import (
+    get_public_snapshot_gateway,
+    get_quality_finding_gateway,
+    get_store_workspace_gateway,
+)
+from backend.app.application.public_sampling_collector import PublicSamplingCollector
 from backend.app.config import get_settings
 from backend.app.domain.data_quality import QualityFinding, QualityFindingGateway
 from backend.app.domain.public_sampling import PublicSampler, SamplingRequest, SamplingResult
+from backend.app.domain.public_snapshot import PublicSnapshotGateway
 from backend.app.domain.store_workspace import StoreWorkspaceGateway
 from backend.app.infrastructure.public_sampling import PublicHttpFetcher
 
@@ -87,6 +94,46 @@ async def live_sample_preview(payload: SamplingBatchPayload) -> list[SamplingRes
                 for item in payload.requests
             ]
         )
+
+
+@router.post("/store-workspaces/{workspace_id}/live-collect")
+async def live_collect_snapshots(
+    workspace_id: str,
+    payload: SamplingBatchPayload,
+    snapshots: Annotated[PublicSnapshotGateway, Depends(get_public_snapshot_gateway)],
+    workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
+) -> dict[str, object]:
+    """执行受控采样并保存可解析的公开快照；阻断请求不会写入快照。"""
+    if await workspace_gateway.get_workspace(workspace_id) is None:
+        raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
+    try:
+        settings = get_settings()
+    except ValueError as error:
+        raise HTTPException(status_code=503, detail={"code": "sampling_not_configured"}) from error
+    allowed_hosts = frozenset(
+        host.strip().lower()
+        for host in settings.public_sampling_allowed_hosts.split(",")
+        if host.strip()
+    )
+    if not allowed_hosts:
+        raise HTTPException(status_code=503, detail={"code": "sampling_not_configured"})
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        fetcher = PublicHttpFetcher(
+            client, allowed_hosts=allowed_hosts, user_agent=settings.public_sampling_user_agent
+        )
+        results, saved = await PublicSamplingCollector(
+            snapshots, fetcher.fetch_page
+        ).collect(
+            workspace_id=workspace_id,
+            urls=[item.url for item in payload.requests],
+            global_limit=payload.global_limit,
+            max_attempts=payload.max_attempts,
+        )
+    return {
+        "results": [asdict(result) for result in results],
+        "saved_count": len(saved),
+        "snapshots": [asdict(snapshot) for snapshot in saved],
+    }
 
 
 @router.post(

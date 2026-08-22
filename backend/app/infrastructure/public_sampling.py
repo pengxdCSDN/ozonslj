@@ -45,7 +45,12 @@ class PublicHttpFetcher:
                 return FetchResponse(robots.status_code, False, "robots 策略禁止访问")
 
         response = await self._client.get(url, headers={"User-Agent": self._user_agent})
-        return _retry_response(response)
+        result = _retry_response(response)
+        if isinstance(result, FetchResponse) and result.allowed:
+            return result.__class__(
+                result.status_code, result.allowed, result.message, response.text
+            )
+        return result
 
 
 def _retry_response(response: httpx.Response) -> FetchResponse | tuple[int, float | None]:

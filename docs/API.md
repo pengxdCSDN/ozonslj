@@ -262,7 +262,7 @@ Retry-After: 2
 
 竞品种子不接受任意 URL 透传：服务端只接受允许的 HTTPS 域名和规范化商品 URL。被 robots、策略、登录、验证码或访问限制禁止时不发请求，并返回明确采样状态。
 
-公开采样提供两个入口：`POST /v1/public-sampling/preview` 仅使用开发 Stub；`POST /v1/public-sampling/live-preview` 才允许真实只读 HTTP。真实入口要求服务端配置 `PUBLIC_SAMPLING_ALLOWED_HOSTS`（逗号分隔的精确域名）和可选的 `PUBLIC_SAMPLING_USER_AGENT`；未配置白名单直接返回 `503 sampling_not_configured`，客户端不能通过请求体绕过 robots 或域名限制。
+公开采样提供三个入口：`POST /v1/public-sampling/preview` 仅使用开发 Stub；`POST /v1/public-sampling/live-preview` 执行真实只读 HTTP 但不落库；`POST /v1/public-sampling/store-workspaces/{workspace_id}/live-collect` 在同样的合规边界下解析并保存公开快照。真实入口要求服务端配置 `PUBLIC_SAMPLING_ALLOWED_HOSTS`（逗号分隔的精确域名）和可选的 `PUBLIC_SAMPLING_USER_AGENT`；未配置白名单直接返回 `503 sampling_not_configured`，客户端不能通过请求体绕过 robots 或域名限制。
 
 ## 9. 选品、Listing 与广告（已定档待开发）
 
