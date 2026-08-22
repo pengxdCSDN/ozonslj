@@ -195,8 +195,8 @@
 
 - 已新增 `backend/app/domain/automation_orchestration.py`，集中实现事件下游白名单、运行链路追踪、最大深度熔断、幂等键和有限指数退避。
 - 已新增 `backend/tests/test_automation_orchestration.py`，覆盖展示刷新反向同步、建议越权执行、触发链超深、父子运行追踪、幂等键和重试上限。
-- 后端全量 pytest、Ruff 和新增领域模块 mypy 已通过；前端 Vite 构建已通过。
-- TypeScript 增量检查因本地 `tsbuildinfo` 文件锁长时间无输出，本轮已安全终止，不能视为通过；需清理锁定进程或在独立验证环境重新执行。
+- 后端全量 pytest、Ruff、mypy 和 PostgreSQL Schema 验证已通过；前端 TypeScript 检查与 Vite 生产构建也已通过。
+- 当前验证结果为本地脱敏/Stub 环境结果；隔离 PostgreSQL/Redis 的部署恢复、真实 Seller/Performance 授权和真实供应商质量窗口仍需在目标环境执行。
 
 当前能力已接入同步任务基础层：任务保存运行标识、根任务、父任务、触发来源、数据版本和触发深度；新增 0106 迁移为历史任务补齐兼容值；Worker 在任务成功持久化后通过 Redis Stream 发布可幂等追踪的 `external_fact_changed` 事件，Redis 投递失败会释放幂等标记以便恢复；Consumer Group 已完成合法字段解析和非法事件隔离；应用层事件路由已锁定“事实事件 → 数据质量任务”的幂等端口；新增 0107 和 `quality_check_jobs` 已完成质量任务事实持久化；Quality Worker 已完成租约领取、规则执行、问题写入、成功/失败状态和消息确认；商品质量运行器已接入商品分页读取、必填/币种/价格/库存规则和重复游标熔断；质量任务 Redis 投递和消费适配器已完成；Scheduler 已接入质量任务扫描和幂等投递；Quality Worker 已接入生产 `run_worker` 组装，实际消费 `quality_check_tasks` 并写回质量问题；数据质量中心已完成结果摘要、开放问题列表、状态筛选和人工标记处理。当前仍未完成库存/订单/履约全量规则扩展，以及领域计算和对账结果的自动化回读。
 库存、订单、履约的第一批只读质量规则已完成领域实现、单元测试和统一 Quality Worker 接入：Worker 顺序读取三类 PostgreSQL 分页事实，执行标识、履约方式、数量、币种、金额、时间及日期边界校验；重复游标会熔断，规则失败由 Worker 统一有限重试。下一步是用真实只读同步数据做部署验收，再补充领域计算和对账结果的自动化回读。
