@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from backend.app.api.dependencies import (
     get_competitor_seed_gateway,
+    get_public_snapshot_gateway,
     get_store_workspace_gateway,
 )
 from backend.app.domain.competitor_seed import CompetitorSeed
@@ -56,6 +57,16 @@ class StubSeedGateway:
             return None
         self.seed = replace(self.seed, status=status)
         return self.seed
+
+
+class StubSnapshotGateway:
+    async def save_snapshot(self, *, workspace_id: str, snapshot: object) -> object:
+        del workspace_id
+        return snapshot
+
+    async def list_snapshots(self, *, workspace_id: str, limit: int = 50) -> list[object]:
+        del workspace_id, limit
+        return []
 
 
 def test_competitor_seed_create_list_and_update_status() -> None:
@@ -111,3 +122,18 @@ def test_competitor_seed_limit_is_enforced() -> None:
     )
 
     assert response.status_code == 409
+
+
+def test_competitor_seed_collect_requires_sampling_configuration() -> None:
+    app = create_app()
+    app.dependency_overrides[get_competitor_seed_gateway] = StubSeedGateway
+    app.dependency_overrides[get_store_workspace_gateway] = StubWorkspaceGateway
+    app.dependency_overrides[get_public_snapshot_gateway] = StubSnapshotGateway
+
+    response = TestClient(app).post(
+        "/v1/store-workspaces/store-1/competitor-seeds/seed-1/collect",
+        json={},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "sampling_not_configured"

@@ -255,7 +255,7 @@ Retry-After: 2
 | GET | `/v1/store-workspaces/{id}/keyword-report-imports` | 查询导入历史 |
 | POST | `/v1/store-workspaces/{id}/competitor-seeds` | 创建受控竞品种子 |
 | GET | `/v1/store-workspaces/{id}/competitor-seeds` | 查询种子与采样状态 |
-| POST | `/v1/store-workspaces/{id}/competitor-seeds/{seed_id}/collect` | 手动触发单个种子采样 |
+| POST | `/v1/store-workspaces/{id}/competitor-seeds/{seed_id}/collect` | 手动触发 active 种子采样并保存可解析公开快照 |
 | GET | `/v1/store-workspaces/{id}/public-product-snapshots` | 查询公开字段快照 |
 
 上传接口限制文件大小、类型、编码、解压后大小和行列数量，计算内容指纹并幂等。开发阶段文件加密暂存服务器私有目录 7 天；响应不返回服务器路径。
