@@ -103,7 +103,7 @@ Returns:
             text_layer_status="unavailable", ocr_required=False, ocr_provider=None,
         )
     try:
-        from pypdf import PdfReader  # type: ignore[import-not-found]
+        from pypdf import PdfReader
 
         reader = PdfReader(str(path), strict=False)
         pages = [page.extract_text() or "" for page in reader.pages]
