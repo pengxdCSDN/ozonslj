@@ -88,6 +88,14 @@ AI-010 新增通知模板预览 API 和前端入口，仅允许 headline、summa
 - 前端：`./extension/node_modules/.bin/tsc.CMD -b extension/tsconfig.json --pretty false`。
 - 自动化测试不访问真实 Ozon、真实公开页面或真实大模型。
 
+## 2026-08-22 运行环境与 Seller 同步边界复核
+
+云服务器 `/opt/ozonslj/app/deploy` 的 Docker Compose 配置校验通过；API、Worker、Scheduler、PostgreSQL、Redis 和 Nginx 均处于运行状态，HTTPS `live/ready/ops` 检查通过，API 容器可导入应用模块。该环境不是“Docker 未启动”或“无法连接服务器”。
+
+当前线上应用镜像运行版本为 `00576a931366f674278790ccc268dd76dc30478d`，本地分支当前提交为 `a83bec23bc44df47d444af2d2d20595264516230`，两者不能视为同一源码版本；线上版本与本地未发布改动的关系须通过稳定构建流程继续核验。
+
+真实授权存在不等于全量 Seller 后台同步已经接通：当前 Compose 运行配置仍为 `OZON_MODE=stub`，代码中的 `sync_runtime` 在 `live` 模式会因产品、库存、订单、出库四类后台同步 handler 尚未接通而拒绝启动。产品目录、财务累计和 Performance 的 HTTP/只读能力是独立适配器，不能替代上述四类后台同步。后续应先完成 live handler 与分页、水位、落库和失败重试闭环，再在授权范围内做云端只读验收；不得仅切换环境变量冒充完成。
+
 ## 2026-08-18 RAG 评测模型调用错误诊断
 
 评测执行器已将 Embedding、Chroma、Reranker、文本模型、限流、超时、认证、模型不存在、非法响应和运行时异常统一为脱敏错误码；Worker 将主要错误码与数量回写 PostgreSQL，结果页显示主要失败原因和下一步处理提示。该链路不保存供应商原始响应、提示词或凭据。验收顺序固定为先处理错误码、运行 30 例，再运行 120/240 例；真实供应商稳定性仍需云端实际运行验证。

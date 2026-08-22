@@ -8,7 +8,7 @@
 - SSH 身份文件：`C:\Users\ashi7\.ssh\ozonslj_server`；自动化检查使用 `BatchMode=yes` 和 `IdentitiesOnly=yes`。
 - 规格：Linux，2 核 CPU、2GB 内存、约 4GB Swap；Swap 仅作突发保护。
 - 项目目录：`/opt/ozonslj/app`；Compose 入口：`/opt/ozonslj/app/deploy`。
-- 公网只开放 Nginx 80；当前开发节点使用公网 IP + HTTP，正式数据进入前配置域名、HTTPS 和正式认证。
+- 公网入口由 Nginx 提供 80/443；当前节点仍使用公网 IP 和开发证书，HTTPS 已验证。正式域名、正式证书和生产认证接入前，不得把当前开发节点当作生产环境。
 
 ## 2. 已存在的服务与资源预算
 

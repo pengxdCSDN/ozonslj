@@ -9,7 +9,7 @@
 当前节点使用 Docker Compose 部署 PostgreSQL、Redis、API、Worker 与 Nginx/Web 骨架。
 运行时和后续开发均以 PostgreSQL 为唯一关系数据库，不提供 SQLite 回退路径。
 
-- 公网只开放 Nginx 的 `80` 端口。
+- 公网入口使用 Nginx 的 `80/443` 端口；HTTP 会重定向到 HTTPS，当前仍使用公网 IP 和开发证书。
 - PostgreSQL 和 Redis 只接入 Compose 内部网络，不映射公网端口。
 - API 与 Worker 额外接入出站网络，用于后续访问 Ozon API；PostgreSQL 和 Redis 不接入该网络。
 - PostgreSQL 的 `15432` 仅绑定服务器 `127.0.0.1`，只允许通过 SSH 隧道访问。
