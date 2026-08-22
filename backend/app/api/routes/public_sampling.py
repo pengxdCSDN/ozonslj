@@ -8,12 +8,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.app.api.dependencies import (
+    get_automation_event_publisher,
     get_public_snapshot_gateway,
     get_quality_finding_gateway,
     get_store_workspace_gateway,
 )
 from backend.app.application.public_sampling_collector import PublicSamplingCollector
 from backend.app.config import get_settings
+from backend.app.domain.automation_orchestration import AutomationEventPublisher
 from backend.app.domain.data_quality import QualityFinding, QualityFindingGateway
 from backend.app.domain.public_sampling import PublicSampler, SamplingRequest, SamplingResult
 from backend.app.domain.public_snapshot import PublicSnapshotGateway
@@ -101,6 +103,7 @@ async def live_collect_snapshots(
     workspace_id: str,
     payload: SamplingBatchPayload,
     snapshots: Annotated[PublicSnapshotGateway, Depends(get_public_snapshot_gateway)],
+    event_publisher: Annotated[AutomationEventPublisher, Depends(get_automation_event_publisher)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> dict[str, object]:
     """执行受控采样并保存可解析的公开快照；阻断请求不会写入快照。"""
@@ -122,7 +125,7 @@ async def live_collect_snapshots(
             client, allowed_hosts=allowed_hosts, user_agent=settings.public_sampling_user_agent
         )
         results, saved = await PublicSamplingCollector(
-            snapshots, fetcher.fetch_page
+            snapshots, fetcher.fetch_page, event_publisher
         ).collect(
             workspace_id=workspace_id,
             urls=[item.url for item in payload.requests],

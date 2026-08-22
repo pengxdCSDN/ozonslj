@@ -8,12 +8,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.app.api.dependencies import (
+    get_automation_event_publisher,
     get_competitor_seed_gateway,
     get_public_snapshot_gateway,
     get_store_workspace_gateway,
 )
 from backend.app.application.public_sampling_collector import PublicSamplingCollector
 from backend.app.config import get_settings
+from backend.app.domain.automation_orchestration import AutomationEventPublisher
 from backend.app.domain.competitor_seed import (
     CompetitorSeed,
     CompetitorSeedError,
@@ -146,6 +148,7 @@ async def collect_competitor_seed(
     payload: CollectSeedRequest,
     gateway: Annotated[CompetitorSeedGateway, Depends(get_competitor_seed_gateway)],
     snapshots: Annotated[PublicSnapshotGateway, Depends(get_public_snapshot_gateway)],
+    event_publisher: Annotated[AutomationEventPublisher, Depends(get_automation_event_publisher)],
     workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
 ) -> dict[str, object]:
     """按已保存的 active 种子执行受控采样并保存可解析快照。"""
@@ -179,7 +182,7 @@ async def collect_competitor_seed(
             client, allowed_hosts=allowed_hosts, user_agent=settings.public_sampling_user_agent
         )
         results, saved = await PublicSamplingCollector(
-            snapshots, fetcher.fetch_page
+            snapshots, fetcher.fetch_page, event_publisher
         ).collect(
             workspace_id=workspace_id,
             urls=[seed.url],

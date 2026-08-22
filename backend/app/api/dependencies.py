@@ -20,6 +20,7 @@ from backend.app.domain.advertising_thresholds import AdvertisingThresholdGatewa
 from backend.app.domain.agent_permissions import AgentPermissionGateway
 from backend.app.domain.agent_trigger import AgentTriggerGateway
 from backend.app.domain.audit_event_store import AuditEventGateway
+from backend.app.domain.automation_orchestration import AutomationEventPublisher
 from backend.app.domain.competition_analysis import CompetitionAnalysisGateway
 from backend.app.domain.competitor_seed import CompetitorSeedGateway
 from backend.app.domain.competitor_selection_analysis import CompetitorSelectionAnalysisGateway
@@ -216,6 +217,7 @@ from backend.app.infrastructure.postgresql.store_workspaces import (
 from backend.app.infrastructure.postgresql.summary_reports import PostgresSummaryReportGateway
 from backend.app.infrastructure.postgresql.sync_jobs import PostgresSyncJobGateway
 from backend.app.infrastructure.readiness import InfrastructureReadinessProbe
+from backend.app.infrastructure.redis_automation_events import RedisAutomationEventPublisher
 from backend.app.infrastructure.redis_rag_tasks import RedisRagTaskQueue
 
 
@@ -392,6 +394,13 @@ def get_redis_client() -> Redis:
     if settings.redis_url is None:
         raise RuntimeError("REDIS_URL 未配置")
     return cast(Redis, Redis.from_url(str(settings.redis_url), decode_responses=True))
+
+
+def get_automation_event_publisher(
+    redis: Annotated[Redis, Depends(get_redis_client)],
+) -> AutomationEventPublisher:
+    """返回事实变化事件发布器；Redis 仅保存可重建唤醒和短期幂等标记。"""
+    return RedisAutomationEventPublisher(redis)
 
 
 async def close_redis_client() -> None:

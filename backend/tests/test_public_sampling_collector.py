@@ -19,6 +19,15 @@ class StubSnapshots:
         return self.saved
 
 
+class StubEventPublisher:
+    def __init__(self) -> None:
+        self.events: list[object] = []
+
+    async def publish_once(self, event: object) -> bool:
+        self.events.append(event)
+        return True
+
+
 def test_collector_saves_only_successfully_parsed_public_snapshot() -> None:
     async def fetch(url: str) -> FetchResponse:
         if url.endswith("/blocked"):
@@ -32,8 +41,9 @@ def test_collector_saves_only_successfully_parsed_public_snapshot() -> None:
         )
 
     snapshots = StubSnapshots()
+    events = StubEventPublisher()
     results, saved = asyncio.run(
-        PublicSamplingCollector(snapshots, fetch).collect(
+        PublicSamplingCollector(snapshots, fetch, events).collect(
             workspace_id="store-1",
             urls=["https://example.com/item", "https://example.com/blocked"],
             global_limit=2,
@@ -45,3 +55,4 @@ def test_collector_saves_only_successfully_parsed_public_snapshot() -> None:
     assert results[1].allowed is False
     assert len(saved) == 1
     assert saved[0].price_minor == 1000
+    assert len(events.events) == 1

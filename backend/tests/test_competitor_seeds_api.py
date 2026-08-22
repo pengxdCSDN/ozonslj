@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from fastapi.testclient import TestClient
 
 from backend.app.api.dependencies import (
+    get_automation_event_publisher,
     get_competitor_seed_gateway,
     get_public_snapshot_gateway,
     get_store_workspace_gateway,
@@ -69,6 +70,12 @@ class StubSnapshotGateway:
         return []
 
 
+class StubEventPublisher:
+    async def publish_once(self, event: object) -> bool:
+        del event
+        return True
+
+
 def test_competitor_seed_create_list_and_update_status() -> None:
     app = create_app()
     seeds = StubSeedGateway()
@@ -129,6 +136,7 @@ def test_competitor_seed_collect_requires_sampling_configuration() -> None:
     app.dependency_overrides[get_competitor_seed_gateway] = StubSeedGateway
     app.dependency_overrides[get_store_workspace_gateway] = StubWorkspaceGateway
     app.dependency_overrides[get_public_snapshot_gateway] = StubSnapshotGateway
+    app.dependency_overrides[get_automation_event_publisher] = StubEventPublisher
 
     response = TestClient(app).post(
         "/v1/store-workspaces/store-1/competitor-seeds/seed-1/collect",
