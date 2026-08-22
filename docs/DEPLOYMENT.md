@@ -411,3 +411,17 @@ docker compose --env-file .env logs --tail=100 api worker
 - Web 资源验收通过：`index-CUliVqbQ.js`、`index-CCvx1uyu.css` 和 favicon 均返回 `200`。
 - 利润模型页面新增财务日期范围和“从 Ozon 同步财务”入口；同步结果只归一化销售额、佣金、物流及其他费用，供订单实际费用回填和利润校准使用。
 - 本次发布仅增加 Ozon 财务只读读取能力，未调用任何 Seller 写接口；自动化测试使用 Mock，真实店铺数据需在生产页面点击同步后再按账号权限验收。
+
+## 2026-08-22 CI 门禁修复与自动发布闭环
+
+- 目标提交：`224d4772d4d4907af169a38fc7c3cfc6b2bdcb5e`，删除 `pdf_uploads.py` 中过时的
+  `pypdf` mypy 忽略注释。
+- 失败提交 `9739384` 的真实阻断是 mypy `unused-ignore`；pytest、Ruff 通过不代表后续 schema、
+  ACR、SSH 或云端步骤已经执行。
+- 修复后本地 pytest、Ruff、mypy（339 个源文件）和 schema 门禁通过；GitHub Actions 自动构建、
+  推送并部署完成。
+- 云端 API、Worker、Scheduler 统一摘要：
+  `sha256:ae940dd8438e4f09bfb71531c9e899bd66952d6d6e10da89a0a5663681c85ca1`；镜像内
+  `OZONSLJ_RELEASE_REVISION` 与目标提交一致，`live/ready` 均返回 `{"status":"ok"}`。
+- 后续发布必须记录门禁结果、source commit、image digest、release revision、三服务一致性和
+  live/ready；未跟踪诊断目录不得加入提交或清理。

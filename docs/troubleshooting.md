@@ -569,3 +569,23 @@ TLS 配置，不要关闭校验或把 Client Secret 写入日志。
 用量行现在按 `Asia/Shanghai` 自然日写入；读取时当天字段只汇总当天行，本月字段汇总当月所有日期行。
 部署数据库迁移 `0109_daily_model_budget_usage.sql` 后，刷新模型额度页面即可验证跨日归零；历史月度累计不删除，
 但旧版本写入的月初行无法还原到具体日期。
+
+## 2026-08-22：GitHub Actions mypy 门禁因过时忽略注释失败
+
+### 现象与根因
+
+提交 `9739384` 的 pytest 和 Ruff 已通过，但 `Run mypy` 在
+`backend/app/api/routes/pdf_uploads.py:106` 报 `Unused "type: ignore" comment`，因此 schema、
+ACR、SSH 和云端步骤全部被跳过。`pypdf` 已是运行时依赖，CI 通过 `pip install -e .` 后能够找到
+该模块；旧的 `# type: ignore[import-not-found]` 已失去必要性。此故障不是 ACR、SSH、授权或服务器故障。
+
+### 修复与防复发
+
+- 删除过时忽略注释；本地补齐 `pypdf` 后，mypy 339 个源文件、PDF 回归测试、Ruff 和
+  `git diff --check` 均通过。
+- CI 失败时必须先定位具体步骤；前置门禁失败时不得检查或重启后续服务，也不得把未执行的 ACR/SSH
+  步骤报告为失败原因。
+- 修改 `type: ignore` 后必须在与 CI 相同的依赖集合中运行 strict mypy；禁止用
+  `--ignore-missing-imports` 或无依据的忽略掩盖依赖环境差异。
+- 只有 pytest、Ruff、mypy、schema 全部通过，才允许继续核对 ACR source commit、镜像 revision、
+  三服务摘要和 live/ready。
