@@ -545,6 +545,10 @@ Performance 页面可以显示“Client ID 已配置”，但点击“获取 Tok
 “Client ID 已配置”只代表加密凭据存在；只有 Access Token 获取成功且连接状态变为可用，才代表真实
 Performance OAuth 验证通过。自动化测试使用 MockTransport，不访问真实 Ozon 账号。
 
+广告活动只读接口不要求用户在每次调用前手动点击：后端会在请求前检查已加密保存的 Token，剩余有效期
+不足 60 秒或已经过期时，自动使用后端保存的 Client ID/Secret 重新获取 Token 并更新加密存储；任何
+失败仍返回脱敏错误码。浏览器页面显示的“Token 已过期”是状态快照，不代表下一次只读请求不会自动换取。
+
 ### 307 重定向处理
 
 2026-08-20 已确认：`performance.ozon.ru` 是网页入口，调用 Token 时会返回面向浏览器的 307，随后可能
