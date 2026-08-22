@@ -31,6 +31,13 @@ class SyncJob(BaseModel):
     lease_owner: str | None = None
     lease_expires_at: datetime | None = None
     heartbeat_at: datetime | None = None
+    # 自动化编排上下文：旧任务允许为空，新增任务由应用层填充，便于追踪触发链。
+    run_id: str | None = None
+    root_run_id: str | None = None
+    parent_run_id: str | None = None
+    trigger_source: str = "manual"
+    data_version: str | None = None
+    trigger_depth: int = Field(default=0, ge=0)
 
 
 class SyncJobPage(BaseModel):

@@ -22,7 +22,7 @@ ozonslj 是面向 Ozon 跨境卖家的多组织 SaaS 智能运营工作台，使
 | 已开发 | FastAPI 应用骨架、Chrome/Web 共用 React 入口、店铺工作区、Seller 凭据本地加密/验证、工作区商品报价读取 |
 | 已有结构基础 | PostgreSQL 基础 schema、多组织表、成员/工作区授权、RLS 函数与策略、迁移契约测试 |
 | 部分开发 | 生产环境 PostgreSQL/Redis 配置校验、Seller HTTP 网关边界、Stub/Mock 路径 |
-| 尚未开发 | Redis Streams 完整任务闭环、完整 Seller 同步、搜索词导入、公开采样、选品、Listing、Performance、审核写入和 Agent |
+| 部分开发 | Redis Streams 同步/质量任务投递、租约恢复、事实变化事件发布、Consumer Group 字段隔离、数据质量路由、质量任务持久化、Quality Worker、商品质量规则运行器、Scheduler 扫描和 Worker 运行组装；质量结果页面回读、完整 Seller 同步、搜索词导入、公开采样、选品、Listing、Performance、审核写入和 Agent 仍待开发 |
 | 已部署基础设施 | 云端 Compose、PostgreSQL/Redis、版本化迁移和 Fernet Secret；备份/恢复、cron 与日志轮转脚本模板已存在，但定时任务安装待补；详见 `SERVER_CONTEXT.md` |
 | 已清理历史实现 | 旧持久化适配器、旧数据库路径配置、DPAPI 云端依赖和对应测试路径均已移除 |
 
@@ -91,6 +91,14 @@ flowchart TB
 每个请求依次校验身份、组织成员关系、组织角色、工作区授权和资源状态。PostgreSQL RLS 是第二道隔离边界：每个事务使用 `SET LOCAL` 设置 `app.organization_id` 与 `app.user_id`；缺少上下文时默认拒绝。Worker 从任务事实恢复用户或服务主体上下文。日常应用账户不得拥有 `BYPASSRLS`。
 
 ## 6. 数据与任务架构
+
+### 6.1 受控自动化编排层
+
+自动化编排层位于应用层与任务/事件基础设施之间，统一处理事件分类、下游白名单、幂等键、运行链路、重试和熔断。处理链保持单向：
+
+`外部事实同步 → 数据质量 → 领域计算 → 异常/建议 → 人工审核 → 受控执行 → 结果回读 → 对账复盘`
+
+同步任务保存 `run_id`、`root_run_id`、`parent_run_id`、`trigger_source`、`data_version` 和 `trigger_depth`。Worker 只有在事实成功持久化后才发布 `external_fact_changed`；事件消费者必须按 `event_id` 幂等，并遵守目标白名单。展示刷新不产生业务事件，建议不直接触发执行，触发链超过 5 层熔断并转人工。
 
 数据模型和迁移细节以 [DATABASE.md](./DATABASE.md) 为准。核心原则：
 
@@ -210,13 +218,13 @@ V5.1～V5.3 容器上限合计 1280MB，V5.4 起 1408MB。Swap 只用于故障�
 - [可观测性与运行门禁](./ARCHITECTURE-V6.md#24-可观测性与运行门禁)：日志、指标、追踪关联、告警和就绪门禁。
 - [分阶段部署与能力开关](./ARCHITECTURE-V6.md#25-分阶段部署与能力开关)：V5.1～V5.5 的进程、适配器、默认关闭能力和上线条件。
 
-## 16. 知识型混合 RAG 目标扩展（已确认、待开发）
+## 16. 知识型混合 RAG 扩展（核心闭环已开发，云端验收待完成）
 
 知识型混合 RAG 是现有模块化单体的目标扩展，不改变业务事实存储基线。此前“首期不引入向量数据库”的约束对普通运营业务仍然有效；经 [ADR-0010](./decisions/0010-chroma-for-knowledge-hybrid-rag.md) 确认，知识 RAG 专项必须增加 Chroma，且仅作为可从 PostgreSQL 已发布知识版本重建的语义索引。
 
 目标拓扑在现有 API 与基础设施旁增加 `rag-worker`、Chroma 和厂商无关模型端口。`rag-worker` 与业务同步 Worker 使用独立 Redis Stream、Consumer Group、死信队列、任务类型、凭据和资源限制；PostgreSQL 继续保存任务、租约、发布和治理事实。RAG 任一组件异常不得影响登录、工作区和现有运营 API，也不得以重建 PostgreSQL、Redis 或 Nginx 作为恢复手段。
 
-该扩展目前已有 RAG-1 切片领域内核和 RAG-2 核心治理 migration，但没有可运行的 RAG API、Chroma 容器、前端页面或完整闭环。实现边界以 [RAG 技术架构](./RAG_ARCHITECTURE.md) 为准，实施状态以 [RAG 实施计划](./RAG_IMPLEMENTATION_PLAN.md) 为准。
+该扩展已具备 RAG-1 至 RAG-7 的领域模型、治理 migration、PostgreSQL + Chroma 持久化运行时、API、前端页面和测试闭环；RAG-8 的开发云 Chroma/Worker 健康、备份恢复和真实供应商连通性仍待部署验收。实现边界以 [RAG 技术架构](./RAG_ARCHITECTURE.md) 为准，实施状态以 [RAG 实施计划](./RAG_IMPLEMENTATION_PLAN.md) 为准。
 # 当前部署模式：单组织、内部隔离
 
 当前部署是单一运营组织模式。`DEFAULT_ORGANIZATION_ID` 由服务端配置，登录接口和客户端不得提交、选择或切换组织。认证成功后，服务端使用该固定组织建立 PostgreSQL 事务上下文。

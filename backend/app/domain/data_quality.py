@@ -9,6 +9,47 @@ from pydantic import BaseModel, ConfigDict, Field
 QualitySeverity = Literal["warning", "error"]
 QualityFindingStatus = Literal["open", "accepted", "resolved", "ignored"]
 QualityFindingSource = Literal["derived_quality"]
+QualityCheckJobStatus = Literal["queued", "running", "succeeded", "failed"]
+
+
+class QualityCheckJob(BaseModel):
+    """由事实变化事件创建的可恢复质量检查任务。"""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(min_length=1)
+    workspace_id: str = Field(min_length=1)
+    status: QualityCheckJobStatus
+    data_version: str = Field(min_length=1)
+    idempotency_key: str = Field(min_length=1)
+    parent_run_id: str = Field(min_length=1)
+    attempt_count: int = Field(ge=0)
+    created_at: datetime
+
+
+class QualityCheckJobGateway(Protocol):
+    """质量检查任务事实端口；重复幂等键必须复用已有任务。"""
+
+    async def schedule_quality_check(
+        self, *, workspace_id: str, data_version: str, idempotency_key: str, parent_run_id: str
+    ) -> bool:
+        """创建或复用质量检查任务，返回是否新建。"""
+
+    async def claim_quality_check(
+        self, *, job_id: str, worker_id: str, lease_seconds: int
+    ) -> QualityCheckJob | None:
+        """领取质量任务；租约有效时同一任务只能被一个 Worker 执行。"""
+
+    async def complete_quality_check(self, *, job_id: str, worker_id: str) -> bool:
+        """质量检查成功后关闭任务并释放租约。"""
+
+    async def fail_quality_check(
+        self, *, job_id: str, worker_id: str, retry_delay_seconds: int
+    ) -> bool:
+        """失败任务按有限重试策略重新排队或标记失败。"""
+
+    async def list_dispatchable_quality_checks(self, *, limit: int) -> list[QualityCheckJob]:
+        """读取到期排队任务，供 Scheduler 重建 Redis 投递。"""
 
 
 class QualityFindingRecord(BaseModel):

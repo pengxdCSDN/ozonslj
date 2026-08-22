@@ -44,7 +44,10 @@ def test_create_job_uses_idempotency_and_context() -> None:
     assert job.id == "sync-1"
     sql, params = connection.execute.call_args.args
     assert "ON CONFLICT" in sql
-    assert params[1:] == ("org-default", "store-1", "stock", "user-1", "stock-sync-001")
+    assert params[1:6] == ("org-default", "store-1", "stock", "user-1", "stock-sync-001")
+    assert params[6] == params[0]
+    assert params[7] == params[0]
+    assert params[8:] == ("manual", "stock-sync-001")
 
 
 def test_dispatch_scan_reads_only_due_queued_jobs() -> None:

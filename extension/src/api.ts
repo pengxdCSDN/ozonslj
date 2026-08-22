@@ -803,6 +803,34 @@ export function previewProfitReconciliation(content: string): Promise<ProfitReco
   });
 }
 
+export interface ProfitReconciliationRecord {
+  id?: string;
+  batch_id?: string;
+  workspace_id?: string;
+  order_id: string;
+  sku_id: string;
+  estimated_profit_minor: number | null;
+  actual_profit_minor: number | null;
+  variance_minor: number | null;
+  side: "matched" | "missing_estimated" | "missing_actual";
+  source: string;
+  created_at?: string;
+}
+
+export function saveProfitReconciliation(
+  workspaceId: string,
+  payload: { idempotency_key: string; source: string; status: "completed" | "partial" | "failed"; records: ProfitReconciliationRecord[] }
+): Promise<{ batch: { id: string }; record_count: number }> {
+  return requestJson(`/v1/selection/profit-model/${encodeURIComponent(workspaceId)}/reconciliation`, {
+    method: "POST", body: JSON.stringify(payload),
+  });
+}
+
+export function listProfitReconciliationRecords(workspaceId: string, batchId?: string): Promise<ProfitReconciliationRecord[]> {
+  const suffix = batchId ? `?batch_id=${encodeURIComponent(batchId)}` : "";
+  return requestJson(`/v1/selection/profit-model/${encodeURIComponent(workspaceId)}/reconciliation/records${suffix}`);
+}
+
 export interface ProductOffer {
   offer_id: string;
   ozon_product_id: string | null;

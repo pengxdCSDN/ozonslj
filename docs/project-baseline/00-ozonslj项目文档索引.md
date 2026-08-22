@@ -23,6 +23,7 @@
 | [`troubleshooting.md`](./troubleshooting.md) | 已复现故障的现象、原因、恢复和预防 | 未验证猜测 |
 | [`decisions/`](./decisions/) | 已接受或被替代的重大技术决策、背景与权衡 | 详细接口/schema 规范 |
 | [`DELIVERY_BASELINE.md`](./DELIVERY_BASELINE.md) | WorkBuddy 交付方案提炼出的新增事实基线 | 替代已确认需求或架构 |
+| [`AUTOMATION_FIRST_DESIGN.md`](./AUTOMATION_FIRST_DESIGN.md) | “一切尽可能自动化”的页面设计原则、改进清单、优先级和验收指标 | 绕过审核或把规划能力写成已实现 |
 | `REQUIREMENTS-V*-PENDING.md`、`ARCHITECTURE-V*-PENDING.md` | 逐项确认过程和待定决策 | 当前权威规则的唯一副本 |
 | `REQUIREMENTS-V*.md`、`ARCHITECTURE-V*.md` | 已定档版本快照和变更历史 | 日常持续维护入口 |
 

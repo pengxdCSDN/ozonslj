@@ -2,7 +2,7 @@
 
 import asyncio
 from datetime import timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from backend.app.domain.sync_job import SyncJob, SyncJobPage, SyncResourceType
@@ -10,7 +10,8 @@ from backend.app.infrastructure.postgresql.session import PostgresSessionFactory
 
 _JOB_COLUMNS = """id, workspace_id, resource_type, status, processed_count, failure_count,
 error_code, error_message, attempt_count, max_attempts, next_attempt_at,
-created_at, started_at, completed_at, lease_owner, lease_expires_at, heartbeat_at"""
+created_at, started_at, completed_at, lease_owner, lease_expires_at, heartbeat_at,
+run_id, root_run_id, parent_run_id, trigger_source, data_version, trigger_depth"""
 
 
 class PostgresSyncJobGateway:
@@ -64,21 +65,24 @@ Returns:
 Raises:
     RuntimeError: 业务约束或外部依赖失败时抛出。
 """
+        job_id = f"sync-{uuid4()}"
         with self._sessions.transaction(self._context) as connection:
             row = connection.execute(
                 f"""
                 INSERT INTO sync_jobs (
                     id, organization_id, workspace_id, resource_type, status,
-                    requested_user_id, idempotency_key
-                ) VALUES (%s, %s, %s, %s, 'queued', %s, %s)
+                    requested_user_id, idempotency_key, run_id, root_run_id,
+                    trigger_source, data_version, trigger_depth
+                ) VALUES (%s, %s, %s, %s, 'queued', %s, %s, %s, %s, %s, %s, 0)
                 ON CONFLICT (organization_id, workspace_id, idempotency_key)
                     WHERE idempotency_key IS NOT NULL
                 DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
                 RETURNING {_JOB_COLUMNS}
                 """,
                 (
-                    f"sync-{uuid4()}", self._context.organization_id, workspace_id,
+                    job_id, self._context.organization_id, workspace_id,
                     resource_type, self._context.user_id, idempotency_key,
+                    job_id, job_id, "manual", idempotency_key,
                 ),
             ).fetchone()
         if row is None:
@@ -408,9 +412,21 @@ Args:
 
 Returns:
     返回调用完成后的领域结果。"""
-    return SyncJob(**{name: row[name] for name in (
+    values: dict[str, Any] = {
+        name: cast(Any, row.get(name)) for name in (
         "id", "workspace_id", "resource_type", "status", "processed_count",
         "failure_count", "error_code", "error_message", "attempt_count",
         "max_attempts", "next_attempt_at", "created_at", "started_at", "completed_at",
         "lease_owner", "lease_expires_at", "heartbeat_at",
-    )})
+        )
+    }
+    # 兼容迁移前的测试夹具和历史读路径：缺少新字段时使用领域默认值，
+    # 真实迁移后的 PostgreSQL 行会包含完整编排上下文。
+    for name in ("run_id", "root_run_id", "parent_run_id", "data_version"):
+        if name in row and row[name] is not None:
+            values[name] = row[name]
+    if row.get("trigger_source") is not None:
+        values["trigger_source"] = row["trigger_source"]
+    if row.get("trigger_depth") is not None:
+        values["trigger_depth"] = row["trigger_depth"]
+    return SyncJob(**values)

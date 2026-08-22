@@ -3,6 +3,10 @@
 import asyncio
 from contextlib import suppress
 
+from backend.app.domain.automation_orchestration import (
+    AutomationEvent,
+    AutomationEventPublisher,
+)
 from backend.app.domain.sync_job import (
     SyncHandler,
     SyncJobConsumer,
@@ -23,6 +27,7 @@ class SyncWorker:
         worker_id: str,
         lease_seconds: int = 30,
         retry_delay_seconds: int = 60,
+        event_publisher: AutomationEventPublisher | None = None,
     ) -> None:
         """注入任务网关、消息消费者和按资源类型索引的同步处理器。
 
@@ -42,6 +47,7 @@ Returns:
         self._worker_id = worker_id
         self._lease_seconds = lease_seconds
         self._retry_delay_seconds = retry_delay_seconds
+        self._event_publisher = event_publisher
 
     async def process_one(self, *, block_ms: int = 1_000) -> bool:
         """消费并处理一条消息，完成租约、心跳、成功/失败落库和确认。
@@ -94,6 +100,19 @@ Returns:
                         failure_count=result.failure_count,
                     )
             if persisted:
+                if self._event_publisher is not None and job.run_id and job.root_run_id:
+                    # 只有外部事实同步成功后发布事件；展示刷新和计算结果不经过此出口。
+                    await self._event_publisher.publish_once(
+                        AutomationEvent(
+                            event_id=f"{job.run_id}:external_fact_changed",
+                            event_type="external_fact_changed",
+                            workspace_id=job.workspace_id,
+                            run_id=job.run_id,
+                            root_run_id=job.root_run_id,
+                            source=job.resource_type,
+                            data_version=job.data_version or job.id,
+                        )
+                    )
                 await self._consumer.acknowledge(message.message_id)
             return persisted
         finally:

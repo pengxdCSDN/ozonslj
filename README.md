@@ -53,8 +53,9 @@ API/Worker 服务。Web 静态资源使用服务器 `deploy/web` 挂载目录发
 - [开发计划](./docs/PROJECT_PLAN.md)
 - [Linux 部署](./docs/DEPLOYMENT.md)
 - [前后端可复用修复基线](./docs/FRONTEND_REUSABLE_FIXES.md)
+- [自动化优先设计](./docs/AUTOMATION_FIRST_DESIGN.md)
 
-### 最新项目文档基线（Obsidian 00–24）
+### 最新项目文档基线（Obsidian 00–25）
 
 - [00 项目文档索引](./docs/project-baseline/00-ozonslj项目文档索引.md)
 - [01 需求文档](./docs/project-baseline/01-ozonslj需求文档.md)
@@ -83,6 +84,7 @@ API/Worker 服务。Web 静态资源使用服务器 `deploy/web` 挂载目录发
 - [22 RAG 目标 API](./docs/project-baseline/22-ozonslj-RAG目标API.md)
 - [23 RAG 实施计划](./docs/project-baseline/23-ozonslj-RAG实施计划.md)
 - [24 ADR-0010 Chroma 向量索引决策](./docs/project-baseline/24-ozonslj-ADR-0010-Chroma向量索引决策.md)
+- [25 自动化优先设计](./docs/project-baseline/25-ozonslj自动化优先设计.md)
 
 ## 完整检查
 

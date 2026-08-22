@@ -56,6 +56,21 @@
 
 ## 3. 健康检查（已实现）
 
+## 3.1 自动化任务与事件约定
+
+同步任务响应可包含以下自动化运行上下文：
+
+| 字段 | 含义 |
+|---|---|
+| `run_id` | 本次自动化运行唯一标识 |
+| `root_run_id` | 触发链根运行标识 |
+| `parent_run_id` | 直接父任务运行标识 |
+| `trigger_source` | `manual`、`scheduled` 或受控事件来源 |
+| `data_version` | 本次任务消费的数据版本或导入批次 |
+| `trigger_depth` | 当前触发链深度，超过上限必须熔断 |
+
+任务接口不得把页面刷新作为同步触发来源。事件消费者只接受白名单事件；重复 `event_id` 必须返回幂等结果，不得重复创建下游任务。认证、权限、合规和数据冲突错误不得自动重试。
+
 | 方法 | 路径 | 响应 |
 |---|---|---|
 | GET | `/health/live` | 只验证 API 进程可响应；不访问外部依赖 |
@@ -341,3 +356,8 @@ Agent 接口不接受任意 SQL、任意工具名、文件系统路径、模型�
 `POST /v1/selection/profit-model/reconciliation/preview`
 
 提交订单实际费用 CSV，返回每行预计利润、实际利润、物流费用差异和差异比例。该接口只做预览和对账计算，不把外部财务数据直接写成平台事实。必需字段为 `order_id`、`sku_id`、`estimated_profit_minor`、`actual_profit_minor`、`estimated_logistics_minor`、`actual_logistics_minor` 和 `source`；利润允许为负，所有金额使用最小货币单位整数。
+### 利润对账结果
+
+- `POST /v1/selection/profit-model/{workspace_id}/reconciliation`：保存人工确认后的标准化对账批次；必须提供幂等键、来源、状态和订单/SKU 明细，重复幂等键复用原批次。
+- `GET /v1/selection/profit-model/{workspace_id}/reconciliation/records`：读取当前工作区的持久化对账明细，可按 `batch_id` 和 `limit` 筛选。
+- 该组接口只操作本地 PostgreSQL 对账事实，不调用 Ozon 写接口；预览接口不会自动落库。

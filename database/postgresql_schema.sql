@@ -132,12 +132,20 @@ CREATE TABLE IF NOT EXISTS sync_jobs (
     idempotency_key TEXT,
     requested_user_id TEXT,
     attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+    lease_owner TEXT,
+    lease_expires_at TIMESTAMPTZ,
     max_attempts INTEGER NOT NULL DEFAULT 3 CHECK (max_attempts BETWEEN 1 AND 10),
     next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     lease_owner TEXT,
     lease_expires_at TIMESTAMPTZ,
     heartbeat_at TIMESTAMPTZ,
     cancel_requested_at TIMESTAMPTZ,
+    run_id TEXT,
+    root_run_id TEXT,
+    parent_run_id TEXT,
+    trigger_source TEXT NOT NULL DEFAULT 'manual',
+    data_version TEXT,
+    trigger_depth INTEGER NOT NULL DEFAULT 0 CHECK (trigger_depth >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
@@ -217,6 +225,12 @@ COMMENT ON TABLE posting_items IS '履约单商品明细快照；数量必须为
 COMMENT ON TABLE sync_jobs IS '可恢复的数据同步任务；保存状态、处理计数、错误摘要和执行时间线。';
 COMMENT ON COLUMN sync_jobs.status IS '任务状态：queued 排队、running 执行中、succeeded 成功、partial 部分成功、failed 失败、cancelled 取消。';
 COMMENT ON COLUMN sync_jobs.error_message IS '脱敏后的错误摘要；禁止写入 Api-Key、Client-Id 原值或 Ozon 原始敏感响应。';
+COMMENT ON COLUMN sync_jobs.run_id IS '本次自动化运行唯一标识；用于重复消息去重和完整链路追踪。';
+COMMENT ON COLUMN sync_jobs.root_run_id IS '触发链根运行标识；同一根任务下的自动化结果不得重复成功。';
+COMMENT ON COLUMN sync_jobs.parent_run_id IS '直接父任务运行标识；展示刷新不得作为业务父任务。';
+COMMENT ON COLUMN sync_jobs.trigger_source IS '触发来源：manual、scheduled 或受控事件名称；必须经过事件白名单。';
+COMMENT ON COLUMN sync_jobs.data_version IS '本次任务消费的数据版本或导入批次标识，用于幂等和回读。';
+COMMENT ON COLUMN sync_jobs.trigger_depth IS '自动化触发链深度；超过编排上限必须熔断并转人工。';
 
 -- 卖家操作审计表：记录谁在什么工作区执行了什么风险级别的操作，供追踪和审计使用。
 COMMENT ON TABLE seller_operations IS '卖家操作脱敏审计记录；只追加，不作为业务状态事实来源。';
@@ -234,6 +248,9 @@ CREATE INDEX IF NOT EXISTS idx_postings_status_date
 CREATE INDEX IF NOT EXISTS idx_posting_items_offer ON posting_items (offer_id);
 CREATE INDEX IF NOT EXISTS idx_sync_jobs_queue
     ON sync_jobs (workspace_id, resource_type, status, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_sync_jobs_run_scope
+    ON sync_jobs (organization_id, workspace_id, root_run_id, resource_type, data_version)
+    WHERE root_run_id IS NOT NULL AND data_version IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_seller_operations_time
     ON seller_operations (workspace_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_seller_accounts_status
@@ -252,6 +269,23 @@ CREATE TABLE IF NOT EXISTS data_quality_findings (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     resolved_at TIMESTAMPTZ
 );
+
+CREATE TABLE IF NOT EXISTS quality_check_jobs (
+    id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL REFERENCES store_workspaces(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'queued'
+        CHECK (status IN ('queued', 'running', 'succeeded', 'failed')),
+    data_version TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    parent_run_id TEXT NOT NULL,
+    attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_quality_check_jobs_idempotency
+    ON quality_check_jobs (organization_id, workspace_id, idempotency_key);
 
 CREATE INDEX IF NOT EXISTS idx_quality_findings_workspace_status
     ON data_quality_findings (workspace_id, status, created_at DESC);
@@ -287,6 +321,29 @@ CREATE POLICY keyword_report_imports_isolation ON keyword_report_imports
     USING (organization_id = current_setting('app.organization_id', true))
     WITH CHECK (organization_id = current_setting('app.organization_id', true));
 
+CREATE TABLE IF NOT EXISTS profit_reconciliation_batches (
+    id TEXT PRIMARY KEY, organization_id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL REFERENCES store_workspaces(id) ON DELETE CASCADE,
+    idempotency_key TEXT NOT NULL, source TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('completed', 'partial', 'failed')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (organization_id, workspace_id, idempotency_key)
+);
+CREATE TABLE IF NOT EXISTS profit_reconciliation_records (
+    id TEXT PRIMARY KEY, organization_id TEXT NOT NULL,
+    batch_id TEXT NOT NULL REFERENCES profit_reconciliation_batches(id) ON DELETE CASCADE,
+    workspace_id TEXT NOT NULL REFERENCES store_workspaces(id) ON DELETE CASCADE,
+    order_id TEXT NOT NULL, sku_id TEXT NOT NULL,
+    estimated_profit_minor BIGINT, actual_profit_minor BIGINT, variance_minor BIGINT,
+    side TEXT NOT NULL CHECK (side IN ('matched', 'missing_estimated', 'missing_actual')),
+    source TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (estimated_profit_minor IS NOT NULL OR actual_profit_minor IS NOT NULL),
+    UNIQUE (organization_id, batch_id, order_id, sku_id)
+);
+CREATE INDEX IF NOT EXISTS idx_profit_reconciliation_records_workspace
+    ON profit_reconciliation_records (organization_id, workspace_id, created_at DESC);
+
 COMMENT ON TABLE data_quality_findings IS '数据质量隔离记录；异常不覆盖业务事实。';
+COMMENT ON TABLE profit_reconciliation_records IS '订单/SKU 预计与实际利润差异；缺失侧显式标记。';
 
 COMMIT;

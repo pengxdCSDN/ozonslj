@@ -6,7 +6,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.app.api.dependencies import get_profit_model_gateway, get_store_workspace_gateway
+from backend.app.api.dependencies import (
+    get_profit_model_gateway,
+    get_profit_reconciliation_gateway,
+    get_store_workspace_gateway,
+)
 from backend.app.domain.assumption_version import assumption_version
 from backend.app.domain.logistics_template_import import (
     LogisticsTemplateImportError,
@@ -22,6 +26,7 @@ from backend.app.domain.profit_reconciliation import (
     ProfitReconciliationError,
     preview_profit_reconciliation_csv,
 )
+from backend.app.domain.profit_reconciliation_record import ProfitReconciliationRecord
 from backend.app.domain.sku_profit import (
     CommissionRule,
     FbsLogisticsTemplate,
@@ -34,12 +39,16 @@ from backend.app.domain.sku_profit import (
     calculate_sku_profits,
 )
 from backend.app.domain.store_workspace import StoreWorkspaceGateway
+from backend.app.infrastructure.postgresql.profit_reconciliation import (
+    PostgresProfitReconciliationGateway,
+)
 
 router = APIRouter(prefix="/v1/selection/profit-model", tags=["selection"])
 
 
 class ProfitModelPayload(BaseModel):
     """说明 ProfitModelPayload 的职责、状态边界和对外协作关系。"""
+
     selling_price_minor: int = Field(ge=0)
     purchase_cost_minor: int = Field(ge=0)
     fbo_logistics_minor: int = Field(ge=0)
@@ -121,6 +130,57 @@ class ProfitReconciliationCsvPayload(BaseModel):
     """接收订单实际费用 CSV，仅用于预览和差异计算。"""
 
     content: str = Field(min_length=1, max_length=2_000_000)
+
+
+class ProfitReconciliationSavePayload(BaseModel):
+    """保存已完成预览的对账批次；不会调用外部接口。"""
+
+    idempotency_key: str = Field(min_length=1, max_length=200)
+    source: str = Field(min_length=1, max_length=100)
+    status: str = Field(pattern=r"^(completed|partial|failed)$")
+    records: list[ProfitReconciliationRecord] = Field(max_length=5000)
+
+
+@router.post("/{workspace_id}/reconciliation", response_model=dict[str, object])
+async def save_profit_reconciliation(
+    workspace_id: str,
+    payload: ProfitReconciliationSavePayload,
+    gateway: Annotated[
+        PostgresProfitReconciliationGateway, Depends(get_profit_reconciliation_gateway)
+    ],
+    workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
+) -> dict[str, object]:
+    """保存人工确认后的对账事实；幂等键重复时复用原批次。"""
+    if await workspace_gateway.get_workspace(workspace_id) is None:
+        raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
+    batch = await gateway.create_batch(
+        workspace_id=workspace_id,
+        idempotency_key=payload.idempotency_key,
+        source=payload.source,
+        status=payload.status,
+        records=payload.records,
+    )
+    return {"batch": batch.model_dump(mode="json"), "record_count": len(payload.records)}
+
+
+@router.get(
+    "/{workspace_id}/reconciliation/records", response_model=list[ProfitReconciliationRecord]
+)
+async def list_profit_reconciliation(
+    workspace_id: str,
+    gateway: Annotated[
+        PostgresProfitReconciliationGateway, Depends(get_profit_reconciliation_gateway)
+    ],
+    workspace_gateway: Annotated[StoreWorkspaceGateway, Depends(get_store_workspace_gateway)],
+    batch_id: str | None = None,
+    limit: int = 100,
+) -> list[ProfitReconciliationRecord]:
+    """读取对账结果；只返回当前工作区范围内的持久化事实。"""
+    if await workspace_gateway.get_workspace(workspace_id) is None:
+        raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
+    if not 1 <= limit <= 500:
+        raise HTTPException(status_code=422, detail={"code": "limit_out_of_range"})
+    return await gateway.list_records(workspace_id=workspace_id, batch_id=batch_id, limit=limit)
 
 
 @router.post("/reconciliation/preview")
@@ -241,11 +301,11 @@ async def calculate_product_skus(payload: ProductSkuProfitPayload) -> list[SkuPr
 async def calculate_profit(payload: ProfitModelPayload) -> list[ProfitScenario]:
     """执行 calculate_profit 的业务流程并返回该流程的结果。
 
-Args:
-    payload: 参数语义、输入边界和安全约束。
+    Args:
+        payload: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return list(calculate_profit_model(ProfitModelInput(**payload.model_dump())))
 
 
@@ -261,18 +321,18 @@ async def calculate_and_save_profit(
 ) -> list[ProfitScenario]:
     """执行 calculate_and_save_profit 的业务流程并返回该流程的结果。
 
-Args:
-    workspace_id: 参数语义、输入边界和安全约束。
-    payload: 参数语义、输入边界和安全约束。
-    gateway: 参数语义、输入边界和安全约束。
-    workspace_gateway: 参数语义、输入边界和安全约束。
+    Args:
+        workspace_id: 参数语义、输入边界和安全约束。
+        payload: 参数语义、输入边界和安全约束。
+        gateway: 参数语义、输入边界和安全约束。
+        workspace_gateway: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。
+    Returns:
+        返回调用完成后的领域结果。
 
-Raises:
-    HTTPException: 业务约束或外部依赖失败时抛出。
-"""
+    Raises:
+        HTTPException: 业务约束或外部依赖失败时抛出。
+    """
     if await workspace_gateway.get_workspace(workspace_id) is None:
         raise HTTPException(status_code=404, detail={"code": "workspace_not_found"})
     assumptions = payload.model_dump()

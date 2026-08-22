@@ -22,7 +22,7 @@ PostgreSQL 保存业务事实、任务事实、授权关系、审核状态和审
 | 多组织与 RLS 迁移 | 已有结构基础 | `0002_multi_tenant_saas.sql` 建立租户/授权边界，`0003_business_facts_rls.sql` 为全部业务事实补齐直接组织归属、同组织外键和强制 RLS |
 | Python PostgreSQL 适配器 | 开发中 | 已完成事务级租户上下文、商品、工作区/凭据/审计和多组织身份适配器及单元测试；登录路由、Redis 限流与完整应用装配待完成 |
 | RLS 请求/任务事务上下文 | 尚未开发 | 尚无连接池事务内 `SET LOCAL` 的运行时实现与集成测试 |
-| Redis Streams 任务闭环 | 已定档待开发 | 尚无投递、Consumer Group、租约、心跳和恢复实现 |
+| Redis Streams 任务闭环 | 部分开发 | 同步/质量任务投递、Consumer、租约、心跳、恢复、事实变化事件发布、事件 Consumer Group、质量路由、`quality_check_jobs` 持久化、Quality Worker、商品/库存/订单/履约质量规则、Scheduler 扫描和 Worker 生产运行组装已实现；质量结果回读已实现，对账结果持久化表已加入 0108，写入接口仍待接入 |
 | V5 选品/Listing/Performance/审核/Agent 表 | 已定档待开发 | V6 定档和迁移包完成前不得提前标记已存在 |
 
 只有 schema 或迁移 SQL 不等于功能已开发。能力至少需要应用用例、持久化适配器、权限上下文和相应测试形成闭环。
@@ -67,7 +67,13 @@ PostgreSQL 保存业务事实、任务事实、授权关系、审核状态和审
 | `postings` | 工作区 | 履约编号工作区内唯一；订单删除后可保留履约事实 |
 | `posting_items` | 履约单 | 数量为正；名称和价格保存履约时快照 |
 | `sync_jobs` | 工作区 | PostgreSQL 中的可恢复任务事实；Redis 丢失后可重建 |
+| `quality_check_jobs` | 工作区 | 事实变化触发的质量检查任务；幂等键唯一，Redis 仅负责唤醒 |
+| `profit_reconciliation_batches` / `profit_reconciliation_records` | 工作区 | 预计利润与只读财务实际费用的对账批次和明细；缺失侧显式标记，0108 迁移建立，预览数据不自动落库 |
 | `seller_operations` | 工作区 | 追加式脱敏审计；不作为业务状态来源 |
+
+### 4.1 `sync_jobs` 自动化运行上下文
+
+同步任务除状态、租约、游标和重试字段外，还保存 `run_id`、`root_run_id`、`parent_run_id`、`trigger_source`、`data_version` 和 `trigger_depth`。`root_run_id + resource_type + data_version` 在组织/工作区范围内形成幂等边界；`trigger_depth` 用于防止跨页面事件无限级联。0106 迁移会为历史任务补齐兼容运行标识，新任务由应用层生成完整上下文。Redis 只保存可重建的投递信号，不保存这些任务事实。
 
 `operators` 是早期身份表；多组织认证迁移完成并验证审计引用兼容后才能清理。禁止在同一阶段直接删除旧身份表、切换全部外键并发布新认证代码。
 
@@ -139,7 +145,7 @@ API 应用授权和 PostgreSQL RLS 是两道独立边界，不能互相替代：
 
 ## 9. Redis 边界
 
-Redis Streams + Consumer Group 已确认但尚未开发。Redis 消息只携带任务/命令 ID、组织 ID、工作区 ID、任务类型和跟踪 ID，不携带凭据或大载荷。任务状态、租约、心跳、游标、尝试次数、下次执行时间和结果全部保存到 PostgreSQL；Redis 清空后由 Scheduler 根据数据库事实重建投递。
+Redis Streams + Consumer Group 已部分开发。Redis 消息只携带任务/命令 ID、组织 ID、工作区 ID、任务类型和跟踪 ID，不携带凭据或大载荷。任务状态、租约、心跳、游标、尝试次数、下次执行时间和结果全部保存到 PostgreSQL；Redis 清空后由 Scheduler 根据数据库事实重建投递。质量检查任务沿用同一原则，使用独立 Stream 和 `quality_check_jobs` 事实表。
 
 短期 Performance Access Token 可加密存 Redis 并设置不超过上游有效期的 TTL；长期授权材料仍以加密密文保存到 PostgreSQL。Redis `noeviction`，达到内存限制时任务必须显式失败/退避，不能静默丢弃业务事实。
 
@@ -165,6 +171,8 @@ Redis Streams + Consumer Group 已确认但尚未开发。Redis 消息只携带�
 ## 11. 知识型混合 RAG 数据基线（核心已开发，云端验收待完成）
 
 RAG 的 PostgreSQL 目标模型包括知识来源、来源版本、解析产物、切片目录、发布版本、摄取/索引任务、查询追踪、反馈、评测案例、模型配置引用和审计事实。详细实体所有权、约束、索引和迁移顺序以 [RAG 知识治理与数据模型设计](./RAG_GOVERNANCE_AND_DATA_MODEL.md) 为准。
+
+`0105_rag_task_archive.sql` 为任务运营治理迁移：`rag_ingestion_jobs.archived_at` 非空表示任务已从默认运营列表归档，但不改变原始状态、错误摘要或知识数据。归档只允许失败/取消任务；清理接口只物理删除当前组织内、已归档且超过保留期的失败/取消任务，默认保留 30 天，避免误删运行中、成功任务和知识来源事实。需要复盘时使用 `include_archived=true` 查询归档任务。
 
 Chroma 只保存已发布切片的向量和最少必要的非敏感过滤元数据，记录 ID 必须与 PostgreSQL `chunk_id` 对账。Chroma 可删除、重建和切换索引版本，不能保存唯一正文、发布状态、权限、凭据或审计事实。`0090` 至 `0094` migration、PostgreSQL 仓储适配器、Chroma 本地/HTTP 适配器和 RAG 查询闭环已实现；剩余工作是开发云实例、备份恢复和资源边界的实际验收。
 ## 2026-08-09 开发状态同步

@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from backend.app.application.sync_worker import SyncWorker
+from backend.app.domain.automation_orchestration import AutomationEvent
 from backend.app.domain.sync_job import SyncJob, SyncJobMessage, SyncResult
 
 
@@ -13,6 +14,7 @@ def _job() -> SyncJob:
         processed_count=0, failure_count=0, attempt_count=1, max_attempts=3,
         next_attempt_at=now, created_at=now, lease_owner="worker-1",
         lease_expires_at=now,
+        run_id="run-1", root_run_id="run-1", data_version="version-1",
     )
 
 
@@ -66,6 +68,15 @@ class SecretFailureHandler:
         raise RuntimeError("Api-Key=should-never-be-persisted")
 
 
+@dataclass
+class FakeEventPublisher:
+    events: list[AutomationEvent] = field(default_factory=list)
+
+    async def publish_once(self, event: AutomationEvent) -> bool:
+        self.events.append(event)
+        return True
+
+
 def test_worker_acknowledges_only_after_completion_persists() -> None:
     jobs = FakeJobs()
     consumer = FakeConsumer()
@@ -75,6 +86,21 @@ def test_worker_acknowledges_only_after_completion_persists() -> None:
 
     assert asyncio.run(worker.process_one()) is True
     assert consumer.acknowledged == ["1-0"]
+
+
+def test_worker_publishes_only_external_fact_event_after_persisted_success() -> None:
+    jobs = FakeJobs()
+    consumer = FakeConsumer()
+    publisher = FakeEventPublisher()
+    worker = SyncWorker(
+        jobs, consumer, {"stock": SuccessHandler()}, worker_id="worker-1",
+        event_publisher=publisher,
+    )
+
+    assert asyncio.run(worker.process_one()) is True
+    assert len(publisher.events) == 1
+    assert publisher.events[0].event_type == "external_fact_changed"
+    assert publisher.events[0].event_id == "run-1:external_fact_changed"
 
 
 def test_worker_does_not_ack_when_completion_is_not_persisted() -> None:

@@ -22,7 +22,7 @@ ozonslj 是面向 Ozon 跨境卖家的多组织 SaaS 智能运营工作台，使
 | 已开发 | FastAPI 应用骨架、Chrome/Web 共用 React 入口、店铺工作区、Seller 凭据本地加密/验证、工作区商品报价读取 |
 | 已有结构基础 | PostgreSQL 基础 schema、多组织表、成员/工作区授权、RLS 函数与策略、迁移契约测试 |
 | 部分开发 | 生产环境 PostgreSQL/Redis 配置校验、Seller HTTP 网关边界、Stub/Mock 路径 |
-| 尚未开发 | Redis Streams 完整任务闭环、完整 Seller 同步、搜索词导入、公开采样、选品、Listing、Performance、审核写入和 Agent |
+| 部分开发 | Redis Streams 同步/质量任务投递、租约恢复、事实变化事件发布、Consumer Group 字段隔离、数据质量路由、质量任务持久化、Quality Worker、商品质量规则运行器、Scheduler 扫描和 Worker 运行组装；质量结果页面回读、完整 Seller 同步、搜索词导入、公开采样、选品、Listing、Performance、审核写入和 Agent 仍待开发 |
 | 已部署基础设施 | 云端 Compose、PostgreSQL/Redis、版本化迁移和 Fernet Secret；备份/恢复、cron 与日志轮转脚本模板已存在，但定时任务安装待补；详见 `SERVER_CONTEXT.md` |
 | 已清理历史实现 | 旧持久化适配器、旧数据库路径配置、DPAPI 云端依赖和对应测试路径均已移除 |
 
@@ -91,6 +91,14 @@ flowchart TB
 每个请求依次校验身份、组织成员关系、组织角色、工作区授权和资源状态。PostgreSQL RLS 是第二道隔离边界：每个事务使用 `SET LOCAL` 设置 `app.organization_id` 与 `app.user_id`；缺少上下文时默认拒绝。Worker 从任务事实恢复用户或服务主体上下文。日常应用账户不得拥有 `BYPASSRLS`。
 
 ## 6. 数据与任务架构
+
+### 6.1 受控自动化编排层
+
+自动化编排层位于应用层与任务/事件基础设施之间，统一处理事件分类、下游白名单、幂等键、运行链路、重试和熔断。处理链保持单向：
+
+`外部事实同步 → 数据质量 → 领域计算 → 异常/建议 → 人工审核 → 受控执行 → 结果回读 → 对账复盘`
+
+同步任务保存 `run_id`、`root_run_id`、`parent_run_id`、`trigger_source`、`data_version` 和 `trigger_depth`。Worker 只有在事实成功持久化后才发布 `external_fact_changed`；事件消费者必须按 `event_id` 幂等，并遵守目标白名单。展示刷新不产生业务事件，建议不直接触发执行，触发链超过 5 层熔断并转人工。
 
 数据模型和迁移细节以 [DATABASE.md](./DATABASE.md) 为准。核心原则：
 

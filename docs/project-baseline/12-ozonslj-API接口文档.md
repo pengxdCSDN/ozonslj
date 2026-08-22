@@ -56,6 +56,21 @@
 
 ## 3. 健康检查（已实现）
 
+## 3.1 自动化任务与事件约定
+
+同步任务响应可包含以下自动化运行上下文：
+
+| 字段 | 含义 |
+|---|---|
+| `run_id` | 本次自动化运行唯一标识 |
+| `root_run_id` | 触发链根运行标识 |
+| `parent_run_id` | 直接父任务运行标识 |
+| `trigger_source` | `manual`、`scheduled` 或受控事件来源 |
+| `data_version` | 本次任务消费的数据版本或导入批次 |
+| `trigger_depth` | 当前触发链深度，超过上限必须熔断 |
+
+任务接口不得把页面刷新作为同步触发来源。事件消费者只接受白名单事件；重复 `event_id` 必须返回幂等结果，不得重复创建下游任务。认证、权限、合规和数据冲突错误不得自动重试。
+
 | 方法 | 路径 | 响应 |
 |---|---|---|
 | GET | `/health/live` | 只验证 API 进程可响应；不访问外部依赖 |
@@ -111,7 +126,28 @@
 
 自动化测试使用 HTTP Mock，不访问真实账户。实际 Seller 验证方法在实现/验收前核对官方文档，不在内部契约中固化未经验证的上游路径。
 
-## 5. 商品报价（已实现本地切片）
+## 5. 商品报价与 Ozon 只读目录
+
+本地切片接口保留用于开发和离线演示；生产利润测算页面优先调用后端 Ozon 只读目录接口。后端负责从工作区读取并解密凭据，浏览器端不会接触 Client ID、Api-Key 或 Token。
+
+`GET /v1/seller/products/store-workspaces/{workspace_id}/catalog`
+
+该接口只读取商品列表、商品属性和价格信息，并统一展开为 SKU 事实。规格、类目或佣金字段在上游缺失时返回 `null`，前端必须阻止无依据的自动计算或明确提示人工补录。接口不执行商品、价格、库存、订单或广告写操作。
+
+| 参数 | 类型 | 默认 | 约束 |
+|---|---|---:|---|
+| `cursor` | string | 空 | 由上游返回的分页游标 |
+| `limit` | integer | 50 | 1～100 |
+
+响应字段包括 `offer_id`、`ozon_product_id`、`product_group_id`、`category_id`、`price_minor`、`weight_g`、`length_mm`、`width_mm`、`height_mm`、`commission_rate_bps` 和 `source`。金额使用最小货币单位，重量使用克，尺寸使用毫米，佣金使用万分比。
+
+当前适配器按 Seller API 的只读商品列表、属性和价格契约进行组合；上线前仍需用目标店铺的脱敏响应完成一次契约验收，确认字段版本和权限，不把未经验证的上游字段当作计算事实。
+
+`GET /v1/seller/products/store-workspaces/{workspace_id}/finance/accruals`
+
+按 `date_from`、`date_to`（最多 31 个自然日）调用 Ozon 新版 `/v1/finance/accrual/by-day`，按 `last_id` 自动翻页，返回标准化的销售、佣金、物流服务和其他费用明细。该接口只读，不写订单或财务数据；同步结果当前用于前端对账预览，后续可接入持久化同步批次。
+
+### 5.1 本地商品报价切片
 
 `GET /v1/store-workspaces/{workspace_id}/product-offers`
 
@@ -143,6 +179,16 @@
 ```
 
 当前代码仍通过历史持久化适配器返回数据；PostgreSQL 适配器完成前，本接口只能标记为“业务切片已实现、数据库迁移未完成”。
+
+## 6.1 RAG 知识任务治理（已实现）
+
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| GET | `/v1/knowledge-tasks?include_archived=false` | 分页查询当前组织的解析、索引、撤回、删除和重建任务；默认隐藏已归档任务 |
+| POST | `/v1/knowledge-tasks/{task_id}/archive` | 归档已失败或已取消的历史任务；只改变列表可见性，不删除任务事实 |
+| POST | `/v1/knowledge-tasks/cleanup?older_than_days=30` | 清理超过保留期的已归档失败/取消任务；范围限制为当前组织，默认保留 30 天 |
+
+归档接口拒绝排队、执行中或成功任务。清理是不可逆的物理删除，仅作用于已归档且已终结的失败/取消任务，不删除知识来源、版本、切片或索引数据；所有任务状态和错误摘要仍以 PostgreSQL 为审计事实来源。
 
 ## 6. Seller 同步与查询（当前已实现的只读/任务控制能力）
 
@@ -241,7 +287,28 @@ Retry-After: 2
 
 批准接口必须重新校验权限、审核状态、预览版本和数据新鲜度，并使用幂等键。API 只创建命令；独立 `execution-worker` 执行写入。首个价格写入每批最多 20 件、涨跌不超过 10%、不得低于利润线。结果不确定时返回 `verification_required` 或 `manual_review`，不得盲目重试。
 
-## 11. Agent 与报告（V5.5，已定档待开发）
+## 11. RAG 评测案例确认（已实现）
+
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| POST | `/v1/rag-evaluation/case-generation-jobs` | 创建 AI 草稿案例 |
+| GET | `/v1/rag-evaluation/cases?page=1&page_size=20&q=...` | 分页搜索当前组织的固定/草稿案例；`q` 匹配案例 ID、问题、状态和安全标签 |
+| POST | `/v1/rag-evaluation/cases/{case_id}/confirm` | 单条人工确认 |
+| POST | `/v1/rag-evaluation/cases/confirm-batch` | 批量人工确认，最多 240 个案例 |
+| POST | `/v1/rag-evaluation/runs` | 创建或复用评测运行并计算确认门禁；门禁不足不创建运行记录，同一规模已有活动批次时自动去重 |
+| GET | `/v1/rag-evaluation/runs?limit=20` | 查看当前组织的评测运行历史与脱敏指标；前端按批次分页展示，`run_id` 为内部追踪号，不要求用户填写；失败运行返回 `error_code` 和 `metrics.error_breakdown` |
+| GET | `/v1/rag-evaluation/runs/{run_id}` | 查看单次评测运行结果 |
+| POST | `/v1/rag-evaluation/runs/{run_id}/metrics` | 由评测 Worker 回写单次运行的聚合指标 |
+
+评测运行响应中的 `error_code` 是脱敏的主要失败分类，例如 `embedding_dimension_mismatch`、`quota_exceeded`、`timeout`、`unauthorized` 和 `chroma_unavailable`。`metrics.error_breakdown` 是错误码到案例数量的 JSON 字符串，仅用于诊断，不包含供应商原始错误正文、请求内容或凭据。
+
+评测案例列表响应为 `{items, total, page, page_size, total_pages, draft_count, confirmed_count}`。历史 `fixed-rag-v1` 案例保留在 PostgreSQL 供审计，但列表只展示当前 `fixed-rag-v2`；Seller 店铺未验证不阻断 RAG 评测页面。
+
+评测结果页读取运行历史中的 `status`、`executed_count`、错误数量和指标快照。指标快照只保存 Recall、Precision、引用支持率、正确拒答率、多意图、安全和主备降级等聚合结果，不保存问题正文、提示词、凭据或模型原始响应。`gate_status=ready` 仅表示案例确认门禁通过；只有运行完成并且指标达到 [RAG 质量运行手册](./RAG_QUALITY_RUNBOOK.md) 的硬门槛时，结果状态才显示为质量通过。
+
+固定 400 例通过 PostgreSQL 幂等种子写入；确认状态、确认人和确认时间不保存在 API 进程内存中，API 重启后必须保持。未确认案例不能通过运行门禁。
+
+## 12. Agent 与报告（V5.5，已定档待开发）
 
 | 方法 | 路径 | 用途 |
 |---|---|---|
@@ -251,7 +318,7 @@ Retry-After: 2
 
 Agent 接口不接受任意 SQL、任意工具名、文件系统路径、模型地址或写适配器参数。服务端从版本化注册表选择工作流和只读工具，并记录事实、工作流、模型和提示词版本。
 
-## 12. 接口验收规则
+## 13. 接口验收规则
 
 - 当前实现与目标契约在文档和测试中明确区分。
 - API 与 RLS 均拒绝跨组织/工作区访问。
@@ -269,3 +336,28 @@ Agent 接口不接受任意 SQL、任意工具名、文件系统路径、模型�
 - 商品、库存、订单和履约快照历史查询接口已形成 Stub/PostgreSQL 闭环，默认使用稳定分页并限制最大页大小。
 - ERP 导入边界要求金额与币种成对出现；缺少币种的金额请求在预览/边界校验阶段拒绝，不写入业务事实。
 - Seller 同步 API 当前不调用真实 Ozon；真实适配需在确认官方接口契约和账号授权后接入，禁止从示例路径猜测。
+
+# SKU 自动利润计算
+
+`POST /v1/selection/profit-model/calculate-skus`
+
+提交一个商品、一个或多个 SKU，以及本次允许使用的版本化佣金规则和 FBS 物流模板。后端按 `category_id` 和 `logistics_template_id` 精确匹配规则，返回每个 SKU 的费用瀑布、计费重量、贡献利润、贡献利润率、盈亏平衡售价和规则追溯信息。
+
+- 金额均使用最小货币单位整数；RUB 场景下为戈比。
+- 比例均使用基点整数，`100 bp = 1%`。
+- 尺寸使用毫米，重量使用克。
+- 规则缺失、重复、分档非法或无法覆盖计费重量时返回 `422 profit_calculation_invalid`。
+- 该接口只做推导估算，不读取凭据、不调用 Ozon，也不修改商品价格或其他外部状态。
+
+`POST /v1/selection/profit-model/logistics-templates/preview`
+
+提交物流模板 CSV 文本，返回行数、错误摘要和按模板版本聚合后的标准化预览。该接口只校验，不写入配置；模板必须包含履约方式、仓库、线路、区域、生效日期、体积重系数和重量分档。
+
+`POST /v1/selection/profit-model/reconciliation/preview`
+
+提交订单实际费用 CSV，返回每行预计利润、实际利润、物流费用差异和差异比例。该接口只做预览和对账计算，不把外部财务数据直接写成平台事实。必需字段为 `order_id`、`sku_id`、`estimated_profit_minor`、`actual_profit_minor`、`estimated_logistics_minor`、`actual_logistics_minor` 和 `source`；利润允许为负，所有金额使用最小货币单位整数。
+### 利润对账结果
+
+- `POST /v1/selection/profit-model/{workspace_id}/reconciliation`：保存人工确认后的标准化对账批次；必须提供幂等键、来源、状态和订单/SKU 明细，重复幂等键复用原批次。
+- `GET /v1/selection/profit-model/{workspace_id}/reconciliation/records`：读取当前工作区的持久化对账明细，可按 `batch_id` 和 `limit` 筛选。
+- 该组接口只操作本地 PostgreSQL 对账事实，不调用 Ozon 写接口；预览接口不会自动落库。

@@ -160,6 +160,9 @@ from backend.app.infrastructure.postgresql.product_offers import (
     PostgresProductOfferGateway,
 )
 from backend.app.infrastructure.postgresql.profit_models import PostgresProfitModelGateway
+from backend.app.infrastructure.postgresql.profit_reconciliation import (
+    PostgresProfitReconciliationGateway,
+)
 from backend.app.infrastructure.postgresql.public_snapshots import PostgresPublicSnapshotGateway
 from backend.app.infrastructure.postgresql.rag_evaluation import (
     PostgresRagEvaluationGateway,
@@ -218,35 +221,36 @@ from backend.app.infrastructure.redis_rag_tasks import RedisRagTaskQueue
 
 class LoginRateLimiter(Protocol):
     """说明 LoginRateLimiter 的职责、状态边界和对外协作关系。"""
+
     async def retry_after(self, email: str, client_key: str) -> int | None:
         """执行 retry_after 的业务流程并返回该流程的结果。
 
-Args:
-    email: 参数语义、输入边界和安全约束。
-    client_key: 参数语义、输入边界和安全约束。
+        Args:
+            email: 参数语义、输入边界和安全约束。
+            client_key: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+        Returns:
+            返回调用完成后的领域结果。"""
 
     async def record_failure(self, email: str, client_key: str) -> None:
         """执行 record_failure 的业务流程并返回该流程的结果。
 
-Args:
-    email: 参数语义、输入边界和安全约束。
-    client_key: 参数语义、输入边界和安全约束。
+        Args:
+            email: 参数语义、输入边界和安全约束。
+            client_key: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+        Returns:
+            返回调用完成后的领域结果。"""
 
     async def clear(self, email: str, client_key: str) -> None:
         """执行 clear 的业务流程并返回该流程的结果。
 
-Args:
-    email: 参数语义、输入边界和安全约束。
-    client_key: 参数语义、输入边界和安全约束。
+        Args:
+            email: 参数语义、输入边界和安全约束。
+            client_key: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+        Returns:
+            返回调用完成后的领域结果。"""
 
 
 class _LegacySellerCredentialProtector:
@@ -255,28 +259,28 @@ class _LegacySellerCredentialProtector:
     def __init__(self, protector: CredentialProtector) -> None:
         """初始化对象依赖和运行时状态。
 
-Args:
-    protector: 参数语义、输入边界和安全约束。
+        Args:
+            protector: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+        Returns:
+            返回调用完成后的领域结果。"""
         self._protector = protector
 
     @property
     def key_version(self) -> int:
         """执行 key_version 的业务流程并返回该流程的结果。
-Returns:
-    返回调用完成后的领域结果。"""
+        Returns:
+            返回调用完成后的领域结果。"""
         return self._protector.key_version
 
     def encrypt(self, api_key: str) -> bytes:
         """执行 encrypt 的业务流程并返回该流程的结果。
 
-Args:
-    api_key: 参数语义、输入边界和安全约束。
+        Args:
+            api_key: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+        Returns:
+            返回调用完成后的领域结果。"""
         return self._protector.protect(api_key)
 
 
@@ -286,22 +290,22 @@ class _LegacySellerCredentialVerifier:
     def __init__(self, verifier: SellerAccountVerifier) -> None:
         """初始化对象依赖和运行时状态。
 
-Args:
-    verifier: 参数语义、输入边界和安全约束。
+        Args:
+            verifier: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+        Returns:
+            返回调用完成后的领域结果。"""
         self._verifier = verifier
 
     async def verify(self, *, client_id: str, api_key: str) -> None:
         """执行 verify 的业务流程并返回该流程的结果。
 
-Args:
-    client_id: 参数语义、输入边界和安全约束。
-    api_key: 参数语义、输入边界和安全约束。
+        Args:
+            client_id: 参数语义、输入边界和安全约束。
+            api_key: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+        Returns:
+            返回调用完成后的领域结果。"""
         await self._verifier.verify(OzonCredentials(client_id=client_id, api_key=api_key))
 
 
@@ -311,21 +315,21 @@ class _LegacySellerAccountGateway:
     def __init__(self, gateway: StoreWorkspaceGateway) -> None:
         """初始化对象依赖和运行时状态。
 
-Args:
-    gateway: 参数语义、输入边界和安全约束。
+        Args:
+            gateway: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+        Returns:
+            返回调用完成后的领域结果。"""
         self._gateway = gateway
 
     async def create(self, **values: object) -> CreatedSellerAccount:
         """执行 create 的业务流程并返回该流程的结果。
 
-Args:
-    **values: 参数语义、输入边界和安全约束。
+        Args:
+            **values: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+        Returns:
+            返回调用完成后的领域结果。"""
         workspace = await self._gateway.create_workspace(
             display_name=str(values["display_name"]),
             client_id=str(values["client_id"]),
@@ -342,21 +346,22 @@ Returns:
 
 class ReadinessProbe(Protocol):
     """说明 ReadinessProbe 的职责、状态边界和对外协作关系。"""
+
     async def check(self) -> None:
         """执行 check 的业务流程并返回该流程的结果。
-Returns:
-    返回调用完成后的领域结果。"""
+        Returns:
+            返回调用完成后的领域结果。"""
 
 
 @lru_cache
 def get_postgres_sessions() -> PostgresSessionFactory:
     """执行 get_postgres_sessions 的业务流程并返回该流程的结果。
-Returns:
-    返回调用完成后的领域结果。
+    Returns:
+        返回调用完成后的领域结果。
 
-Raises:
-    RuntimeError: 业务约束或外部依赖失败时抛出。
-"""
+    Raises:
+        RuntimeError: 业务约束或外部依赖失败时抛出。
+    """
     settings = get_settings()
     if settings.database_url is None:
         raise RuntimeError("DATABASE_URL 未配置")
@@ -367,8 +372,8 @@ Raises:
 
 def close_postgres_sessions() -> None:
     """仅关闭已经创建的全局连接池，避免关停阶段意外建立新连接。
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     if get_postgres_sessions.cache_info().currsize > 0:
         get_postgres_sessions().close()
         get_postgres_sessions.cache_clear()
@@ -377,12 +382,12 @@ Returns:
 @lru_cache
 def get_redis_client() -> Redis:
     """执行 get_redis_client 的业务流程并返回该流程的结果。
-Returns:
-    返回调用完成后的领域结果。
+    Returns:
+        返回调用完成后的领域结果。
 
-Raises:
-    RuntimeError: 业务约束或外部依赖失败时抛出。
-"""
+    Raises:
+        RuntimeError: 业务约束或外部依赖失败时抛出。
+    """
     settings = get_settings()
     if settings.redis_url is None:
         raise RuntimeError("REDIS_URL 未配置")
@@ -391,8 +396,8 @@ Raises:
 
 async def close_redis_client() -> None:
     """执行 close_redis_client 的业务流程并返回该流程的结果。
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     if get_redis_client.cache_info().currsize > 0:
         await get_redis_client().aclose()
         get_redis_client.cache_clear()
@@ -403,11 +408,11 @@ def get_identity_service(
 ) -> IdentityService:
     """执行 get_identity_service 的业务流程并返回该流程的结果。
 
-Args:
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return IdentityService(PostgresIdentityGateway(sessions))
 
 
@@ -416,11 +421,11 @@ def get_login_rate_limiter(
 ) -> LoginRateLimiter:
     """执行 get_login_rate_limiter 的业务流程并返回该流程的结果。
 
-Args:
-    redis: 参数语义、输入边界和安全约束。
+    Args:
+        redis: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     settings = get_settings()
     return RedisLoginRateLimiter(
         redis,
@@ -435,26 +440,26 @@ def get_readiness_probe(
 ) -> ReadinessProbe:
     """执行 get_readiness_probe 的业务流程并返回该流程的结果。
 
-Args:
-    sessions: 参数语义、输入边界和安全约束。
-    redis: 参数语义、输入边界和安全约束。
+    Args:
+        sessions: 参数语义、输入边界和安全约束。
+        redis: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return InfrastructureReadinessProbe(sessions, redis)
 
 
 def get_session_cookie_secure() -> bool:
     """执行 get_session_cookie_secure 的业务流程并返回该流程的结果。
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return get_settings().session_cookie_secure
 
 
 def get_default_organization_id() -> str:
     """返回当前部署绑定的运营组织，避免客户端参与租户选择。
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return get_settings().default_organization_id
 
 
@@ -464,12 +469,12 @@ def get_request_session_token(
 ) -> str | None:
     """执行 get_request_session_token 的业务流程并返回该流程的结果。
 
-Args:
-    session: 参数语义、输入边界和安全约束。
-    authorization: 参数语义、输入边界和安全约束。
+    Args:
+        session: 参数语义、输入边界和安全约束。
+        authorization: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     if session:
         return session
     if authorization is None:
@@ -486,16 +491,16 @@ async def get_current_user(
 ) -> AuthenticatedUser:
     """执行 get_current_user 的业务流程并返回该流程的结果。
 
-Args:
-    service: 参数语义、输入边界和安全约束。
-    token: 参数语义、输入边界和安全约束。
+    Args:
+        service: 参数语义、输入边界和安全约束。
+        token: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。
+    Returns:
+        返回调用完成后的领域结果。
 
-Raises:
-    HTTPException: 业务约束或外部依赖失败时抛出。
-"""
+    Raises:
+        HTTPException: 业务约束或外部依赖失败时抛出。
+    """
     user = await service.authenticate(token) if token else None
     if user is None:
         raise HTTPException(
@@ -510,11 +515,11 @@ def get_tenant_context(
 ) -> TenantContext:
     """只从已验证会话派生数据库租户上下文，禁止客户端自报组织或用户。
 
-Args:
-    user: 参数语义、输入边界和安全约束。
+    Args:
+        user: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return TenantContext(organization_id=user.organization_id, user_id=user.id)
 
 
@@ -523,15 +528,15 @@ def require_account_manager(
 ) -> AuthenticatedUser:
     """卖家账户与凭据只允许组织所有者或管理员管理。
 
-Args:
-    user: 参数语义、输入边界和安全约束。
+    Args:
+        user: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。
+    Returns:
+        返回调用完成后的领域结果。
 
-Raises:
-    HTTPException: 业务约束或外部依赖失败时抛出。
-"""
+    Raises:
+        HTTPException: 业务约束或外部依赖失败时抛出。
+    """
     if user.organization_role not in {"owner", "admin"}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -546,12 +551,12 @@ def get_product_offer_gateway(
 ) -> ProductOfferGateway:
     """执行 get_product_offer_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresProductOfferGateway(sessions, context)
 
 
@@ -579,12 +584,12 @@ def get_customer_order_gateway(
 ) -> CustomerOrderGateway:
     """使用认证会话的固定内部边界读取脱敏订单。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresCustomerOrderGateway(sessions, context)
 
 
@@ -594,12 +599,12 @@ def get_posting_gateway(
 ) -> PostingGateway:
     """使用认证会话的固定内部边界读取履约摘要。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresPostingGateway(sessions, context)
 
 
@@ -609,12 +614,12 @@ def get_seller_operation_gateway(
 ) -> SellerOperationGateway:
     """使用认证会话的固定内部边界读取脱敏审计。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresSellerOperationGateway(sessions, context)
 
 
@@ -624,12 +629,12 @@ def get_keyword_import_gateway(
 ) -> KeywordImportGateway:
     """执行 get_keyword_import_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresKeywordImportGateway(sessions, context)
 
 
@@ -639,12 +644,12 @@ def get_listing_keyword_gateway(
 ) -> ListingKeywordGateway:
     """执行 get_listing_keyword_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresListingKeywordGateway(sessions, context)
 
 
@@ -654,12 +659,12 @@ def get_listing_layer_gateway(
 ) -> ListingLayerGateway:
     """执行 get_listing_layer_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresListingLayerGateway(sessions, context)
 
 
@@ -669,12 +674,12 @@ def get_listing_title_draft_gateway(
 ) -> ListingTitleDraftGateway:
     """执行 get_listing_title_draft_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresListingTitleDraftGateway(sessions, context)
 
 
@@ -684,12 +689,12 @@ def get_listing_fabe_gateway(
 ) -> ListingFabeGateway:
     """执行 get_listing_fabe_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresListingFabeGateway(sessions, context)
 
 
@@ -699,12 +704,12 @@ def get_listing_risk_gateway(
 ) -> ListingRiskGateway:
     """执行 get_listing_risk_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresListingRiskGateway(sessions, context)
 
 
@@ -714,12 +719,12 @@ def get_listing_version_gateway(
 ) -> ListingVersionGateway:
     """执行 get_listing_version_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresListingVersionGateway(sessions, context)
 
 
@@ -729,12 +734,12 @@ def get_listing_publish_gateway(
 ) -> ListingPublishGateway:
     """执行 get_listing_publish_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresListingPublishGateway(sessions, context)
 
 
@@ -744,12 +749,12 @@ def get_advertising_keyword_diagnosis_gateway(
 ) -> AdvertisingKeywordDiagnosisGateway:
     """执行 get_advertising_keyword_diagnosis_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresAdvertisingKeywordDiagnosisGateway(sessions, context)
 
 
@@ -759,12 +764,12 @@ def get_advertising_threshold_gateway(
 ) -> AdvertisingThresholdGateway:
     """执行 get_advertising_threshold_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresAdvertisingThresholdGateway(sessions, context)
 
 
@@ -774,12 +779,12 @@ def get_advertising_calendar_gateway(
 ) -> AdvertisingCalendarGateway:
     """执行 get_advertising_calendar_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresAdvertisingCalendarGateway(sessions, context)
 
 
@@ -789,12 +794,12 @@ def get_advertising_boundary_gateway(
 ) -> AdvertisingBoundaryGateway:
     """执行 get_advertising_boundary_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresAdvertisingBoundaryGateway(sessions, context)
 
 
@@ -804,12 +809,12 @@ def get_model_adapter_gateway(
 ) -> ModelAdapterGateway:
     """执行 get_model_adapter_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresModelAdapterGateway(sessions, context)
 
 
@@ -819,12 +824,12 @@ def get_model_budget_gateway(
 ) -> PostgresModelBudgetGateway:
     """返回按租户隔离的模型额度 PostgreSQL 网关。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresModelBudgetGateway(sessions, context)
 
 
@@ -834,20 +839,20 @@ def get_rag_model_provider_gateway(
 ) -> PostgresRagModelProviderGateway:
     """返回带组织 RLS 上下文的 RAG 模型供应商配置网关。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresRagModelProviderGateway(sessions, context)
 
 
 @lru_cache
 def get_model_credential_store() -> ModelCredentialStore:
     """模型凭据只写入部署专用 Secret 卷，目录由环境配置决定。
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return ModelCredentialStore(get_settings().rag_provider_credentials_dir)
 
 
@@ -857,12 +862,12 @@ def get_rag_task_gateway(
 ) -> PostgresRagTaskGateway:
     """RAG 任务状态统一从 PostgreSQL 读取，避免 API/Worker 各自持有内存队列。
 
-Args:
-    sessions: 参数语义、输入边界和安全约束。
-    context: 参数语义、输入边界和安全约束。
+    Args:
+        sessions: 参数语义、输入边界和安全约束。
+        context: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresRagTaskGateway(sessions, context)
 
 
@@ -872,12 +877,12 @@ def get_rag_evaluation_gateway(
 ) -> PostgresRagEvaluationGateway:
     """返回按组织隔离的评测案例与运行记录 PostgreSQL 网关。
 
-Args:
-    sessions: 参数语义、输入边界和安全约束。
-    context: 参数语义、输入边界和安全约束。
+    Args:
+        sessions: 参数语义、输入边界和安全约束。
+        context: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresRagEvaluationGateway(sessions, context)
 
 
@@ -886,11 +891,11 @@ def get_rag_task_queue(
 ) -> RedisRagTaskQueue:
     """返回 RAG Redis Stream 投递器；Redis 只保存可重放的任务触发信号。
 
-Args:
-    redis: 参数语义、输入边界和安全约束。
+    Args:
+        redis: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return RedisRagTaskQueue(redis)
 
 
@@ -900,12 +905,12 @@ def get_readonly_tool_gateway(
 ) -> ReadonlyToolGateway:
     """执行 get_readonly_tool_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresReadonlyToolGateway(sessions, context)
 
 
@@ -915,12 +920,12 @@ def get_sales_analysis_gateway(
 ) -> SalesAnalysisGateway:
     """执行 get_sales_analysis_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresSalesAnalysisGateway(sessions, context)
 
 
@@ -930,12 +935,12 @@ def get_inventory_analysis_gateway(
 ) -> InventoryAnalysisGateway:
     """执行 get_inventory_analysis_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresInventoryAnalysisGateway(sessions, context)
 
 
@@ -945,12 +950,12 @@ def get_advertising_analysis_gateway(
 ) -> AdvertisingAnalysisGateway:
     """执行 get_advertising_analysis_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresAdvertisingAnalysisGateway(sessions, context)
 
 
@@ -960,12 +965,12 @@ def get_competitor_selection_analysis_gateway(
 ) -> CompetitorSelectionAnalysisGateway:
     """执行 get_competitor_selection_analysis_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresCompetitorSelectionAnalysisGateway(sessions, context)
 
 
@@ -975,12 +980,12 @@ def get_summary_report_gateway(
 ) -> SummaryReportGateway:
     """执行 get_summary_report_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresSummaryReportGateway(sessions, context)
 
 
@@ -990,12 +995,12 @@ def get_agent_trigger_gateway(
 ) -> AgentTriggerGateway:
     """执行 get_agent_trigger_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresAgentTriggerGateway(sessions, context)
 
 
@@ -1005,12 +1010,12 @@ def get_agent_permission_gateway(
 ) -> AgentPermissionGateway:
     """执行 get_agent_permission_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresAgentPermissionGateway(sessions, context)
 
 
@@ -1020,12 +1025,12 @@ def get_external_notification_gateway(
 ) -> ExternalNotificationGateway:
     """执行 get_external_notification_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresExternalNotificationGateway(sessions, context)
 
 
@@ -1035,12 +1040,12 @@ def get_diff_preview_gateway(
 ) -> DiffPreviewGateway:
     """执行 get_diff_preview_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresDiffPreviewGateway(sessions, context)
 
 
@@ -1050,12 +1055,12 @@ def get_manual_approval_gateway(
 ) -> ManualApprovalGateway:
     """执行 get_manual_approval_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    sessions: 参数语义、输入边界和安全约束。
-    context: 参数语义、输入边界和安全约束。
+    Args:
+        sessions: 参数语义、输入边界和安全约束。
+        context: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresManualApprovalGateway(sessions, context)
 
 
@@ -1065,12 +1070,12 @@ def get_execution_result_gateway(
 ) -> ExecutionResultGateway:
     """执行 get_execution_result_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    sessions: 参数语义、输入边界和安全约束。
-    context: 参数语义、输入边界和安全约束。
+    Args:
+        sessions: 参数语义、输入边界和安全约束。
+        context: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresExecutionResultGateway(sessions, context)
 
 
@@ -1080,12 +1085,12 @@ def get_readback_verification_gateway(
 ) -> ReadbackVerificationGateway:
     """执行 get_readback_verification_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    sessions: 参数语义、输入边界和安全约束。
-    context: 参数语义、输入边界和安全约束。
+    Args:
+        sessions: 参数语义、输入边界和安全约束。
+        context: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresReadbackVerificationGateway(sessions, context)
 
 
@@ -1095,12 +1100,12 @@ def get_audit_event_gateway(
 ) -> AuditEventGateway:
     """执行 get_audit_event_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    sessions: 参数语义、输入边界和安全约束。
-    context: 参数语义、输入边界和安全约束。
+    Args:
+        sessions: 参数语义、输入边界和安全约束。
+        context: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresAuditEventGateway(sessions, context)
 
 
@@ -1110,12 +1115,12 @@ def get_data_freshness_gateway(
 ) -> DataFreshnessGateway:
     """执行 get_data_freshness_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresDataFreshnessGateway(sessions, context)
 
 
@@ -1125,12 +1130,12 @@ def get_data_provenance_gateway(
 ) -> DataProvenanceGateway:
     """执行 get_data_provenance_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresDataProvenanceGateway(sessions, context)
 
 
@@ -1140,12 +1145,12 @@ def get_search_attributes_gateway(
 ) -> SearchAttributesGateway:
     """执行 get_search_attributes_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresSearchAttributesGateway(sessions, context)
 
 
@@ -1155,12 +1160,12 @@ def get_smart_search_gateway(
 ) -> SmartSearchGateway:
     """执行 get_smart_search_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresSmartSearchGateway(sessions, context)
 
 
@@ -1170,12 +1175,12 @@ def get_competitor_seed_gateway(
 ) -> CompetitorSeedGateway:
     """执行 get_competitor_seed_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresCompetitorSeedGateway(sessions, context)
 
 
@@ -1185,12 +1190,12 @@ def get_competition_analysis_gateway(
 ) -> CompetitionAnalysisGateway:
     """执行 get_competition_analysis_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresCompetitionAnalysisGateway(sessions, context)
 
 
@@ -1200,12 +1205,12 @@ def get_cost_sensitivity_gateway(
 ) -> CostSensitivityGateway:
     """执行 get_cost_sensitivity_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresCostSensitivityGateway(sessions, context)
 
 
@@ -1215,13 +1220,21 @@ def get_profit_model_gateway(
 ) -> ProfitModelGateway:
     """执行 get_profit_model_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresProfitModelGateway(sessions, context)
+
+
+def get_profit_reconciliation_gateway(
+    context: Annotated[TenantContext, Depends(get_tenant_context)],
+    sessions: Annotated[PostgresSessionFactory, Depends(get_postgres_sessions)],
+) -> PostgresProfitReconciliationGateway:
+    """创建工作区隔离的利润对账事实网关；金额和来源由调用方先完成标准化。"""
+    return PostgresProfitReconciliationGateway(sessions, context)
 
 
 def get_public_snapshot_gateway(
@@ -1230,12 +1243,12 @@ def get_public_snapshot_gateway(
 ) -> PublicSnapshotGateway:
     """执行 get_public_snapshot_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresPublicSnapshotGateway(sessions, context)
 
 
@@ -1245,12 +1258,12 @@ def get_parser_alert_gateway(
 ) -> ParserAlertGateway:
     """执行 get_parser_alert_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresParserAlertGateway(sessions, context)
 
 
@@ -1260,12 +1273,12 @@ def get_explore_opportunity_gateway(
 ) -> ExploreOpportunityGateway:
     """执行 get_explore_opportunity_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresExploreOpportunityGateway(sessions, context)
 
 
@@ -1275,12 +1288,12 @@ def get_validate_result_gateway(
 ) -> ValidateResultGateway:
     """执行 get_validate_result_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresValidateResultGateway(sessions, context)
 
 
@@ -1290,12 +1303,12 @@ def get_selection_decision_book_gateway(
 ) -> SelectionDecisionBookGateway:
     """执行 get_selection_decision_book_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresSelectionDecisionBookGateway(sessions, context)
 
 
@@ -1305,12 +1318,12 @@ def get_expand_result_gateway(
 ) -> ExpandResultGateway:
     """执行 get_expand_result_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresExpandResultGateway(sessions, context)
 
 
@@ -1320,12 +1333,12 @@ def get_quality_finding_gateway(
 ) -> QualityFindingGateway:
     """返回带组织上下文的质量隔离适配器，禁止通过请求参数切换租户。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresQualityFindingGateway(sessions, context)
 
 
@@ -1335,12 +1348,12 @@ def get_sync_job_gateway(
 ) -> SyncJobGateway:
     """同步任务始终写入 PostgreSQL，Redis 仅承担后续可重建投递。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresSyncJobGateway(sessions, context)
 
 
@@ -1350,12 +1363,12 @@ def get_stock_position_gateway(
 ) -> StockPositionGateway:
     """使用认证会话派生的内部边界读取库存，客户端不能指定组织。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresStockPositionGateway(sessions, context)
 
 
@@ -1365,12 +1378,12 @@ def get_store_workspace_gateway(
 ) -> StoreWorkspaceGateway:
     """执行 get_store_workspace_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresStoreWorkspaceGateway(
         sessions,
         context,
@@ -1383,12 +1396,12 @@ def get_seller_order_snapshot_gateway(
 ) -> SellerOrderSnapshotGateway:
     """执行 get_seller_order_snapshot_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresSellerOrderSnapshotGateway(sessions, context)
 
 
@@ -1398,12 +1411,12 @@ def get_seller_stock_snapshot_gateway(
 ) -> SellerStockSnapshotGateway:
     """执行 get_seller_stock_snapshot_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresSellerStockSnapshotGateway(sessions, context)
 
 
@@ -1413,12 +1426,12 @@ def get_seller_fulfillment_snapshot_gateway(
 ) -> SellerFulfillmentSnapshotGateway:
     """执行 get_seller_fulfillment_snapshot_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresSellerFulfillmentSnapshotGateway(sessions, context)
 
 
@@ -1428,20 +1441,20 @@ def get_seller_product_snapshot_gateway(
 ) -> SellerProductSnapshotGateway:
     """执行 get_seller_product_snapshot_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresSellerProductSnapshotGateway(sessions, context)
 
 
 @lru_cache
 def get_credential_protector() -> CredentialProtector:
     """执行 get_credential_protector 的业务流程并返回该流程的结果。
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     settings = get_settings()
     return FernetCredentialProtector(
         settings.ozon_credential_key_file,
@@ -1456,13 +1469,13 @@ def get_performance_credential_gateway(
 ) -> PerformanceCredentialGateway:
     """提供 Performance API 凭据网关，确保令牌加密边界只存在于后端。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
-    protector: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
+        protector: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresPerformanceCredentialGateway(sessions, context, protector)
 
 
@@ -1472,12 +1485,12 @@ def get_advertising_campaign_gateway(
 ) -> AdvertisingCampaignGateway:
     """执行 get_advertising_campaign_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresAdvertisingCampaignGateway(sessions, context)
 
 
@@ -1487,12 +1500,12 @@ def get_advertising_report_gateway(
 ) -> AdvertisingReportGateway:
     """执行 get_advertising_report_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresAdvertisingReportGateway(sessions, context)
 
 
@@ -1502,20 +1515,20 @@ def get_advertising_metrics_gateway(
 ) -> AdvertisingMetricsGateway:
     """执行 get_advertising_metrics_gateway 的业务流程并返回该流程的结果。
 
-Args:
-    context: 参数语义、输入边界和安全约束。
-    sessions: 参数语义、输入边界和安全约束。
+    Args:
+        context: 参数语义、输入边界和安全约束。
+        sessions: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return PostgresAdvertisingMetricsGateway(sessions, context)
 
 
 @lru_cache
 def get_seller_account_verifier() -> SellerAccountVerifier:
     """执行 get_seller_account_verifier 的业务流程并返回该流程的结果。
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     settings = get_settings()
     if settings.ozon_mode == "stub":
         return StubSellerAccountVerifier()
@@ -1529,13 +1542,13 @@ def get_seller_account_service(
 ) -> SellerAccountService:
     """保留旧 Seller 账户 API 的依赖入口，写入统一工作区聚合。
 
-Args:
-    gateway: 参数语义、输入边界和安全约束。
-    verifier: 参数语义、输入边界和安全约束。
-    protector: 参数语义、输入边界和安全约束。
+    Args:
+        gateway: 参数语义、输入边界和安全约束。
+        verifier: 参数语义、输入边界和安全约束。
+        protector: 参数语义、输入边界和安全约束。
 
-Returns:
-    返回调用完成后的领域结果。"""
+    Returns:
+        返回调用完成后的领域结果。"""
     return SellerAccountService(
         _LegacySellerAccountGateway(gateway),
         _LegacySellerCredentialVerifier(verifier),
