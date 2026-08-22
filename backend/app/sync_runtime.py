@@ -11,6 +11,7 @@ from redis.asyncio import Redis
 from backend.app.application.composite_quality_runner import CompositeQualityRunner
 from backend.app.application.operational_quality_runner import OperationalQualityRunner
 from backend.app.application.product_quality_runner import ProductQualityRunner
+from backend.app.application.public_snapshot_quality_runner import PublicSnapshotQualityRunner
 from backend.app.application.quality_check_worker import QualityCheckWorker
 from backend.app.application.quality_task_dispatch import QualityTaskDispatcher
 from backend.app.application.rag_evaluation_worker import RagEvaluationWorker
@@ -25,6 +26,7 @@ from backend.app.infrastructure.postgresql.customer_orders import PostgresCustom
 from backend.app.infrastructure.postgresql.data_quality import PostgresQualityFindingGateway
 from backend.app.infrastructure.postgresql.postings import PostgresPostingGateway
 from backend.app.infrastructure.postgresql.product_offers import PostgresProductOfferGateway
+from backend.app.infrastructure.postgresql.public_snapshots import PostgresPublicSnapshotGateway
 from backend.app.infrastructure.postgresql.quality_check_jobs import PostgresQualityCheckJobGateway
 from backend.app.infrastructure.postgresql.rag_evaluation import PostgresRagEvaluationGateway
 from backend.app.infrastructure.postgresql.rag_tasks import PostgresRagTaskGateway
@@ -300,6 +302,9 @@ async def run_worker(settings: Settings) -> None:
                     PostgresStockPositionGateway(sessions, _service_context(settings)),
                     PostgresCustomerOrderGateway(sessions, _service_context(settings)),
                     PostgresPostingGateway(sessions, _service_context(settings)),
+                ),
+                PublicSnapshotQualityRunner(
+                    PostgresPublicSnapshotGateway(sessions, _service_context(settings))
                 ),
             )
         )
