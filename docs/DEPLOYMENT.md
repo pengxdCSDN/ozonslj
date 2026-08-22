@@ -14,7 +14,7 @@
 - API 与 Worker 额外接入出站网络，用于后续访问 Ozon API；PostgreSQL 和 Redis 不接入该网络。
 - PostgreSQL 的 `15432` 仅绑定服务器 `127.0.0.1`，只允许通过 SSH 隧道访问。
 - PostgreSQL 密码通过 Compose Secret 文件注入，不写入镜像、仓库或环境变量。
-- 当前没有域名，暂时通过公网 IP 和 HTTP 访问；接入域名后再启用 HTTPS。
+- 当前仍使用公网 IP，正式域名尚未接入；Compose 已映射宿主机 80/443，Nginx 通过现有 TLS 证书提供 HTTPS。域名和正式证书接入前，不得把当前开发证书状态当作生产安全配置。
 - Chroma、LangChain 和 LangGraph 在智能体切片开始时加入，不占用当前节点资源。
 
 ## 服务器目录
