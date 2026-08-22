@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     login_window_seconds: int = Field(default=300, ge=60, le=3600)
     ozon_mode: Literal["stub", "live"] = "stub"
     ozon_base_url: HttpUrl = HttpUrl("https://api-seller.ozon.ru")
+    # 公开采样只允许部署配置的精确域名；空值表示真实采样未启用，防止客户端任意发起请求。
+    public_sampling_allowed_hosts: str = ""
+    public_sampling_user_agent: str = "ozonslj-public-sampler/1.0"
     ozon_credential_key_file: Path = Path("secrets/ozon_credential_key")
     ozon_credential_key_version: int = Field(default=1, ge=1)
     # 同步进程采用低并发轮询以适配 2 核 2GB 云服务器；这些值只控制调度节奏，

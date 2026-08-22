@@ -2,13 +2,16 @@
 
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.app.api.dependencies import get_quality_finding_gateway, get_store_workspace_gateway
+from backend.app.config import get_settings
 from backend.app.domain.data_quality import QualityFinding, QualityFindingGateway
 from backend.app.domain.public_sampling import PublicSampler, SamplingRequest, SamplingResult
 from backend.app.domain.store_workspace import StoreWorkspaceGateway
+from backend.app.infrastructure.public_sampling import PublicHttpFetcher
 
 router = APIRouter(prefix="/v1/public-sampling", tags=["public-sampling"])
 
@@ -53,6 +56,37 @@ Returns:
         _stub_fetch_page, global_limit=payload.global_limit, max_attempts=payload.max_attempts
     )
     return await sampler.sample([SamplingRequest(**item.model_dump()) for item in payload.requests])
+
+
+@router.post("/live-preview", response_model=list[SamplingResult])
+async def live_sample_preview(payload: SamplingBatchPayload) -> list[SamplingResult]:
+    """使用服务端白名单执行真实只读采样；未配置白名单时拒绝启动网络请求。"""
+    try:
+        settings = get_settings()
+    except ValueError as error:
+        raise HTTPException(status_code=503, detail={"code": "sampling_not_configured"}) from error
+    allowed_hosts = frozenset(
+        host.strip().lower()
+        for host in settings.public_sampling_allowed_hosts.split(",")
+        if host.strip()
+    )
+    if not allowed_hosts:
+        raise HTTPException(status_code=503, detail={"code": "sampling_not_configured"})
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        fetcher = PublicHttpFetcher(
+            client, allowed_hosts=allowed_hosts, user_agent=settings.public_sampling_user_agent
+        )
+        sampler = PublicSampler(
+            fetcher.fetch_page,
+            global_limit=payload.global_limit,
+            max_attempts=payload.max_attempts,
+        )
+        return await sampler.sample(
+            [
+                SamplingRequest(item.url, stop_requested=item.stop_requested)
+                for item in payload.requests
+            ]
+        )
 
 
 @router.post(
