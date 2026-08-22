@@ -20,8 +20,8 @@ PostgreSQL 保存业务事实、任务事实、授权关系、审核状态和审
 |---|---|---|
 | PostgreSQL 基础业务 schema | 已有结构基础 | `database/postgresql_schema.sql` 包含商品、库存、订单、履约、同步任务和审计 |
 | 多组织与 RLS 迁移 | 已有结构基础 | `0002_multi_tenant_saas.sql` 建立租户/授权边界，`0003_business_facts_rls.sql` 为全部业务事实补齐直接组织归属、同组织外键和强制 RLS |
-| Python PostgreSQL 适配器 | 开发中 | 已完成事务级租户上下文、商品、工作区/凭据/审计和多组织身份适配器及单元测试；登录路由、Redis 限流与完整应用装配待完成 |
-| RLS 请求/任务事务上下文 | 尚未开发 | 尚无连接池事务内 `SET LOCAL` 的运行时实现与集成测试 |
+| Python PostgreSQL 适配器 | 已开发（真实数据库验收待完成） | 已完成事务级租户上下文、商品、工作区/凭据/审计、多组织身份、登录路由、Redis 限流和应用装配；隔离 PostgreSQL 运行验收仍待完成 |
+| RLS 请求/任务事务上下文 | 已开发（集成验收待完成） | `PostgresSessionFactory` 在每个事务内使用 `set_config(..., true)` 设置 `app.organization_id` 与 `app.user_id`；真实 PostgreSQL RLS 集成验收仍待完成 |
 | Redis Streams 任务闭环 | 部分开发 | 同步/质量任务投递、Consumer、租约、心跳、恢复、事实变化事件发布、事件 Consumer Group、质量路由、`quality_check_jobs` 持久化、Quality Worker、商品/库存/订单/履约质量规则、Scheduler 扫描和 Worker 生产运行组装已实现；质量结果回读及利润对账结果持久化 API 已实现，真实部署验收仍待完成 |
 | V5 选品/Listing/Performance/审核/Agent 表 | 已定档待开发 | V6 定档和迁移包完成前不得提前标记已存在 |
 
