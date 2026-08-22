@@ -27,7 +27,16 @@ class SamplingResult:
     message: str
 
 
-FetchPage = Callable[[str], Awaitable[int | tuple[int, float | None]]]
+@dataclass(frozen=True, slots=True)
+class FetchResponse:
+    """页面适配器结果；策略阻断必须在发送页面请求前显式返回。"""
+
+    status_code: int | None
+    allowed: bool = True
+    message: str = "请求完成"
+
+
+FetchPage = Callable[[str], Awaitable[int | tuple[int, float | None] | FetchResponse]]
 
 
 class PublicSampler:
@@ -99,8 +108,14 @@ Returns:
         for attempt in range(1, self._max_attempts + 1):
             async with self._global_limit:
                 response = await self._fetch_page(url)
+            if isinstance(response, FetchResponse) and not response.allowed:
+                return SamplingResult(
+                    url, False, response.status_code, attempt, response.message
+                )
             retry_after: float | None = None
-            if isinstance(response, tuple):
+            if isinstance(response, FetchResponse):
+                last_status = response.status_code
+            elif isinstance(response, tuple):
                 last_status, retry_after = response
             else:
                 last_status = response
